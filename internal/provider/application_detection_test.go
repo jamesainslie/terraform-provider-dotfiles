@@ -204,10 +204,7 @@ func TestApplicationDetectionIntegration(t *testing.T) {
 		}
 
 		// Perform application detection
-		result, err := appResource.performApplicationDetection(ctx, &model)
-		if err != nil {
-			t.Fatalf("Application detection failed: %v", err)
-		}
+		result := appResource.performApplicationDetection(ctx, &model)
 
 		// git should typically be available on most systems
 		if result.Method == "not_found" {
@@ -241,10 +238,7 @@ func TestApplicationDetectionIntegration(t *testing.T) {
 		}
 
 		// Perform detection
-		result, err := appResource.performApplicationDetection(ctx, &model)
-		if err != nil {
-			t.Fatalf("Application detection failed: %v", err)
-		}
+		result := appResource.performApplicationDetection(ctx, &model)
 
 		// Should not be installed
 		if result.Installed {

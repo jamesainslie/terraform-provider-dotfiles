@@ -120,10 +120,7 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 				}(),
 			}
 
-			result, err := appResource.performApplicationDetection(ctx, &data)
-			if err != nil {
-				t.Fatalf("Detection should not error: %v", err)
-			}
+			result := appResource.performApplicationDetection(ctx, &data)
 
 			if result.Installed {
 				t.Error("Unknown application should not be detected as installed")

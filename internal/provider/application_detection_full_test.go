@@ -459,10 +459,7 @@ func TestApplicationDetectionRealWorldScenarios(t *testing.T) {
 				}(),
 			}
 
-			result, err := appResource.performApplicationDetection(ctx, &model)
-			if err != nil {
-				t.Fatalf("Detection failed for %s: %v", scenario.application, err)
-			}
+			result := appResource.performApplicationDetection(ctx, &model)
 
 			t.Logf("%s: installed=%v, method=%s, expected_skip=%v",
 				scenario.description, result.Installed, result.Method, scenario.shouldSkip)
