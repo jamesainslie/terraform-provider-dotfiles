@@ -70,11 +70,9 @@ func TestEnhancedFileResourceBackupSchema(t *testing.T) {
 func TestBackupStrategyModel(t *testing.T) {
 	// Test enhanced provider model with backup strategy
 	model := &EnhancedProviderModel{
-		DotfilesProviderModel: DotfilesProviderModel{
-			DotfilesRoot:    types.StringValue("~/dotfiles"),
-			BackupEnabled:   types.BoolValue(true),
-			BackupDirectory: types.StringValue("~/.dotfiles-backups"),
-		},
+		DotfilesRoot:    types.StringValue("~/dotfiles"),
+		BackupEnabled:   types.BoolValue(true),
+		BackupDirectory: types.StringValue("~/.dotfiles-backups"),
 		BackupStrategy: &BackupStrategyModel{
 			Enabled:         types.BoolValue(true),
 			Directory:       types.StringValue("~/.dotfiles-backups"),

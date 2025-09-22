@@ -41,6 +41,8 @@ type DotfilesProviderModel struct {
 	TargetPlatform     types.String `tfsdk:"target_platform"`
 	TemplateEngine     types.String `tfsdk:"template_engine"`
 	LogLevel           types.String `tfsdk:"log_level"`
+	BackupStrategy     *BackupStrategyModel `tfsdk:"backup_strategy"`
+	Recovery           *RecoveryModel       `tfsdk:"recovery"`
 }
 
 func (p *DotfilesProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -186,6 +188,30 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 		config.LogLevel = data.LogLevel.ValueString()
 	} else {
 		config.LogLevel = "info"
+	}
+
+	// Handle backup strategy configuration
+	if data.BackupStrategy != nil {
+		if !data.BackupStrategy.Enabled.IsNull() {
+			config.BackupEnabled = data.BackupStrategy.Enabled.ValueBool()
+		}
+		if !data.BackupStrategy.Directory.IsNull() {
+			config.BackupDirectory = data.BackupStrategy.Directory.ValueString()
+		}
+		// Additional backup strategy fields can be handled here as needed
+		// For now, we keep the existing simple backup configuration approach
+	}
+
+	// Handle recovery configuration
+	if data.Recovery != nil {
+		// Recovery configuration is mainly used by resources
+		// Log that recovery features are enabled if configured
+		if !data.Recovery.CreateRestoreScripts.IsNull() && data.Recovery.CreateRestoreScripts.ValueBool() {
+			tflog.Debug(ctx, "Recovery restore scripts enabled")
+		}
+		if !data.Recovery.ValidateBackups.IsNull() && data.Recovery.ValidateBackups.ValueBool() {
+			tflog.Debug(ctx, "Backup validation enabled")
+		}
 	}
 
 	// Validate configuration

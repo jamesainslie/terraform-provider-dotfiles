@@ -44,11 +44,9 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 	t.Run("Enhanced backup with provider-level configuration", func(t *testing.T) {
 		// Create enhanced provider model
 		providerModel := &EnhancedProviderModel{
-			DotfilesProviderModel: DotfilesProviderModel{
-				DotfilesRoot:    types.StringValue(sourceDir),
-				BackupEnabled:   types.BoolValue(true),
-				BackupDirectory: types.StringValue(backupDir),
-			},
+			DotfilesRoot:    types.StringValue(sourceDir),
+			BackupEnabled:   types.BoolValue(true),
+			BackupDirectory: types.StringValue(backupDir),
 			BackupStrategy: &BackupStrategyModel{
 				Enabled:         types.BoolValue(true),
 				Directory:       types.StringValue(backupDir),
