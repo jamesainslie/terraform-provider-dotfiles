@@ -183,14 +183,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if !data.RequireApplication.IsNull() {
 		appDetectionConfig := buildApplicationDetectionConfig(&data)
 
-		shouldSkip, err := r.checkApplicationRequirements(ctx, appDetectionConfig, &resp.Diagnostics)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Application requirement check failed",
-				fmt.Sprintf("Could not check application requirements: %s", err.Error()),
-			)
-			return
-		}
+		shouldSkip := r.checkApplicationRequirements(ctx, appDetectionConfig, &resp.Diagnostics)
 
 		if shouldSkip {
 			tflog.Info(ctx, "Skipping file resource - required application not available", map[string]interface{}{
@@ -839,9 +832,9 @@ func (r *FileResource) fileManager() *fileops.FileManager {
 }
 
 // checkApplicationRequirements checks if required applications are available.
-func (r *FileResource) checkApplicationRequirements(ctx context.Context, config *ApplicationDetectionConfig, diagnostics *diag.Diagnostics) (bool, error) {
+func (r *FileResource) checkApplicationRequirements(ctx context.Context, config *ApplicationDetectionConfig, diagnostics *diag.Diagnostics) bool {
 	if config.RequiredApplication == "" {
-		return false, nil // No application required
+		return false // No application required
 	}
 
 	// Create a temporary ApplicationResource for detection
@@ -869,7 +862,7 @@ func (r *FileResource) checkApplicationRequirements(ctx context.Context, config 
 	// Check if application is installed
 	if !result.Installed {
 		if config.SkipIfMissing {
-			return true, nil // Skip this resource
+			return true // Skip this resource
 		}
 		// Add warning if configured to warn
 		diagnostics.AddWarning(
@@ -891,14 +884,14 @@ func (r *FileResource) checkApplicationRequirements(ctx context.Context, config 
 
 			if config.SkipIfMissing {
 				diagnostics.AddWarning("Application version incompatible", message+" - skipping configuration")
-				return true, nil // Skip this resource
+				return true // Skip this resource
 			} else {
 				diagnostics.AddWarning("Application version incompatible", message+" - proceeding anyway")
 			}
 		}
 	}
 
-	return false, nil // Don't skip
+	return false // Don't skip
 }
 
 // buildApplicationDetectionConfig builds application detection config from model.

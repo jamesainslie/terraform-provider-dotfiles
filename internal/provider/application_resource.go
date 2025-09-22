@@ -336,14 +336,7 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 
 	// Try each detection method
 	for _, method := range detectionMethods {
-		result, err := r.tryDetectionMethod(ctx, appName, method)
-		if err != nil {
-			tflog.Debug(ctx, "Detection method failed", map[string]interface{}{
-				"method": method,
-				"error":  err.Error(),
-			})
-			continue
-		}
+		result := r.tryDetectionMethod(ctx, appName, method)
 		if result.Installed {
 			tflog.Info(ctx, "Application detected", map[string]interface{}{
 				"application": appName,
@@ -363,7 +356,7 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 }
 
 // tryDetectionMethod attempts to detect application using specified method.
-func (r *ApplicationResource) tryDetectionMethod(ctx context.Context, appName, method string) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) tryDetectionMethod(ctx context.Context, appName, method string) *ApplicationDetectionResult {
 	platformProvider := platform.DetectPlatform()
 
 	switch method {
@@ -376,19 +369,19 @@ func (r *ApplicationResource) tryDetectionMethod(ctx context.Context, appName, m
 	case "package_manager":
 		return r.detectByPackageManager(ctx, appName, platformProvider)
 	default:
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	}
 }
 
 // detectByCommand detects application by running a command.
-func (r *ApplicationResource) detectByCommand(ctx context.Context, appName string) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) detectByCommand(ctx context.Context, appName string) *ApplicationDetectionResult {
 	// Use command -v to check if command exists in PATH
 	cmd := fmt.Sprintf("command -v %s", appName)
 
 	// Execute command using the same shell execution logic as hooks
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	// TODO: Extract version information if possible
@@ -396,11 +389,11 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 		Installed: true,
 		Method:    "command",
 		Version:   "unknown", // Could be enhanced to extract version
-	}, nil
+	}
 }
 
 // detectByFile detects application by checking file/directory existence.
-func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, platformProvider platform.PlatformProvider) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, platformProvider platform.PlatformProvider) *ApplicationDetectionResult {
 	// Use context for structured logging and to avoid unused parameter warnings
 	tflog.Debug(ctx, "detectByFile invoked", map[string]interface{}{
 		"application": appName,
@@ -458,31 +451,31 @@ func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, 
 				InstallationPath: expandedPath,
 				Method:           "file",
 				Version:          "unknown", // Could be enhanced to extract version from app bundle
-			}, nil
+			}
 		}
 	}
 
-	return &ApplicationDetectionResult{Installed: false}, nil
+	return &ApplicationDetectionResult{Installed: false}
 }
 
 // detectByBrewCask detects application installed via Homebrew cask.
-func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName string) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName string) *ApplicationDetectionResult {
 	cmd := fmt.Sprintf("brew list --cask | grep -q '^%s$'", appName)
 
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	return &ApplicationDetectionResult{
 		Installed: true,
 		Method:    "brew_cask",
 		Version:   "unknown", // Could be enhanced to get brew cask version
-	}, nil
+	}
 }
 
 // detectByPackageManager detects application via system package manager.
-func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appName string, platformProvider platform.PlatformProvider) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appName string, platformProvider platform.PlatformProvider) *ApplicationDetectionResult {
 	var cmd string
 
 	switch platformProvider.GetPlatform() {
@@ -502,23 +495,23 @@ func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appNam
 				return &ApplicationDetectionResult{
 					Installed: true,
 					Method:    "package_manager",
-				}, nil
+				}
 			}
 		}
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	default:
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	return &ApplicationDetectionResult{
 		Installed: true,
 		Method:    "package_manager",
-	}, nil
+	}
 }
 
 // capitalizeFirst capitalizes the first letter of a string.
