@@ -148,14 +148,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	})
 
 	// Get repository information (for local path if it's a Git repository)
-	repositoryLocalPath, err := r.getRepositoryLocalPath(data.Repository.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Repository not found",
-			fmt.Sprintf("Could not find repository %s: %s", data.Repository.ValueString(), err.Error()),
-		)
-		return
-	}
+	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
 
 	// Build source file path
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
@@ -317,14 +310,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	})
 
 	// Get repository local path
-	repositoryLocalPath, err := r.getRepositoryLocalPath(data.Repository.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Repository not found",
-			fmt.Sprintf("Could not find repository %s: %s", data.Repository.ValueString(), err.Error()),
-		)
-		return
-	}
+	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
 
 	// Build paths
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
@@ -468,11 +454,11 @@ func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 }
 
 // getRepositoryLocalPath returns the local path for a repository.
-func (r *FileResource) getRepositoryLocalPath(repositoryID string) (string, error) {
+func (r *FileResource) getRepositoryLocalPath(repositoryID string) string {
 	// For now, assume repository ID maps to the dotfiles root
 	// TODO: Implement proper repository lookup when repository state management is added
 	_ = repositoryID // TODO: Use repositoryID when repository lookup is implemented
-	return r.client.Config.DotfilesRoot, nil
+	return r.client.Config.DotfilesRoot
 }
 
 // updateComputedAttributes updates computed attributes for state tracking.
