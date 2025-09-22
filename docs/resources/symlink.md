@@ -30,3 +30,7 @@ Manages symbolic links to dotfiles
 ### Read-Only
 
 - `id` (String) Symlink identifier
+- `is_symlink` (Boolean) Whether the target is actually a symlink
+- `last_modified` (String) Last modification timestamp of the symlink
+- `link_exists` (Boolean) Whether the symlink exists
+- `link_target` (String) The target that the symlink points to

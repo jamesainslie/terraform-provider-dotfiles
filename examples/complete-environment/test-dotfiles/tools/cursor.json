@@ -1,0 +1,16 @@
+{
+    "editor.fontSize": 14,
+    "editor.fontFamily": "Fira Code",
+    "editor.fontLigatures": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": true,
+    "workbench.colorTheme": "Dark+ (default dark)",
+    "workbench.iconTheme": "vscode-icons",
+    "files.autoSave": "onFocusChange",
+    "files.trimTrailingWhitespace": true,
+    "terminal.integrated.shell.osx": "/opt/homebrew/bin/fish",
+    "terminal.integrated.shell.linux": "/usr/bin/fish",
+    "extensions.autoUpdate": false,
+    "telemetry.telemetryLevel": "off"
+}

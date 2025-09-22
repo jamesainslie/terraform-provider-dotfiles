@@ -1,0 +1,39 @@
+# Fish shell configuration for {{.user_name}}
+set -g fish_greeting ""
+
+# Environment variables
+set -gx EDITOR {{.editor}}
+set -gx LANG en_US.UTF-8
+
+{{if eq .system.platform "macos"}}# macOS specific settings
+fish_add_path /opt/homebrew/bin
+fish_add_path /usr/local/bin{{end}}
+
+{{if eq .system.platform "linux"}}# Linux specific settings
+fish_add_path ~/.local/bin
+fish_add_path /usr/local/bin{{end}}
+
+# Common aliases
+alias ll "ls -la"
+alias la "ls -A"
+alias l "ls -CF"
+
+{{if .features.docker}}# Docker support enabled
+set -gx DOCKER_HOST unix:///var/run/docker.sock
+alias dps "docker ps"
+alias dimg "docker images"{{end}}
+
+{{if .features.k8s}}# Kubernetes tools
+alias k "kubectl"
+alias kgs "kubectl get svc"
+alias kgp "kubectl get pods"{{end}}
+
+# Functions
+function mkcd
+    mkdir -p $argv[1]
+    cd $argv[1]
+end
+
+function backup
+    cp $argv[1] $argv[1].backup.(date +%Y%m%d-%H%M%S)
+end
