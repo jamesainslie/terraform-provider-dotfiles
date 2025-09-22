@@ -1,0 +1,25 @@
+# Example Terraform variables for GitHub dotfiles repository
+# Copy this file to terraform.tfvars and update with your values
+
+# GitHub Personal Access Token (required for private repositories)
+# Get your token from: https://github.com/settings/tokens
+# Scopes needed: repo (for private repos), or public_repo (for public repos only)
+github_token = "ghp_your_github_personal_access_token_here"
+
+# Enterprise GitHub token (if using GitHub Enterprise)
+enterprise_github_token = "your_enterprise_token_here"
+
+# SSH key passphrase (if your SSH key is encrypted)
+ssh_passphrase = "your_ssh_key_passphrase"
+
+# Your dotfiles repository URL
+dotfiles_repository_url = "https://github.com/yourusername/dotfiles.git"
+
+# Git branch to use (defaults to 'main')
+git_branch = "main"
+
+# Enable automatic updates
+enable_auto_update = true
+
+# How often to check for updates
+update_interval = "1h"
