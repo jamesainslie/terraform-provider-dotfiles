@@ -7,7 +7,7 @@ project_name: terraform-provider-dotfiles
 before:
   hooks:
     - go mod tidy
-    - go test ./...
+    # Tests are already run in separate CI jobs, skip here to avoid duplicates
     - go vet ./...
 
 builds:

@@ -192,10 +192,10 @@ func TestRepositoryResource(t *testing.T) {
 		authConfig = r.buildAuthConfig(data)
 
 		if authConfig.PersonalAccessToken != "" {
-			t.Error("Expected empty PAT for null value")
+			t.Errorf("Expected empty PAT for null value, got: %q", authConfig.PersonalAccessToken)
 		}
 		if authConfig.Username != "" {
-			t.Error("Expected empty username for null value")
+			t.Errorf("Expected empty username for null value, got: %q", authConfig.Username)
 		}
 	})
 }
