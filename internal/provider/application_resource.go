@@ -210,14 +210,7 @@ func (r *ApplicationResource) Create(ctx context.Context, req resource.CreateReq
 	})
 
 	// Perform application detection
-	detectionResult, err := r.performApplicationDetection(ctx, &data)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Application detection failed",
-			fmt.Sprintf("Could not detect application %s: %s", data.Application.ValueString(), err.Error()),
-		)
-		return
-	}
+	detectionResult := r.performApplicationDetection(ctx, &data)
 
 	// Update computed attributes with detection results
 	data.Installed = types.BoolValue(detectionResult.Installed)
@@ -268,20 +261,13 @@ func (r *ApplicationResource) Read(ctx context.Context, req resource.ReadRequest
 
 	// Re-perform application detection to check current state
 	if data.DetectInstallation.ValueBool() {
-		detectionResult, err := r.performApplicationDetection(ctx, &data)
-		if err != nil {
-			resp.Diagnostics.AddWarning(
-				"Application detection failed",
-				fmt.Sprintf("Could not re-detect application %s: %s", data.Application.ValueString(), err.Error()),
-			)
-		} else {
-			// Update computed attributes
-			data.Installed = types.BoolValue(detectionResult.Installed)
-			data.Version = types.StringValue(detectionResult.Version)
-			data.InstallationPath = types.StringValue(detectionResult.InstallationPath)
-			data.LastChecked = types.StringValue(time.Now().Format(time.RFC3339))
-			data.DetectionResult = types.StringValue(detectionResult.Method)
-		}
+		detectionResult := r.performApplicationDetection(ctx, &data)
+		// Update computed attributes
+		data.Installed = types.BoolValue(detectionResult.Installed)
+		data.Version = types.StringValue(detectionResult.Version)
+		data.InstallationPath = types.StringValue(detectionResult.InstallationPath)
+		data.LastChecked = types.StringValue(time.Now().Format(time.RFC3339))
+		data.DetectionResult = types.StringValue(detectionResult.Method)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -326,12 +312,12 @@ type ApplicationDetectionResult struct {
 }
 
 // performApplicationDetection performs application detection using configured methods.
-func (r *ApplicationResource) performApplicationDetection(ctx context.Context, data *ApplicationResourceModel) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) performApplicationDetection(ctx context.Context, data *ApplicationResourceModel) *ApplicationDetectionResult {
 	if !data.DetectInstallation.ValueBool() {
 		return &ApplicationDetectionResult{
 			Installed: true, // Assume installed if detection is disabled
 			Method:    "disabled",
-		}, nil
+		}
 	}
 
 	appName := data.Application.ValueString()
@@ -365,7 +351,7 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 				"version":     result.Version,
 				"path":        result.InstallationPath,
 			})
-			return result, nil
+			return result
 		}
 	}
 
@@ -373,7 +359,7 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 	return &ApplicationDetectionResult{
 		Installed: false,
 		Method:    "not_found",
-	}, nil
+	}
 }
 
 // tryDetectionMethod attempts to detect application using specified method.
@@ -402,7 +388,7 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 	// Execute command using the same shell execution logic as hooks
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, err
+		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 
 	// TODO: Extract version information if possible
@@ -485,7 +471,7 @@ func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName stri
 
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, err
+		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 
 	return &ApplicationDetectionResult{
@@ -526,7 +512,7 @@ func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appNam
 
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, err
+		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 
 	return &ApplicationDetectionResult{

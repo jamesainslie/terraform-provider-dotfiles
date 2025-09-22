@@ -864,10 +864,7 @@ func (r *FileResource) checkApplicationRequirements(ctx context.Context, config 
 	}
 
 	// Perform detection
-	result, err := appResource.performApplicationDetection(ctx, &detectionModel)
-	if err != nil {
-		return false, fmt.Errorf("application detection failed: %w", err)
-	}
+	result := appResource.performApplicationDetection(ctx, &detectionModel)
 
 	// Check if application is installed
 	if !result.Installed {
