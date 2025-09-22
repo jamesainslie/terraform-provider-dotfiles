@@ -364,13 +364,13 @@ Platform: {{.platform}}`
 			t.Errorf("Failed to read processed template: %v", err)
 		} else {
 			processedContent := string(content)
-			if !contains([]string{processedContent}, "Test User") {
-				t.Error("Template should contain processed 'Test User'")
+			if !containsSubstring(processedContent, "Test User") {
+				t.Errorf("Template should contain processed 'Test User', got: %s", processedContent)
 			}
-			if !contains([]string{processedContent}, "test@example.com") {
-				t.Error("Template should contain processed email")
+			if !containsSubstring(processedContent, "test@example.com") {
+				t.Errorf("Template should contain processed email, got: %s", processedContent)
 			}
-			if contains([]string{processedContent}, "{{.name}}") {
+			if containsSubstring(processedContent, "{{.name}}") {
 				t.Error("Template should not contain unprocessed variables")
 			}
 		}
@@ -414,11 +414,11 @@ Config: {{.system.config_dir}}
 			t.Errorf("Failed to read processed template: %v", err)
 		} else {
 			processedContent := string(content)
-			if !contains([]string{processedContent}, "macos") {
-				t.Error("Template should contain processed platform")
+			if !containsSubstring(processedContent, "macos") {
+				t.Errorf("Template should contain processed platform, got: %s", processedContent)
 			}
-			if !contains([]string{processedContent}, "Docker support enabled") {
-				t.Error("Template should contain conditional content")
+			if !containsSubstring(processedContent, "Docker support enabled") {
+				t.Errorf("Template should contain conditional content, got: %s", processedContent)
 			}
 		}
 	})

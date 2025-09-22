@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
 )
 
@@ -168,7 +169,17 @@ func (fm *FileManager) ProcessTemplate(templatePath, targetPath string, variable
 		return nil
 	}
 	
-	// For now, return an error since template engine is not implemented
-	// This will make the tests fail as expected in TDD
-	return fmt.Errorf("template processing not implemented yet")
+	// Create template engine
+	engine, err := template.NewGoTemplateEngine()
+	if err != nil {
+		return fmt.Errorf("failed to create template engine: %w", err)
+	}
+	
+	// Process template file
+	err = engine.ProcessTemplateFile(templatePath, targetPath, variables, fileMode)
+	if err != nil {
+		return fmt.Errorf("failed to process template: %w", err)
+	}
+	
+	return nil
 }
