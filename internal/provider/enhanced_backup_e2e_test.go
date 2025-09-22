@@ -345,13 +345,11 @@ func TestEnhancedBackupCompatibility(t *testing.T) {
 	targetFile := filepath.Join(tempDir, "target.txt")
 
 	// Create source and target files
-	err = os.WriteFile(sourceFile, []byte("source content"), 0644)
-	if err != nil {
+	if err := os.WriteFile(sourceFile, []byte("source content"), 0644); err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
-	err = os.WriteFile(targetFile, []byte("existing content"), 0644)
-	if err != nil {
+	if err := os.WriteFile(targetFile, []byte("existing content"), 0644); err != nil {
 		t.Fatalf("Failed to create target file: %v", err)
 	}
 

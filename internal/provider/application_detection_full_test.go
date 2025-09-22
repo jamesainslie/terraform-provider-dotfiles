@@ -121,10 +121,7 @@ set -gx EDITOR {{.editor}}
 		}
 
 		// Test application detection configuration building
-		appConfig, err := buildApplicationDetectionConfig(fileModel)
-		if err != nil {
-			t.Fatalf("Failed to build application config: %v", err)
-		}
+		appConfig := buildApplicationDetectionConfig(fileModel)
 
 		if appConfig.RequiredApplication != "git" {
 			t.Error("Required application should be git")
@@ -169,10 +166,7 @@ set -gx EDITOR {{.editor}}
 			SkipIfAppMissing:   types.BoolValue(true), // Skip if not installed
 		}
 
-		appConfig, err := buildApplicationDetectionConfig(fileModel)
-		if err != nil {
-			t.Fatalf("Failed to build application config: %v", err)
-		}
+		appConfig := buildApplicationDetectionConfig(fileModel)
 
 		fileResource := &FileResource{client: client}
 
@@ -228,10 +222,7 @@ set -gx EDITOR {{.editor}}
 			SkipIfAppMissing:   types.BoolValue(true), // Skip if Fish not installed
 		}
 
-		appConfig, err := buildApplicationDetectionConfig(fileModel)
-		if err != nil {
-			t.Fatalf("Failed to build application config: %v", err)
-		}
+		appConfig := buildApplicationDetectionConfig(fileModel)
 
 		fileResource := &FileResource{client: client}
 		shouldSkip, err := fileResource.checkApplicationRequirements(ctx, appConfig, nil)
@@ -373,10 +364,7 @@ func TestApplicationDetectionFeatureCompleteness(t *testing.T) {
 		}
 
 		// Test that all configurations can be built successfully
-		appConfig, err := buildApplicationDetectionConfig(comprehensiveModel)
-		if err != nil {
-			t.Fatalf("Failed to build application config: %v", err)
-		}
+		appConfig := buildApplicationDetectionConfig(comprehensiveModel)
 
 		permConfig, err := buildFilePermissionConfig(&comprehensiveModel.EnhancedFileResourceModel)
 		if err != nil {

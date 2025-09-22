@@ -160,10 +160,7 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 		}
 
 		// Build application detection config
-		appConfig, err := buildApplicationDetectionConfig(fileModel)
-		if err != nil {
-			t.Fatalf("Failed to build application detection config: %v", err)
-		}
+		appConfig := buildApplicationDetectionConfig(fileModel)
 
 		// Verify configuration
 		if appConfig.RequiredApplication != "git" {
