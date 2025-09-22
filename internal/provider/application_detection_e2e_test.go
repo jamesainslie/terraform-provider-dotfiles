@@ -95,7 +95,10 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 			}
 
 			// Test detection directly
-			result := appResource.performApplicationDetection(ctx, &data)
+			result, err := appResource.performApplicationDetection(ctx, &data)
+			if err != nil {
+				t.Fatalf("Application detection failed: %v", err)
+			}
 
 			// Verify detection result structure
 			if result == nil {
@@ -248,7 +251,10 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 					}(),
 				}
 
-				result := appResource.performApplicationDetection(ctx, &model)
+				result, err := appResource.performApplicationDetection(ctx, &model)
+				if err != nil {
+					t.Fatalf("Detection failed for %s: %v", scenario.application, err)
+				}
 
 				if result.Installed != scenario.expectFound {
 					t.Logf("Detection result for %s: installed=%v, method=%s, expected=%v",
