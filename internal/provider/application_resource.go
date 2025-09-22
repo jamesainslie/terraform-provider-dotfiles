@@ -60,7 +60,6 @@ type ApplicationResourceModel struct {
 	DetectionResult  types.String `tfsdk:"detection_result"`
 }
 
-
 func (r *ApplicationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_application"
 }
