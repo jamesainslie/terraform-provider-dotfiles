@@ -24,8 +24,7 @@ func TestApplicationDetectionFullWorkflow(t *testing.T) {
 	backupDir := filepath.Join(tempDir, "backups")
 
 	// Create source directory structure
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
 

@@ -26,13 +26,11 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 	targetDir := filepath.Join(tempDir, "target")
 	backupDir := filepath.Join(tempDir, "backups")
 
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
 
-	err = os.MkdirAll(targetDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
 	}
 

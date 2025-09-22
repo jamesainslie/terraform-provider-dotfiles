@@ -23,8 +23,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 
 	// Create a mock application structure
 	mockAppPath := filepath.Join(tempDir, "TestApp.app")
-	err = os.MkdirAll(mockAppPath, 0755)
-	if err != nil {
+	if err := os.MkdirAll(mockAppPath, 0755); err != nil {
 		t.Fatalf("Failed to create mock app: %v", err)
 	}
 
