@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -121,15 +123,21 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	for key, attr := range postHooksAttrs {
 		baseAttributes[key] = attr
 	}
-	
+
 	// Add enhanced template attributes
 	templateAttrs := GetEnhancedTemplateAttributes()
 	for key, attr := range templateAttrs {
 		baseAttributes[key] = attr
 	}
 
+	// Add application detection attributes
+	appDetectionAttrs := GetApplicationDetectionAttributes()
+	for key, attr := range appDetectionAttrs {
+		baseAttributes[key] = attr
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages individual dotfiles with comprehensive features: permissions, backup, templates, and hooks",
+		MarkdownDescription: "Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection",
 		Attributes:          baseAttributes,
 		Blocks: map[string]schema.Block{
 			"permissions":   GetPermissionsSchemaBlock(),
@@ -157,7 +165,7 @@ func (r *FileResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data EnhancedFileResourceModelWithTemplate
+	var data EnhancedFileResourceModelWithApplicationDetection
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -170,6 +178,37 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"target_path": data.TargetPath.ValueString(),
 		"is_template": data.IsTemplate.ValueBool(),
 	})
+
+	// Check application requirements before proceeding
+	if !data.RequireApplication.IsNull() {
+		appDetectionConfig, err := buildApplicationDetectionConfig(&data)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid application detection configuration",
+				fmt.Sprintf("Failed to build application detection config: %s", err.Error()),
+			)
+			return
+		}
+
+		shouldSkip, err := r.checkApplicationRequirements(ctx, appDetectionConfig, &resp.Diagnostics)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Application requirement check failed",
+				fmt.Sprintf("Could not check application requirements: %s", err.Error()),
+			)
+			return
+		}
+
+		if shouldSkip {
+			tflog.Info(ctx, "Skipping file resource - required application not available", map[string]interface{}{
+				"required_app": appDetectionConfig.RequiredApplication,
+			})
+			// Set ID and save state without creating file
+			data.ID = data.Name
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
+	}
 
 	// Get repository information (for local path if it's a Git repository)
 	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
@@ -203,7 +242,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Build enhanced backup configuration
-	enhancedBackupConfig, err := buildEnhancedBackupConfigFromTemplateModel(&data)
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(&data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid backup configuration",
@@ -247,7 +286,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	if data.IsTemplate.ValueBool() {
 		// Build enhanced template configuration
-		templateConfig, err := buildEnhancedTemplateConfig(&data)
+		templateConfig, err := buildEnhancedTemplateConfigFromAppModel(&data)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Invalid template configuration",
@@ -299,7 +338,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data EnhancedFileResourceModelWithTemplate
+	var data EnhancedFileResourceModelWithApplicationDetection
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -345,7 +384,7 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data EnhancedFileResourceModelWithTemplate
+	var data EnhancedFileResourceModelWithApplicationDetection
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -390,7 +429,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Build enhanced backup configuration
-	enhancedBackupConfig, err := buildEnhancedBackupConfigFromTemplateModel(&data)
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(&data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid backup configuration",
@@ -434,10 +473,10 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	if data.IsTemplate.ValueBool() {
 		// Build enhanced template configuration
-		templateConfig, err := buildEnhancedTemplateConfig(&data)
+		templateConfig, err := buildEnhancedTemplateConfigFromAppModel(&data)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Invalid template configuration", 
+				"Invalid template configuration",
 				fmt.Sprintf("Failed to build template config: %s", err.Error()),
 			)
 			return
@@ -483,7 +522,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data EnhancedFileResourceModelWithBackup
+	var data EnhancedFileResourceModelWithApplicationDetection
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -608,12 +647,22 @@ func buildEnhancedBackupConfigFromTemplateModel(data *EnhancedFileResourceModelW
 	return buildEnhancedBackupConfigFromFileModel(&data.EnhancedFileResourceModelWithBackup)
 }
 
+// buildEnhancedTemplateConfigFromAppModel builds template config from application detection model
+func buildEnhancedTemplateConfigFromAppModel(data *EnhancedFileResourceModelWithApplicationDetection) (*EnhancedTemplateConfig, error) {
+	return buildEnhancedTemplateConfig(&data.EnhancedFileResourceModelWithTemplate)
+}
+
+// buildEnhancedBackupConfigFromAppModel builds backup config from application detection model
+func buildEnhancedBackupConfigFromAppModel(data *EnhancedFileResourceModelWithApplicationDetection) (*fileops.EnhancedBackupConfig, error) {
+	return buildEnhancedBackupConfigFromTemplateModel(&data.EnhancedFileResourceModelWithTemplate)
+}
+
 // buildEnhancedTemplateConfig builds template configuration from template model
 func buildEnhancedTemplateConfig(data *EnhancedFileResourceModelWithTemplate) (*EnhancedTemplateConfig, error) {
 	config := &EnhancedTemplateConfig{
-		Engine:     "go", // default
-		UserVars:   make(map[string]interface{}),
-		PlatformVars: make(map[string]map[string]interface{}),
+		Engine:          "go", // default
+		UserVars:        make(map[string]interface{}),
+		PlatformVars:    make(map[string]map[string]interface{}),
 		CustomFunctions: make(map[string]interface{}),
 	}
 
@@ -794,6 +843,111 @@ func (r *FileResource) processEnhancedTemplate(sourcePath, targetPath string, co
 func (r *FileResource) fileManager() *fileops.FileManager {
 	platformProvider := platform.DetectPlatform()
 	return fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
+}
+
+// checkApplicationRequirements checks if required applications are available
+func (r *FileResource) checkApplicationRequirements(ctx context.Context, config *ApplicationDetectionConfig, diagnostics *diag.Diagnostics) (bool, error) {
+	if config.RequiredApplication == "" {
+		return false, nil // No application required
+	}
+
+	// Create a temporary ApplicationResource for detection
+	appResource := &ApplicationResource{client: r.client}
+
+	// Create model for detection
+	detectionModel := ApplicationResourceModel{
+		Application:        types.StringValue(config.RequiredApplication),
+		DetectInstallation: types.BoolValue(true),
+		DetectionMethods: func() types.List {
+			// Use default detection methods
+			methods := []attr.Value{
+				types.StringValue("command"),
+				types.StringValue("file"),
+				types.StringValue("package_manager"),
+			}
+			list, _ := types.ListValue(types.StringType, methods)
+			return list
+		}(),
+	}
+
+	// Perform detection
+	result, err := appResource.performApplicationDetection(ctx, &detectionModel)
+	if err != nil {
+		return false, fmt.Errorf("application detection failed: %w", err)
+	}
+
+	// Check if application is installed
+	if !result.Installed {
+		if config.SkipIfMissing {
+			return true, nil // Skip this resource
+		}
+		// Add warning if configured to warn
+		diagnostics.AddWarning(
+			"Required application not found",
+			fmt.Sprintf("Required application %s is not installed", config.RequiredApplication),
+		)
+	}
+
+	// Check version compatibility if version info is available
+	if result.Version != "" && result.Version != "unknown" {
+		if !isVersionCompatible(result.Version, config.MinVersion, config.MaxVersion) {
+			message := fmt.Sprintf("Application %s version %s is not compatible", config.RequiredApplication, result.Version)
+			if config.MinVersion != "" {
+				message += fmt.Sprintf(" (min: %s)", config.MinVersion)
+			}
+			if config.MaxVersion != "" {
+				message += fmt.Sprintf(" (max: %s)", config.MaxVersion)
+			}
+
+			if config.SkipIfMissing {
+				diagnostics.AddWarning("Application version incompatible", message+" - skipping configuration")
+				return true, nil // Skip this resource
+			} else {
+				diagnostics.AddWarning("Application version incompatible", message+" - proceeding anyway")
+			}
+		}
+	}
+
+	return false, nil // Don't skip
+}
+
+// buildApplicationDetectionConfig builds application detection config from model
+func buildApplicationDetectionConfig(data *EnhancedFileResourceModelWithApplicationDetection) (*ApplicationDetectionConfig, error) {
+	config := &ApplicationDetectionConfig{}
+
+	if !data.RequireApplication.IsNull() {
+		config.RequiredApplication = data.RequireApplication.ValueString()
+	}
+	if !data.ApplicationVersionMin.IsNull() {
+		config.MinVersion = data.ApplicationVersionMin.ValueString()
+	}
+	if !data.ApplicationVersionMax.IsNull() {
+		config.MaxVersion = data.ApplicationVersionMax.ValueString()
+	}
+	if !data.SkipIfAppMissing.IsNull() {
+		config.SkipIfMissing = data.SkipIfAppMissing.ValueBool()
+	}
+
+	return config, nil
+}
+
+// isVersionCompatible checks if a version is within specified bounds
+func isVersionCompatible(detected, minVersion, maxVersion string) bool {
+	// Simplified version comparison for now
+	// A real implementation would use proper semantic versioning
+	if minVersion == "" && maxVersion == "" {
+		return true
+	}
+
+	// Basic string comparison (would need proper semver library in production)
+	if minVersion != "" && detected < minVersion {
+		return false
+	}
+	if maxVersion != "" && detected > maxVersion {
+		return false
+	}
+
+	return true
 }
 
 // executeShellCommand executes a shell command safely

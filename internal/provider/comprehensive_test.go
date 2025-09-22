@@ -38,8 +38,8 @@ func TestProviderIntegration(t *testing.T) {
 
 		// Test resource registration
 		resources := p.Resources(ctx)
-		if len(resources) != 4 {
-			t.Errorf("Expected 4 resources, got %d", len(resources))
+		if len(resources) != 5 {
+			t.Errorf("Expected 5 resources, got %d", len(resources))
 		}
 
 		// Test data source registration
@@ -89,6 +89,12 @@ func TestResourceFactoryFunctions(t *testing.T) {
 		directory := NewDirectoryResource()
 		if directory == nil {
 			t.Error("NewDirectoryResource() returned nil")
+		}
+
+		// Test application resource
+		application := NewApplicationResource()
+		if application == nil {
+			t.Error("NewApplicationResource() returned nil")
 		}
 	})
 
