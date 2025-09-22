@@ -32,14 +32,14 @@ type EnhancedBackupConfig struct {
 
 // BackupMetadata represents metadata for a backup file
 type BackupMetadata struct {
-	OriginalPath  string    `json:"original_path"`
-	BackupPath    string    `json:"backup_path"`
-	Timestamp     time.Time `json:"timestamp"`
-	Checksum      string    `json:"checksum"`
-	Compressed    bool      `json:"compressed"`
-	OriginalSize  int64     `json:"original_size"`
-	BackupSize    int64     `json:"backup_size"`
-	FileMode      string    `json:"file_mode"`
+	OriginalPath string    `json:"original_path"`
+	BackupPath   string    `json:"backup_path"`
+	Timestamp    time.Time `json:"timestamp"`
+	Checksum     string    `json:"checksum"`
+	Compressed   bool      `json:"compressed"`
+	OriginalSize int64     `json:"original_size"`
+	BackupSize   int64     `json:"backup_size"`
+	FileMode     string    `json:"file_mode"`
 }
 
 // BackupIndex represents an index of all backups
@@ -149,7 +149,7 @@ func (fm *FileManager) generateBackupPath(filePath string, config *EnhancedBacku
 func (fm *FileManager) generateNumberedBackupName(fileName, backupDir string) string {
 	pattern := filepath.Join(backupDir, fileName+".backup.*")
 	existing, _ := filepath.Glob(pattern)
-	
+
 	nextNumber := 1
 	if len(existing) > 0 {
 		maxNumber := 0
@@ -159,7 +159,7 @@ func (fm *FileManager) generateNumberedBackupName(fileName, backupDir string) st
 			if strings.HasSuffix(base, ".gz") {
 				base = strings.TrimSuffix(base, ".gz")
 			}
-			
+
 			parts := strings.Split(base, ".")
 			if len(parts) >= 3 {
 				// The number should be the last part after removing .gz
@@ -223,14 +223,14 @@ func (fm *FileManager) createBackupMetadata(originalPath, backupPath string, con
 
 	// Create metadata
 	metadata := BackupMetadata{
-		OriginalPath:  originalPath,
-		BackupPath:    backupPath,
-		Timestamp:     time.Now(),
-		Checksum:      checksum,
-		Compressed:    config.Compression,
-		OriginalSize:  originalInfo.Size(),
-		BackupSize:    backupInfo.Size(),
-		FileMode:      originalInfo.Mode().String(),
+		OriginalPath: originalPath,
+		BackupPath:   backupPath,
+		Timestamp:    time.Now(),
+		Checksum:     checksum,
+		Compressed:   config.Compression,
+		OriginalSize: originalInfo.Size(),
+		BackupSize:   backupInfo.Size(),
+		FileMode:     originalInfo.Mode().String(),
 	}
 
 	// Write metadata to file
@@ -277,14 +277,14 @@ func (fm *FileManager) updateBackupIndex(originalPath, backupPath string, config
 	backupInfo, _ := os.Stat(backupPath)
 
 	newBackup := BackupMetadata{
-		OriginalPath:  originalPath,
-		BackupPath:    backupPath,
-		Timestamp:     time.Now(),
-		Checksum:      checksum,
-		Compressed:    config.Compression,
-		OriginalSize:  originalInfo.Size(),
-		BackupSize:    backupInfo.Size(),
-		FileMode:      originalInfo.Mode().String(),
+		OriginalPath: originalPath,
+		BackupPath:   backupPath,
+		Timestamp:    time.Now(),
+		Checksum:     checksum,
+		Compressed:   config.Compression,
+		OriginalSize: originalInfo.Size(),
+		BackupSize:   backupInfo.Size(),
+		FileMode:     originalInfo.Mode().String(),
 	}
 
 	index.Backups = append(index.Backups, newBackup)
@@ -339,7 +339,7 @@ func (fm *FileManager) applyRetentionPolicy(originalPath string, config *Enhance
 		if strings.HasSuffix(path, ".meta") {
 			continue
 		}
-		
+
 		// Include both compressed and uncompressed backup files
 		baseName := filepath.Base(path)
 		if strings.Contains(baseName, ".backup.") {
@@ -365,7 +365,7 @@ func (fm *FileManager) applyRetentionPolicy(originalPath string, config *Enhance
 	toRemove := len(actualBackups) - int(config.MaxBackups)
 	for i := 0; i < toRemove; i++ {
 		backupPath := actualBackups[i]
-		
+
 		// Remove backup file
 		if err := os.Remove(backupPath); err != nil {
 			return fmt.Errorf("failed to remove old backup %s: %w", backupPath, err)

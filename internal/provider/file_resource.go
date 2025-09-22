@@ -115,20 +115,26 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			MarkdownDescription: "Whether the target file exists",
 		},
 	}
-	
+
 	// Add post-hooks attributes
 	postHooksAttrs := GetPostHooksAttributes()
 	for key, attr := range postHooksAttrs {
 		baseAttributes[key] = attr
 	}
 	
+	// Add enhanced template attributes
+	templateAttrs := GetEnhancedTemplateAttributes()
+	for key, attr := range templateAttrs {
+		baseAttributes[key] = attr
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages individual dotfiles with comprehensive permission management and enhanced backup",
+		MarkdownDescription: "Manages individual dotfiles with comprehensive features: permissions, backup, templates, and hooks",
 		Attributes:          baseAttributes,
 		Blocks: map[string]schema.Block{
-			"permissions":    GetPermissionsSchemaBlock(),
-			"backup_policy":  GetBackupPolicySchemaBlock(),
-			"recovery_test":  GetRecoveryTestSchemaBlock(),
+			"permissions":   GetPermissionsSchemaBlock(),
+			"backup_policy": GetBackupPolicySchemaBlock(),
+			"recovery_test": GetRecoveryTestSchemaBlock(),
 		},
 	}
 }
@@ -151,7 +157,7 @@ func (r *FileResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data EnhancedFileResourceModelWithBackup
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -197,7 +203,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Build enhanced backup configuration
-	enhancedBackupConfig, err := buildEnhancedBackupConfigFromFileModel(&data)
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromTemplateModel(&data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid backup configuration",
@@ -240,31 +246,20 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	var finalErr error
 
 	if data.IsTemplate.ValueBool() {
-		// Process template
-		templateVars := make(map[string]interface{})
-
-		// Add template variables if provided
-		if !data.TemplateVars.IsNull() {
-			elements := data.TemplateVars.Elements()
-			for key, value := range elements {
-				if strValue, ok := value.(types.String); ok {
-					templateVars[key] = strValue.ValueString()
-				}
-			}
+		// Build enhanced template configuration
+		templateConfig, err := buildEnhancedTemplateConfig(&data)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid template configuration",
+				fmt.Sprintf("Failed to build template config: %s", err.Error()),
+			)
+			return
 		}
 
-		// Add system context
-		systemInfo := r.client.GetPlatformInfo()
-		context := template.CreateTemplateContext(systemInfo, templateVars)
-
-		// Process template with enhanced permissions
-		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, permConfig.FileMode)
-		if finalErr == nil {
-			// Apply comprehensive permissions after template processing
-			finalErr = fileManager.ApplyPermissions(expandedTargetPath, permConfig)
-		}
+		// Process template with enhanced features
+		finalErr = r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
 	} else {
-		// Regular file copy with enhanced permissions  
+		// Regular file copy with enhanced permissions
 		finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
 	}
 
@@ -304,7 +299,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data EnhancedFileResourceModelWithBackup
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -350,7 +345,7 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data EnhancedFileResourceModelWithBackup
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -395,7 +390,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Build enhanced backup configuration
-	enhancedBackupConfig, err := buildEnhancedBackupConfigFromFileModel(&data)
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromTemplateModel(&data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid backup configuration",
@@ -438,29 +433,18 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	var finalErr error
 
 	if data.IsTemplate.ValueBool() {
-		// Process template for update
-		templateVars := make(map[string]interface{})
-
-		// Add template variables if provided
-		if !data.TemplateVars.IsNull() {
-			elements := data.TemplateVars.Elements()
-			for key, value := range elements {
-				if strValue, ok := value.(types.String); ok {
-					templateVars[key] = strValue.ValueString()
-				}
-			}
+		// Build enhanced template configuration
+		templateConfig, err := buildEnhancedTemplateConfig(&data)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid template configuration", 
+				fmt.Sprintf("Failed to build template config: %s", err.Error()),
+			)
+			return
 		}
 
-		// Add system context
-		systemInfo := r.client.GetPlatformInfo()
-		context := template.CreateTemplateContext(systemInfo, templateVars)
-
-		// Process template with enhanced permissions
-		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, permConfig.FileMode)
-		if finalErr == nil {
-			// Apply comprehensive permissions after template processing
-			finalErr = fileManager.ApplyPermissions(expandedTargetPath, permConfig)
-		}
+		// Process template with enhanced features
+		finalErr = r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
 	} else {
 		// Regular file copy with enhanced permissions
 		finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
@@ -619,6 +603,96 @@ func buildEnhancedBackupConfigFromFileModel(data *EnhancedFileResourceModelWithB
 	return config, fileops.ValidateEnhancedBackupConfig(config)
 }
 
+// buildEnhancedBackupConfigFromTemplateModel builds enhanced backup config from template model
+func buildEnhancedBackupConfigFromTemplateModel(data *EnhancedFileResourceModelWithTemplate) (*fileops.EnhancedBackupConfig, error) {
+	return buildEnhancedBackupConfigFromFileModel(&data.EnhancedFileResourceModelWithBackup)
+}
+
+// buildEnhancedTemplateConfig builds template configuration from template model
+func buildEnhancedTemplateConfig(data *EnhancedFileResourceModelWithTemplate) (*EnhancedTemplateConfig, error) {
+	config := &EnhancedTemplateConfig{
+		Engine:     "go", // default
+		UserVars:   make(map[string]interface{}),
+		PlatformVars: make(map[string]map[string]interface{}),
+		CustomFunctions: make(map[string]interface{}),
+	}
+
+	// Set template engine
+	if !data.TemplateEngine.IsNull() {
+		config.Engine = data.TemplateEngine.ValueString()
+	}
+
+	// Parse template vars
+	if !data.TemplateVars.IsNull() {
+		elements := data.TemplateVars.Elements()
+		for key, value := range elements {
+			if strValue, ok := value.(types.String); ok {
+				config.UserVars[key] = strValue.ValueString()
+			}
+		}
+	}
+
+	// Parse platform template vars
+	if !data.PlatformTemplateVars.IsNull() {
+		elements := data.PlatformTemplateVars.Elements()
+		for platform, platformVarsValue := range elements {
+			if objValue, ok := platformVarsValue.(types.Object); ok {
+				platformMap := make(map[string]interface{})
+				objAttrs := objValue.Attributes()
+				for key, attrValue := range objAttrs {
+					if strValue, ok := attrValue.(types.String); ok {
+						platformMap[key] = strValue.ValueString()
+					}
+				}
+				config.PlatformVars[platform] = platformMap
+			}
+		}
+	}
+
+	// Parse template functions (simple string mappings for now)
+	if !data.TemplateFunctions.IsNull() {
+		elements := data.TemplateFunctions.Elements()
+		for name, funcValue := range elements {
+			if strValue, ok := funcValue.(types.String); ok {
+				// For now, store as string values - could be enhanced to support actual functions
+				config.CustomFunctions[name] = strValue.ValueString()
+			}
+		}
+	}
+
+	return config, ValidateEnhancedTemplateConfig(config)
+}
+
+// EnhancedTemplateConfig represents enhanced template configuration
+type EnhancedTemplateConfig struct {
+	Engine          string
+	UserVars        map[string]interface{}
+	PlatformVars    map[string]map[string]interface{}
+	CustomFunctions map[string]interface{}
+}
+
+// ValidateEnhancedTemplateConfig validates enhanced template configuration
+func ValidateEnhancedTemplateConfig(config *EnhancedTemplateConfig) error {
+	if config == nil {
+		return nil
+	}
+
+	// Validate template engine
+	validEngines := []string{"go", "handlebars", "mustache"}
+	valid := false
+	for _, engine := range validEngines {
+		if config.Engine == engine {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return fmt.Errorf("invalid template engine: %s (must be one of: %v)", config.Engine, validEngines)
+	}
+
+	return nil
+}
+
 // buildFilePermissionConfig builds a PermissionConfig from the enhanced model data
 func buildFilePermissionConfig(data *EnhancedFileResourceModel) (*fileops.PermissionConfig, error) {
 	config := &fileops.PermissionConfig{}
@@ -662,13 +736,13 @@ func executePostCommands(ctx context.Context, commands types.List, operation str
 	}
 
 	tflog.Debug(ctx, fmt.Sprintf("Executing %s commands", operation))
-	
+
 	elements := commands.Elements()
 	for i, cmdValue := range elements {
 		if strCmd, ok := cmdValue.(types.String); ok {
 			cmd := strCmd.ValueString()
 			tflog.Debug(ctx, fmt.Sprintf("Executing %s command %d: %s", operation, i+1, cmd))
-			
+
 			if err := executeShellCommand(ctx, cmd); err != nil {
 				return fmt.Errorf("command %d failed: %w", i+1, err)
 			}
@@ -676,6 +750,50 @@ func executePostCommands(ctx context.Context, commands types.List, operation str
 	}
 
 	return nil
+}
+
+// processEnhancedTemplate processes a template with enhanced features
+func (r *FileResource) processEnhancedTemplate(sourcePath, targetPath string, config *EnhancedTemplateConfig, permConfig *fileops.PermissionConfig) error {
+	// Create template engine based on configuration
+	var engine template.TemplateEngine
+	var err error
+
+	if len(config.CustomFunctions) > 0 {
+		engine, err = template.CreateTemplateEngineWithFunctions(config.Engine, config.CustomFunctions)
+	} else {
+		engine, err = template.CreateTemplateEngine(config.Engine)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create template engine: %w", err)
+	}
+
+	// Build comprehensive template context
+	systemInfo := r.client.GetPlatformInfo()
+	templateContext := template.BuildPlatformAwareTemplateContext(
+		systemInfo,
+		config.UserVars,
+		config.PlatformVars,
+	)
+
+	// Process template file
+	err = engine.ProcessTemplateFile(sourcePath, targetPath, templateContext, permConfig.FileMode)
+	if err != nil {
+		return fmt.Errorf("failed to process template file: %w", err)
+	}
+
+	// Apply permissions after template processing
+	err = r.fileManager().ApplyPermissions(targetPath, permConfig)
+	if err != nil {
+		return fmt.Errorf("failed to apply permissions after template processing: %w", err)
+	}
+
+	return nil
+}
+
+// fileManager creates a file manager instance for this resource
+func (r *FileResource) fileManager() *fileops.FileManager {
+	platformProvider := platform.DetectPlatform()
+	return fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 }
 
 // executeShellCommand executes a shell command safely
@@ -688,7 +806,7 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 
 	// Use shell to execute complex commands
 	var cmd *exec.Cmd
-	
+
 	// Determine shell based on OS
 	var shell, shellFlag string
 	if strings.Contains(os.Getenv("SHELL"), "fish") {
@@ -703,13 +821,13 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 	}
 
 	cmd = exec.CommandContext(ctx, shell, shellFlag, cmdStr)
-	
+
 	// Set environment variables
 	cmd.Env = os.Environ()
-	
+
 	// Capture output
 	output, err := cmd.CombinedOutput()
-	
+
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Command failed: %s", cmdStr), map[string]interface{}{
 			"error":  err.Error(),
@@ -717,10 +835,10 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 		})
 		return fmt.Errorf("command '%s' failed: %w (output: %s)", cmdStr, err, string(output))
 	}
-	
+
 	tflog.Info(ctx, fmt.Sprintf("Command executed successfully: %s", cmdStr), map[string]interface{}{
 		"output": string(output),
 	})
-	
+
 	return nil
 }

@@ -429,11 +429,11 @@ func TestIncrementalBackup(t *testing.T) {
 	fm := NewFileManager(platformProvider, false)
 
 	config := &EnhancedBackupConfig{
-		Enabled:        true,
-		Directory:      backupDir,
-		BackupFormat:   "timestamped",
-		Incremental:    true,
-		BackupIndex:    true,
+		Enabled:      true,
+		Directory:    backupDir,
+		BackupFormat: "timestamped",
+		Incremental:  true,
+		BackupIndex:  true,
 	}
 
 	t.Run("First backup should always be created", func(t *testing.T) {

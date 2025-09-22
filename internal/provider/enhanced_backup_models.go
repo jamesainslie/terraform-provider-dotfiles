@@ -56,15 +56,15 @@ type EnhancedProviderModel struct {
 // EnhancedFileResourceModelWithBackup extends EnhancedFileResourceModel with backup features
 type EnhancedFileResourceModelWithBackup struct {
 	EnhancedFileResourceModel
-	BackupPolicy *BackupPolicyModel  `tfsdk:"backup_policy"`
-	RecoveryTest *RecoveryTestModel  `tfsdk:"recovery_test"`
+	BackupPolicy *BackupPolicyModel `tfsdk:"backup_policy"`
+	RecoveryTest *RecoveryTestModel `tfsdk:"recovery_test"`
 }
 
 // EnhancedSymlinkResourceModelWithBackup extends EnhancedSymlinkResourceModel with backup features
 type EnhancedSymlinkResourceModelWithBackup struct {
 	EnhancedSymlinkResourceModel
-	BackupPolicy *BackupPolicyModel  `tfsdk:"backup_policy"`
-	RecoveryTest *RecoveryTestModel  `tfsdk:"recovery_test"`
+	BackupPolicy *BackupPolicyModel `tfsdk:"backup_policy"`
+	RecoveryTest *RecoveryTestModel `tfsdk:"recovery_test"`
 }
 
 // GetBackupStrategySchemaBlock returns the schema block for backup strategy

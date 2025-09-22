@@ -32,7 +32,7 @@ func TestEnhancedBackupProviderSchema(t *testing.T) {
 			t.Error("backup_strategy block should be defined in provider schema")
 		}
 
-		// Check for recovery block  
+		// Check for recovery block
 		if _, exists := resp.Schema.Blocks["recovery"]; !exists {
 			t.Error("recovery block should be defined in provider schema")
 		}
@@ -44,21 +44,21 @@ func TestEnhancedFileResourceBackupSchema(t *testing.T) {
 	t.Run("FileResource should support backup_policy block", func(t *testing.T) {
 		r := NewFileResource()
 		ctx := context.Background()
-		
+
 		req := resource.SchemaRequest{}
 		resp := &resource.SchemaResponse{}
-		
+
 		r.Schema(ctx, req, resp)
-		
+
 		if resp.Diagnostics.HasError() {
 			t.Fatalf("Schema validation failed: %v", resp.Diagnostics)
 		}
-		
+
 		// Check for backup_policy block
 		if _, exists := resp.Schema.Blocks["backup_policy"]; !exists {
 			t.Error("backup_policy block should be defined in file resource schema")
 		}
-		
+
 		// Check for recovery_test block
 		if _, exists := resp.Schema.Blocks["recovery_test"]; !exists {
 			t.Error("recovery_test block should be defined in file resource schema")
@@ -86,8 +86,8 @@ func TestBackupStrategyModel(t *testing.T) {
 		Recovery: &RecoveryModel{
 			CreateRestoreScripts: types.BoolValue(true),
 			ValidateBackups:      types.BoolValue(true),
-			TestRecovery:        types.BoolValue(false),
-			BackupIndex:         types.BoolValue(true),
+			TestRecovery:         types.BoolValue(false),
+			BackupIndex:          types.BoolValue(true),
 		},
 	}
 

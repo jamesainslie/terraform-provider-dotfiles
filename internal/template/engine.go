@@ -26,44 +26,82 @@ type GoTemplateEngine struct {
 	functions template.FuncMap
 }
 
-// NewGoTemplateEngine creates a new Go template engine with custom functions.
+// NewGoTemplateEngine creates a new Go template engine with default functions.
 func NewGoTemplateEngine() (*GoTemplateEngine, error) {
 	engine := &GoTemplateEngine{
-		functions: template.FuncMap{
-			// Path helper functions
-			"configPath": func(app string) string {
-				return filepath.Join("~/.config", app)
-			},
-			"homebrewBin": func(prefix string) string {
-				return filepath.Join(prefix, "bin")
-			},
-
-			// String helper functions
-			"upper": strings.ToUpper,
-			"lower": strings.ToLower,
-			"title": func(s string) string {
-				if len(s) == 0 {
-					return s
-				}
-				return strings.ToUpper(s[:1]) + s[1:]
-			},
-
-			// Conditional helpers
-			"default": func(defaultValue, value interface{}) interface{} {
-				if value == nil || value == "" {
-					return defaultValue
-				}
-				return value
-			},
-
-			// Platform helpers
-			"isLinux":   func(platform string) bool { return platform == "linux" },
-			"isMacOS":   func(platform string) bool { return platform == "macos" },
-			"isWindows": func(platform string) bool { return platform == "windows" },
-		},
+		functions: getDefaultTemplateFunctions(),
 	}
 
 	return engine, nil
+}
+
+// NewGoTemplateEngineWithFunctions creates a new Go template engine with custom functions.
+func NewGoTemplateEngineWithFunctions(customFunctions map[string]interface{}) (*GoTemplateEngine, error) {
+	// Start with default functions from getDefaultTemplateFunctions
+	allFunctions := getDefaultTemplateFunctions()
+	
+	// Add custom functions
+	for name, fn := range customFunctions {
+		allFunctions[name] = fn
+	}
+	
+	engine := &GoTemplateEngine{
+		functions: allFunctions,
+	}
+
+	return engine, nil
+}
+
+// getDefaultTemplateFunctions returns the standard template functions used across all engines.
+func getDefaultTemplateFunctions() template.FuncMap {
+	return template.FuncMap{
+		// Path helper functions
+		"configPath": func(app string) string {
+			return filepath.Join("~/.config", app)
+		},
+		"homebrewBin": func(prefix string) string {
+			return filepath.Join(prefix, "bin")
+		},
+		"homebrewPrefix": func() string {
+			return "/opt/homebrew" // Default for macOS
+		},
+
+		// String helper functions
+		"upper": strings.ToUpper,
+		"lower": strings.ToLower,
+		"title": func(s string) string {
+			if len(s) == 0 {
+				return s
+			}
+			return strings.ToUpper(s[:1]) + s[1:]
+		},
+		"camelCase": func(s string) string {
+			parts := strings.Split(s, "_")
+			if len(parts) == 0 {
+				return s
+			}
+			result := parts[0]
+			for i := 1; i < len(parts); i++ {
+				if len(parts[i]) > 0 {
+					result += strings.ToUpper(parts[i][:1]) + parts[i][1:]
+				}
+			}
+			return result
+		},
+
+		// Conditional helpers
+		"default": func(defaultValue, value interface{}) interface{} {
+			if value == nil || value == "" {
+				return defaultValue
+			}
+			return value
+		},
+
+		// Platform helpers
+		"isLinux":   func(platform string) bool { return platform == "linux" },
+		"isMacOS":   func(platform string) bool { return platform == "macos" },
+		"isWindows": func(platform string) bool { return platform == "windows" },
+	}
 }
 
 // ProcessTemplate processes a template string with the given context.

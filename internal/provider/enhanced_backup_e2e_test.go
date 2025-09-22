@@ -28,13 +28,13 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
 	backupDir := filepath.Join(tempDir, "backups")
-	
+
 	// Create source directory and files
 	err = os.MkdirAll(sourceDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
-	
+
 	err = os.MkdirAll(targetDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
@@ -42,9 +42,9 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 
 	// Create test configuration files
 	configFiles := map[string]string{
-		"critical.conf":   "# Critical configuration\napi_key=secret123\nhost=production.com",
-		"settings.json":   `{"theme": "dark", "fontSize": 14}`,
-		"app.yaml":        "version: 1.0\nenvironment: production",
+		"critical.conf": "# Critical configuration\napi_key=secret123\nhost=production.com",
+		"settings.json": `{"theme": "dark", "fontSize": 14}`,
+		"app.yaml":      "version: 1.0\nenvironment: production",
 	}
 
 	for filename, content := range configFiles {
@@ -59,7 +59,7 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 		// Test Case 1: File with comprehensive backup policy
 		t.Run("Critical config with full backup features", func(t *testing.T) {
 			targetFile := filepath.Join(targetDir, "critical.conf")
-			
+
 			// Create existing target file (to trigger backup)
 			err := os.WriteFile(targetFile, []byte("old configuration"), 0644)
 			if err != nil {
@@ -168,8 +168,8 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 		// Test Case 2: Multiple backups with retention
 		t.Run("Multiple backups with retention management", func(t *testing.T) {
 			targetFile := filepath.Join(targetDir, "settings.json")
-			
-			// Create target file  
+
+			// Create target file
 			err := os.WriteFile(targetFile, []byte(`{"theme": "light"}`), 0644)
 			if err != nil {
 				t.Fatalf("Failed to create target file: %v", err)
@@ -223,7 +223,7 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 			}
 
 			if len(actualBackups) > 2 {
-				t.Errorf("Expected at most 2 actual backup files after retention, got %d: %v", 
+				t.Errorf("Expected at most 2 actual backup files after retention, got %d: %v",
 					len(actualBackups), actualBackups)
 			}
 
@@ -244,18 +244,18 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 		t.Run("Incremental backup skips duplicates", func(t *testing.T) {
 			targetFile := filepath.Join(targetDir, "app.yaml")
 			content := "version: 2.0\nenvironment: staging"
-			
+
 			err := os.WriteFile(targetFile, []byte(content), 0644)
 			if err != nil {
 				t.Fatalf("Failed to create target file: %v", err)
 			}
 
 			config := &fileops.EnhancedBackupConfig{
-				Enabled:     true,
-				Directory:   backupDir,
+				Enabled:      true,
+				Directory:    backupDir,
 				BackupFormat: "git_style",
-				Incremental: true,
-				BackupIndex: true,
+				Incremental:  true,
+				BackupIndex:  true,
 			}
 
 			platformProvider := platform.DetectPlatform()
@@ -321,8 +321,8 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 				Recovery: &RecoveryModel{
 					CreateRestoreScripts: types.BoolValue(true),
 					ValidateBackups:      types.BoolValue(true),
-					TestRecovery:        types.BoolValue(false),
-					BackupIndex:         types.BoolValue(true),
+					TestRecovery:         types.BoolValue(false),
+					BackupIndex:          types.BoolValue(true),
 				},
 			}
 
@@ -359,7 +359,7 @@ func TestEnhancedBackupCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
-	
+
 	err = os.WriteFile(targetFile, []byte("existing content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create target file: %v", err)
@@ -410,10 +410,10 @@ func TestEnhancedBackupCompatibility(t *testing.T) {
 				},
 			},
 			BackupPolicy: &BackupPolicyModel{
-				AlwaysBackup:    types.BoolValue(true), // Enhanced enabled
-				BackupFormat:    types.StringValue("numbered"),
-				RetentionCount:  types.Int64Value(5),
-				Compression:     types.BoolValue(false),
+				AlwaysBackup:   types.BoolValue(true), // Enhanced enabled
+				BackupFormat:   types.StringValue("numbered"),
+				RetentionCount: types.Int64Value(5),
+				Compression:    types.BoolValue(false),
 			},
 		}
 
@@ -443,14 +443,14 @@ func TestEnhancedBackupCompatibility(t *testing.T) {
 func TestBackupFeatureCompletion(t *testing.T) {
 	t.Run("All backup formats supported", func(t *testing.T) {
 		formats := []string{"timestamped", "numbered", "git_style"}
-		
+
 		for _, format := range formats {
 			config := &fileops.EnhancedBackupConfig{
 				Enabled:      true,
 				BackupFormat: format,
 				Directory:    "/tmp/test-backups",
 			}
-			
+
 			err := fileops.ValidateEnhancedBackupConfig(config)
 			if err != nil {
 				t.Errorf("Backup format %s should be supported: %v", format, err)
@@ -460,14 +460,14 @@ func TestBackupFeatureCompletion(t *testing.T) {
 
 	t.Run("Retention policies supported", func(t *testing.T) {
 		policies := []string{"7d", "30d", "1y", "12w", "6m"}
-		
+
 		for _, policy := range policies {
 			config := &fileops.EnhancedBackupConfig{
 				Enabled:         true,
 				RetentionPolicy: policy,
 				Directory:       "/tmp/test-backups",
 			}
-			
+
 			err := fileops.ValidateEnhancedBackupConfig(config)
 			if err != nil {
 				t.Errorf("Retention policy %s should be supported: %v", policy, err)

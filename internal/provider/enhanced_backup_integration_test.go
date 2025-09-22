@@ -29,12 +29,12 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
 	backupDir := filepath.Join(tempDir, "backups")
-	
+
 	err = os.MkdirAll(sourceDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
-	
+
 	err = os.MkdirAll(targetDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
@@ -139,7 +139,7 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 
 	t.Run("File operations with enhanced backup", func(t *testing.T) {
 		targetFile := filepath.Join(targetDir, "enhanced-config.txt")
-		
+
 		// Create initial target file
 		err = os.WriteFile(targetFile, []byte("original target content"), 0644)
 		if err != nil {
@@ -239,7 +239,7 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to update file for retention test: %v", err)
 			}
-			
+
 			_, err = fm.CreateEnhancedBackup(targetFile, config)
 			if err != nil {
 				t.Fatalf("Backup creation failed during retention test: %v", err)
@@ -253,7 +253,7 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 		}
 
 		if len(backupFiles) > int(config.MaxBackups) {
-			t.Errorf("Expected at most %d backup files after retention, got %d", 
+			t.Errorf("Expected at most %d backup files after retention, got %d",
 				config.MaxBackups, len(backupFiles))
 		}
 	})
@@ -459,7 +459,7 @@ func TestBackupFormatSupport(t *testing.T) {
 		if !strings.Contains(backupName, ".backup.") {
 			t.Error("Git-style backup should contain .backup. in name")
 		}
-		
+
 		// Should contain 8-character hash
 		parts := strings.Split(backupName, ".")
 		hashPart := parts[len(parts)-1]
