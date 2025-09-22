@@ -3,12 +3,12 @@
 page_title: "dotfiles_file Resource - dotfiles"
 subcategory: ""
 description: |-
-  Manages individual dotfiles
+  Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection
 ---
 
 # dotfiles_file (Resource)
 
-Manages individual dotfiles
+Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection
 
 
 
@@ -24,9 +24,23 @@ Manages individual dotfiles
 
 ### Optional
 
+- `application_version_max` (String) Maximum supported version of the application
+- `application_version_min` (String) Minimum required version of the application
 - `backup_enabled` (Boolean) Whether to backup existing files
-- `file_mode` (String) File permissions (e.g., '0644')
+- `backup_policy` (Block, Optional) File-specific backup policy configuration (see [below for nested schema](#nestedblock--backup_policy))
+- `file_mode` (String) File permissions (e.g., '0644') - deprecated, use permissions block
 - `is_template` (Boolean) Whether the file should be processed as a template
+- `permission_rules` (Map of String) Pattern-based permission rules (e.g., 'id_*' = '0600')
+- `permissions` (Block, Optional) Permission management for files and directories (see [below for nested schema](#nestedblock--permissions))
+- `platform_template_vars` (Map of Object) Platform-specific template variables (macos, linux, windows) (see [below for nested schema](#nestedatt--platform_template_vars))
+- `post_create_commands` (List of String) Commands to execute after resource creation
+- `post_update_commands` (List of String) Commands to execute after resource update
+- `pre_destroy_commands` (List of String) Commands to execute before resource destruction
+- `recovery_test` (Block, Optional) Recovery testing configuration (see [below for nested schema](#nestedblock--recovery_test))
+- `require_application` (String) Require this application to be installed before configuring
+- `skip_if_app_missing` (Boolean) Skip this resource if required application is missing
+- `template_engine` (String) Template engine to use: go (default), handlebars, or mustache
+- `template_functions` (Map of String) Custom template functions (name -> value mappings)
 - `template_vars` (Map of String) Variables for template processing
 
 ### Read-Only
@@ -35,3 +49,47 @@ Manages individual dotfiles
 - `file_exists` (Boolean) Whether the target file exists
 - `id` (String) File identifier
 - `last_modified` (String) Last modification timestamp
+
+<a id="nestedblock--backup_policy"></a>
+### Nested Schema for `backup_policy`
+
+Optional:
+
+- `always_backup` (Boolean) Force backup even if globally disabled
+- `backup_format` (String) Backup naming format: timestamped, numbered, or git_style
+- `backup_metadata` (Boolean) Store backup metadata (checksums, timestamps)
+- `compression` (Boolean) Compress this file's backups
+- `retention_count` (Number) Number of backup versions to retain
+- `versioned_backup` (Boolean) Keep multiple backup versions
+
+
+<a id="nestedblock--permissions"></a>
+### Nested Schema for `permissions`
+
+Optional:
+
+- `directory` (String) Directory permission mode (e.g., '0755')
+- `files` (String) File permission mode (e.g., '0644')
+- `recursive` (Boolean) Apply permissions recursively to subdirectories and files
+
+
+<a id="nestedatt--platform_template_vars"></a>
+### Nested Schema for `platform_template_vars`
+
+Optional:
+
+- `config_dir` (String)
+- `credential_helper` (String)
+- `diff_tool` (String)
+- `homebrew_path` (String)
+- `shell` (String)
+
+
+<a id="nestedblock--recovery_test"></a>
+### Nested Schema for `recovery_test`
+
+Optional:
+
+- `command` (String) Command to validate backup ({{.backup_path}} template available)
+- `enabled` (Boolean) Enable recovery testing for this file
+- `timeout` (String) Timeout for recovery test commands

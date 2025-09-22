@@ -21,8 +21,7 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "dotfiles")
 	backupDir := filepath.Join(tempDir, "backups")
 
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
 

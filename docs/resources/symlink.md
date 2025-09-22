@@ -3,12 +3,12 @@
 page_title: "dotfiles_symlink Resource - dotfiles"
 subcategory: ""
 description: |-
-  Manages symbolic links to dotfiles
+  Manages symbolic links to dotfiles with comprehensive permission management
 ---
 
 # dotfiles_symlink (Resource)
 
-Manages symbolic links to dotfiles
+Manages symbolic links to dotfiles with comprehensive permission management
 
 
 
@@ -26,6 +26,11 @@ Manages symbolic links to dotfiles
 
 - `create_parents` (Boolean) Create parent directories
 - `force_update` (Boolean) Force update existing symlinks
+- `permission_rules` (Map of String) Pattern-based permission rules (e.g., 'id_*' = '0600')
+- `permissions` (Block, Optional) Permission management for files and directories (see [below for nested schema](#nestedblock--permissions))
+- `post_create_commands` (List of String) Commands to execute after resource creation
+- `post_update_commands` (List of String) Commands to execute after resource update
+- `pre_destroy_commands` (List of String) Commands to execute before resource destruction
 
 ### Read-Only
 
@@ -34,3 +39,12 @@ Manages symbolic links to dotfiles
 - `last_modified` (String) Last modification timestamp of the symlink
 - `link_exists` (Boolean) Whether the symlink exists
 - `link_target` (String) The target that the symlink points to
+
+<a id="nestedblock--permissions"></a>
+### Nested Schema for `permissions`
+
+Optional:
+
+- `directory` (String) Directory permission mode (e.g., '0755')
+- `files` (String) File permission mode (e.g., '0644')
+- `recursive` (Boolean) Apply permissions recursively to subdirectories and files

@@ -283,8 +283,7 @@ func TestFileManagerPermissions(t *testing.T) {
 
 		for filename, expectedPerm := range testFiles {
 			testFile := filepath.Join(tempDir, filename)
-			err = fm.ApplyPermissions(testFile, config)
-			if err != nil {
+			if err := fm.ApplyPermissions(testFile, config); err != nil {
 				t.Fatalf("Failed to apply permissions to %s: %v", filename, err)
 			}
 

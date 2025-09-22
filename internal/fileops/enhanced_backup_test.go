@@ -362,8 +362,7 @@ func TestBackupMetadata(t *testing.T) {
 				t.Fatalf("Failed to update test file: %v", err)
 			}
 
-			_, err = fm.CreateEnhancedBackup(testFile, config)
-			if err != nil {
+			if _, err := fm.CreateEnhancedBackup(testFile, config); err != nil {
 				t.Fatalf("CreateEnhancedBackup failed: %v", err)
 			}
 		}
