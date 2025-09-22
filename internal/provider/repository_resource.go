@@ -189,6 +189,7 @@ func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequ
 			"url":         info.URL,
 			"local_path":  info.LocalPath,
 			"last_commit": info.LastCommit,
+			"last_update": data.LastUpdate.ValueString(),
 		})
 	} else {
 		// Handle local repository
@@ -206,33 +207,63 @@ func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequ
 
 		// Check if local repository is a Git repository and get commit info
 		localPath := data.SourcePath.ValueString()
-		if r.isGitRepository(localPath) {
+		
+		tflog.Debug(ctx, "Checking if repository is a Git repository", map[string]interface{}{
+			"local_path": localPath,
+		})
+		
+		isGitRepo := r.isGitRepository(localPath)
+		tflog.Debug(ctx, "Git repository detection result", map[string]interface{}{
+			"local_path": localPath,
+			"is_git":     isGitRepo,
+		})
+		
+		if isGitRepo {
+			tflog.Debug(ctx, "Creating Git manager for local repository", map[string]interface{}{
+				"local_path": localPath,
+			})
+			
 			gitManager, err := git.NewGitManager(nil) // No auth needed for local repos
 			if err == nil {
+				tflog.Debug(ctx, "Git manager created successfully, retrieving repository info", map[string]interface{}{
+					"local_path": localPath,
+				})
+				
 				info, err := gitManager.GetRepositoryInfo(localPath)
 				if err == nil {
 					data.LastCommit = types.StringValue(info.LastCommit)
-					tflog.Debug(ctx, "Retrieved Git info for local repository", map[string]interface{}{
+					tflog.Info(ctx, "Successfully retrieved Git info for local repository", map[string]interface{}{
 						"local_path":  localPath,
 						"last_commit": info.LastCommit,
 					})
 				} else {
-					tflog.Warn(ctx, "Failed to get Git info for local repository", map[string]interface{}{
-						"error": err.Error(),
+					tflog.Error(ctx, "Failed to get Git repository info", map[string]interface{}{
+						"error":      err.Error(),
+						"local_path": localPath,
 					})
-					// Set empty but valid commit for non-Git local repos
+					// Set empty but valid commit for repositories with Git issues
 					data.LastCommit = types.StringValue("")
 				}
 			} else {
+				tflog.Error(ctx, "Failed to create Git manager", map[string]interface{}{
+					"error":      err.Error(),
+					"local_path": localPath,
+				})
 				data.LastCommit = types.StringValue("")
 			}
 		} else {
+			tflog.Info(ctx, "Repository is not a Git repository, setting empty commit", map[string]interface{}{
+				"local_path": localPath,
+			})
 			// Not a Git repository, set empty but valid commit
 			data.LastCommit = types.StringValue("")
 		}
 
 		tflog.Info(ctx, "Local repository setup successfully", map[string]interface{}{
-			"source_path": sourcePath,
+			"source_path":  sourcePath,
+			"local_path":   data.LocalPath.ValueString(),
+			"last_commit":  data.LastCommit.ValueString(),
+			"last_update":  data.LastUpdate.ValueString(),
 		})
 	}
 
@@ -621,9 +652,14 @@ func (r *RepositoryResource) buildAuthConfig(data *RepositoryResourceModel) *git
 // isGitRepository checks if a local path contains a Git repository.
 func (r *RepositoryResource) isGitRepository(localPath string) bool {
 	gitDir := filepath.Join(localPath, ".git")
-	if stat, err := os.Stat(gitDir); err == nil {
-		// .git exists, check if it's a directory (normal repo) or file (worktree/submodule)
-		return stat.IsDir() || stat.Mode().IsRegular()
+	
+	stat, err := os.Stat(gitDir)
+	if err != nil {
+		// .git directory/file doesn't exist
+		return false
 	}
-	return false
+	
+	// .git exists, check if it's a directory (normal repo) or file (worktree/submodule)
+	isGitRepo := stat.IsDir() || stat.Mode().IsRegular()
+	return isGitRepo
 }
