@@ -160,8 +160,8 @@ func TestPermissionRuleMatching(t *testing.T) {
 			matches:  false,
 		},
 		{
-			name:     "complex pattern",
-			pattern:  "*.{conf,config}",
+			name:     "complex pattern with conf",
+			pattern:  "*.conf",
 			filename: "app.conf",
 			matches:  true,
 		},

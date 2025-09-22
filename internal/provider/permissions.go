@@ -139,6 +139,23 @@ func matchesPermissionPattern(pattern, filename string) bool {
 	return matched
 }
 
+// isMoreSpecific determines if pattern1 is more specific than pattern2 for the given filename
+func isMoreSpecific(pattern1, pattern2, filename string) bool {
+	// Count wildcards - fewer wildcards means more specific
+	wildcards1 := strings.Count(pattern1, "*") + strings.Count(pattern1, "?")
+	wildcards2 := strings.Count(pattern2, "*") + strings.Count(pattern2, "?")
+	
+	if wildcards1 != wildcards2 {
+		return wildcards1 < wildcards2
+	}
+	
+	// If same number of wildcards, prefer exact character matches
+	exactChars1 := len(pattern1) - wildcards1
+	exactChars2 := len(pattern2) - wildcards2
+	
+	return exactChars1 > exactChars2
+}
+
 // ApplyPermissionRules applies permission rules to a file based on patterns
 func ApplyPermissionRules(filename string, rules types.Map, defaultPerm string) (string, error) {
 	if rules.IsNull() || rules.IsUnknown() {
@@ -146,16 +163,28 @@ func ApplyPermissionRules(filename string, rules types.Map, defaultPerm string) 
 	}
 	
 	elements := rules.Elements()
+	bestMatch := ""
+	bestPerm := ""
+	
+	// Find the most specific pattern match
 	for pattern, permValue := range elements {
 		if strPerm, ok := permValue.(types.String); ok {
 			if matchesPermissionPattern(pattern, filename) {
-				// Validate the permission
-				if _, err := parsePermission(strPerm.ValueString()); err != nil {
-					return defaultPerm, fmt.Errorf("invalid permission in rule %s: %w", pattern, err)
+				// Prefer more specific patterns (patterns with more characters are generally more specific)
+				if bestMatch == "" || len(pattern) > len(bestMatch) || isMoreSpecific(pattern, bestMatch, filename) {
+					// Validate the permission
+					if _, err := parsePermission(strPerm.ValueString()); err != nil {
+						return defaultPerm, fmt.Errorf("invalid permission in rule %s: %w", pattern, err)
+					}
+					bestMatch = pattern
+					bestPerm = strPerm.ValueString()
 				}
-				return strPerm.ValueString(), nil
 			}
 		}
+	}
+	
+	if bestMatch != "" {
+		return bestPerm, nil
 	}
 	
 	return defaultPerm, nil
