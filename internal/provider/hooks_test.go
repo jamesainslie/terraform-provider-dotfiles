@@ -29,7 +29,7 @@ func TestExecutePostCommands(t *testing.T) {
 			types.StringValue("echo 'test command'"),
 		}
 		commands, _ := types.ListValue(types.StringType, commandValues)
-		
+
 		err := executePostCommands(ctx, commands, "test")
 		if err != nil {
 			t.Errorf("Simple command should succeed, got error: %v", err)
@@ -43,7 +43,7 @@ func TestExecutePostCommands(t *testing.T) {
 			types.StringValue("echo 'second command'"),
 		}
 		commands, _ := types.ListValue(types.StringType, commandValues)
-		
+
 		err := executePostCommands(ctx, commands, "test")
 		if err != nil {
 			t.Errorf("Multiple commands should succeed, got error: %v", err)
@@ -56,7 +56,7 @@ func TestExecutePostCommands(t *testing.T) {
 			types.StringValue("false"), // Command that always returns exit code 1
 		}
 		commands, _ := types.ListValue(types.StringType, commandValues)
-		
+
 		err := executePostCommands(ctx, commands, "test")
 		if err == nil {
 			t.Error("Expected error for failing command, but got none")
@@ -70,12 +70,12 @@ func TestExecutePostCommands(t *testing.T) {
 			types.StringValue("echo 'hook executed' > /tmp/test-hook-file"),
 		}
 		commands, _ := types.ListValue(types.StringType, commandValues)
-		
+
 		err := executePostCommands(ctx, commands, "test")
 		if err != nil {
 			t.Errorf("File operation commands should succeed, got error: %v", err)
 		}
-		
+
 		// Cleanup
 		cleanupCommands := []attr.Value{
 			types.StringValue("rm -f /tmp/test-hook-file"),

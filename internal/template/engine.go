@@ -39,12 +39,12 @@ func NewGoTemplateEngine() (*GoTemplateEngine, error) {
 func NewGoTemplateEngineWithFunctions(customFunctions map[string]interface{}) (*GoTemplateEngine, error) {
 	// Start with default functions from getDefaultTemplateFunctions
 	allFunctions := getDefaultTemplateFunctions()
-	
+
 	// Add custom functions
 	for name, fn := range customFunctions {
 		allFunctions[name] = fn
 	}
-	
+
 	engine := &GoTemplateEngine{
 		functions: allFunctions,
 	}

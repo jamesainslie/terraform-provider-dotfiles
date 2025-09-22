@@ -155,10 +155,8 @@ func (fm *FileManager) generateNumberedBackupName(fileName, backupDir string) st
 		maxNumber := 0
 		for _, path := range existing {
 			base := filepath.Base(path)
-			// Remove .gz extension if present for parsing
-			if strings.HasSuffix(base, ".gz") {
-				base = strings.TrimSuffix(base, ".gz")
-			}
+			// Remove .gz extension if present for parsing (safe unconditionally)
+			base = strings.TrimSuffix(base, ".gz")
 
 			parts := strings.Split(base, ".")
 			if len(parts) >= 3 {
@@ -261,7 +259,7 @@ func (fm *FileManager) updateBackupIndex(originalPath, backupPath string, config
 	}
 
 	if _, err := os.Stat(indexPath); err == nil {
-		if loadedIndex, err := LoadBackupIndex(indexPath); err == nil {
+		if loadedIndex, loadErr := LoadBackupIndex(indexPath); loadErr == nil {
 			index = loadedIndex
 		}
 	}
@@ -302,9 +300,10 @@ func (fm *FileManager) shouldSkipIncrementalBackup(filePath string, config *Enha
 	}
 
 	// Load index
-	index, err := LoadBackupIndex(indexPath)
-	if err != nil {
-		return false, nil // Can't load index, create backup to be safe
+	index, loadErr := LoadBackupIndex(indexPath)
+	if loadErr != nil {
+		// Treat as empty index and proceed to create a backup.
+		index = &BackupIndex{LastUpdated: time.Now(), Backups: nil}
 	}
 
 	// Calculate current file checksum
@@ -374,7 +373,7 @@ func (fm *FileManager) applyRetentionPolicy(originalPath string, config *Enhance
 		// Remove associated metadata file if it exists
 		metadataPath := backupPath + ".meta"
 		if _, err := os.Stat(metadataPath); err == nil {
-			os.Remove(metadataPath)
+			_ = os.Remove(metadataPath)
 		}
 	}
 

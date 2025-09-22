@@ -16,11 +16,7 @@ import (
 // TestApplicationDetectionEndToEnd tests the complete application detection workflow
 func TestApplicationDetectionEndToEnd(t *testing.T) {
 	// Create temporary directories
-	tempDir, err := os.MkdirTemp("", "app-detection-e2e-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	sourceDir := filepath.Join(tempDir, "dotfiles")
 	backupDir := filepath.Join(tempDir, "backups")

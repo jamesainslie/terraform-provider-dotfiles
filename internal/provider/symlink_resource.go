@@ -99,13 +99,13 @@ func (r *SymlinkResource) Schema(ctx context.Context, req resource.SchemaRequest
 			MarkdownDescription: "Last modification timestamp of the symlink",
 		},
 	}
-	
+
 	// Add post-hooks attributes
 	postHooksAttrs := GetPostHooksAttributes()
 	for key, attr := range postHooksAttrs {
 		baseAttributes[key] = attr
 	}
-	
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages symbolic links to dotfiles with comprehensive permission management",
 		Attributes:          baseAttributes,

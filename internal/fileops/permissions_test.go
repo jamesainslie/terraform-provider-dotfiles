@@ -64,7 +64,7 @@ func TestPermissionConfig(t *testing.T) {
 				expectError: true,
 			},
 		}
-		
+
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				err := ValidatePermissionConfig(tc.config)
@@ -121,7 +121,7 @@ func TestParsePermissionString(t *testing.T) {
 			expectError: true,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := parsePermissionString(tc.input)
@@ -179,7 +179,7 @@ func TestMatchPattern(t *testing.T) {
 			expected: true,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := matchPattern(tc.pattern, tc.filename)
@@ -193,16 +193,12 @@ func TestMatchPattern(t *testing.T) {
 
 func TestFileManagerPermissions(t *testing.T) {
 	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "fileops-permissions-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-	
+	tempDir := t.TempDir()
+
 	// Create a file manager with a real platform provider
 	platformProvider := platform.DetectPlatform()
 	fm := NewFileManager(platformProvider, false)
-	
+
 	t.Run("ApplyFilePermissions", func(t *testing.T) {
 		// Create a test file
 		testFile := filepath.Join(tempDir, "test.txt")
@@ -210,28 +206,28 @@ func TestFileManagerPermissions(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
-		
+
 		config := &PermissionConfig{
 			FileMode: "0600",
 		}
-		
+
 		err = fm.ApplyPermissions(testFile, config)
 		if err != nil {
 			t.Fatalf("Failed to apply permissions: %v", err)
 		}
-		
+
 		// Check that permissions were applied
 		info, err := os.Stat(testFile)
 		if err != nil {
 			t.Fatalf("Failed to stat file: %v", err)
 		}
-		
+
 		expectedMode := os.FileMode(0600)
 		if info.Mode().Perm() != expectedMode {
 			t.Errorf("Expected permission %o, got %o", expectedMode, info.Mode().Perm())
 		}
 	})
-	
+
 	t.Run("ApplyDirectoryPermissions", func(t *testing.T) {
 		// Create a test directory
 		testDir := filepath.Join(tempDir, "testdir")
@@ -239,36 +235,36 @@ func TestFileManagerPermissions(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create test directory: %v", err)
 		}
-		
+
 		config := &PermissionConfig{
 			DirectoryMode: "0700",
 		}
-		
+
 		err = fm.ApplyPermissions(testDir, config)
 		if err != nil {
 			t.Fatalf("Failed to apply permissions: %v", err)
 		}
-		
+
 		// Check that permissions were applied
 		info, err := os.Stat(testDir)
 		if err != nil {
 			t.Fatalf("Failed to stat directory: %v", err)
 		}
-		
+
 		expectedMode := os.FileMode(0700)
 		if info.Mode().Perm() != expectedMode {
 			t.Errorf("Expected permission %o, got %o", expectedMode, info.Mode().Perm())
 		}
 	})
-	
+
 	t.Run("ApplyPermissionsWithRules", func(t *testing.T) {
 		// Create test files with different patterns
 		testFiles := map[string]string{
-			"id_rsa":       "0600", // Should match id_* rule
-			"id_rsa.pub":   "0644", // Should match *.pub rule
-			"config.fish":  "0644", // Should use default
+			"id_rsa":      "0600", // Should match id_* rule
+			"id_rsa.pub":  "0644", // Should match *.pub rule
+			"config.fish": "0644", // Should use default
 		}
-		
+
 		for filename := range testFiles {
 			testFile := filepath.Join(tempDir, filename)
 			err := os.WriteFile(testFile, []byte("test"), 0666)
@@ -276,7 +272,7 @@ func TestFileManagerPermissions(t *testing.T) {
 				t.Fatalf("Failed to create test file %s: %v", filename, err)
 			}
 		}
-		
+
 		config := &PermissionConfig{
 			FileMode: "0644", // default
 			Rules: map[string]string{
@@ -284,20 +280,20 @@ func TestFileManagerPermissions(t *testing.T) {
 				"*.pub": "0644",
 			},
 		}
-		
+
 		for filename, expectedPerm := range testFiles {
 			testFile := filepath.Join(tempDir, filename)
 			err = fm.ApplyPermissions(testFile, config)
 			if err != nil {
 				t.Fatalf("Failed to apply permissions to %s: %v", filename, err)
 			}
-			
+
 			// Check permissions
 			info, err := os.Stat(testFile)
 			if err != nil {
 				t.Fatalf("Failed to stat file %s: %v", filename, err)
 			}
-			
+
 			expectedMode, _ := parsePermissionString(expectedPerm)
 			if info.Mode().Perm() != expectedMode {
 				t.Errorf("File %s: expected permission %o, got %o",
@@ -310,13 +306,13 @@ func TestFileManagerPermissions(t *testing.T) {
 func TestDryRun(t *testing.T) {
 	platformProvider := platform.DetectPlatform()
 	fm := NewFileManager(platformProvider, true)
-	
+
 	config := &PermissionConfig{
 		DirectoryMode: "0700",
 		FileMode:      "0644",
 		Recursive:     true,
 	}
-	
+
 	// This should not fail even with invalid path in dry run mode
 	err := fm.ApplyPermissions("/nonexistent/path", config)
 	if err != nil {

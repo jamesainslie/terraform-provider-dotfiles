@@ -19,11 +19,7 @@ import (
 // TestApplicationDetectionMethods tests the application detection functionality
 func TestApplicationDetectionMethods(t *testing.T) {
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "app-detection-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create a mock application structure
 	mockAppPath := filepath.Join(tempDir, "TestApp.app")
@@ -166,11 +162,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 
 // TestApplicationDetectionIntegration tests complete application detection workflow
 func TestApplicationDetectionIntegration(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "app-detection-integration-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test client
 	config := &DotfilesConfig{

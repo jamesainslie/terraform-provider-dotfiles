@@ -89,11 +89,11 @@ Editor: vim`
 func TestCustomTemplateFunctions(t *testing.T) {
 	t.Run("Go template engine with custom functions", func(t *testing.T) {
 		customFunctions := map[string]interface{}{
-			"homebrewPrefix": func() string { 
-				return "/opt/homebrew" 
+			"homebrewPrefix": func() string {
+				return "/opt/homebrew"
 			},
-			"configPath": func(app string) string { 
-				return "~/.config/" + app 
+			"configPath": func(app string) string {
+				return "~/.config/" + app
 			},
 			"camelCase": func(s string) string {
 				parts := strings.Split(s, "_")
@@ -172,13 +172,13 @@ func TestPlatformAwareTemplateContext(t *testing.T) {
 	platformVars := map[string]map[string]interface{}{
 		"macos": {
 			"credential_helper": "osxkeychain",
-			"diff_tool":        "opendiff",
-			"homebrew_path":    "/opt/homebrew",
+			"diff_tool":         "opendiff",
+			"homebrew_path":     "/opt/homebrew",
 		},
 		"linux": {
 			"credential_helper": "cache",
-			"diff_tool":        "vimdiff",
-			"homebrew_path":    "/home/linuxbrew/.linuxbrew",
+			"diff_tool":         "vimdiff",
+			"homebrew_path":     "/home/linuxbrew/.linuxbrew",
 		},
 	}
 
@@ -271,15 +271,15 @@ func TestTemplateFileProcessing(t *testing.T) {
 			"platform": "macos",
 		}
 		userVars := map[string]interface{}{
-			"user_name":    "Test User",
-			"user_email":   "test@example.com",
-			"editor":       "vim",
-			"signing_key":  "ABC123",
+			"user_name":   "Test User",
+			"user_email":  "test@example.com",
+			"editor":      "vim",
+			"signing_key": "ABC123",
 		}
 		platformVars := map[string]map[string]interface{}{
 			"macos": {
 				"credential_helper": "osxkeychain",
-				"diff_tool":        "opendiff",
+				"diff_tool":         "opendiff",
 			},
 		}
 

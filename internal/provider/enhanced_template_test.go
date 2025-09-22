@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	
+
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
 )
 
@@ -21,26 +21,26 @@ func TestEnhancedTemplateSchema(t *testing.T) {
 	t.Run("FileResource should support enhanced template features", func(t *testing.T) {
 		r := NewFileResource()
 		ctx := context.Background()
-		
+
 		req := resource.SchemaRequest{}
 		resp := &resource.SchemaResponse{}
-		
+
 		r.Schema(ctx, req, resp)
-		
+
 		if resp.Diagnostics.HasError() {
 			t.Fatalf("Schema validation failed: %v", resp.Diagnostics)
 		}
-		
+
 		// Check for template_engine attribute
 		if _, exists := resp.Schema.Attributes["template_engine"]; !exists {
 			t.Error("template_engine attribute should be defined in file resource schema")
 		}
-		
+
 		// Check for platform_template_vars attribute
 		if _, exists := resp.Schema.Attributes["platform_template_vars"]; !exists {
 			t.Error("platform_template_vars attribute should be defined in file resource schema")
 		}
-		
+
 		// Check for template_functions attribute
 		if _, exists := resp.Schema.Attributes["template_functions"]; !exists {
 			t.Error("template_functions attribute should be defined in file resource schema")
@@ -55,12 +55,12 @@ func TestEnhancedTemplateModel(t *testing.T) {
 		EnhancedFileResourceModelWithBackup: EnhancedFileResourceModelWithBackup{
 			EnhancedFileResourceModel: EnhancedFileResourceModel{
 				FileResourceModel: FileResourceModel{
-					ID:          types.StringValue("test-template"),
-					Repository:  types.StringValue("test-repo"),
-					Name:        types.StringValue("git-config"),
-					SourcePath:  types.StringValue("git/gitconfig.template"),
-					TargetPath:  types.StringValue("~/.gitconfig"),
-					IsTemplate:  types.BoolValue(true),
+					ID:         types.StringValue("test-template"),
+					Repository: types.StringValue("test-repo"),
+					Name:       types.StringValue("git-config"),
+					SourcePath: types.StringValue("git/gitconfig.template"),
+					TargetPath: types.StringValue("~/.gitconfig"),
+					IsTemplate: types.BoolValue(true),
 					TemplateVars: func() types.Map {
 						vars := map[string]attr.Value{
 							"user_name":  types.StringValue("Test User"),
@@ -79,11 +79,11 @@ func TestEnhancedTemplateModel(t *testing.T) {
 				"macos": func() types.Object {
 					attrs := map[string]attr.Value{
 						"credential_helper": types.StringValue("osxkeychain"),
-						"diff_tool":        types.StringValue("opendiff"),
+						"diff_tool":         types.StringValue("opendiff"),
 					}
 					objType := map[string]attr.Type{
 						"credential_helper": types.StringType,
-						"diff_tool":        types.StringType,
+						"diff_tool":         types.StringType,
 					}
 					objVal, _ := types.ObjectValue(objType, attrs)
 					return objVal
@@ -91,11 +91,11 @@ func TestEnhancedTemplateModel(t *testing.T) {
 				"linux": func() types.Object {
 					attrs := map[string]attr.Value{
 						"credential_helper": types.StringValue("cache"),
-						"diff_tool":        types.StringValue("vimdiff"),
+						"diff_tool":         types.StringValue("vimdiff"),
 					}
 					objType := map[string]attr.Type{
 						"credential_helper": types.StringType,
-						"diff_tool":        types.StringType,
+						"diff_tool":         types.StringType,
 					}
 					objVal, _ := types.ObjectValue(objType, attrs)
 					return objVal
@@ -105,9 +105,9 @@ func TestEnhancedTemplateModel(t *testing.T) {
 				types.ObjectType{
 					AttrTypes: map[string]attr.Type{
 						"credential_helper": types.StringType,
-						"diff_tool":        types.StringType,
+						"diff_tool":         types.StringType,
 					},
-				}, 
+				},
 				platformVars,
 			)
 			return mapVal
@@ -138,7 +138,7 @@ func TestEnhancedTemplateModel(t *testing.T) {
 	if len(platformVars) != 2 {
 		t.Errorf("Expected 2 platform configurations, got %d", len(platformVars))
 	}
-	
+
 	// Verify template functions
 	templateFuncs := model.TemplateFunctions.Elements()
 	if len(templateFuncs) != 2 {
@@ -149,10 +149,10 @@ func TestEnhancedTemplateModel(t *testing.T) {
 // TestTemplateEngineSelection tests template engine selection functionality
 func TestTemplateEngineSelection(t *testing.T) {
 	testCases := []struct {
-		name           string
-		engine         string
-		expectError    bool
-		expectedType   string
+		name         string
+		engine       string
+		expectError  bool
+		expectedType string
 	}{
 		{
 			name:         "Go template engine",
@@ -167,7 +167,7 @@ func TestTemplateEngineSelection(t *testing.T) {
 			expectedType: "*template.HandlebarsTemplateEngine",
 		},
 		{
-			name:         "Mustache template engine", 
+			name:         "Mustache template engine",
 			engine:       "mustache",
 			expectError:  false,
 			expectedType: "*template.MustacheTemplateEngine",
@@ -209,18 +209,18 @@ func TestPlatformSpecificTemplateVars(t *testing.T) {
 	platformVars := map[string]map[string]interface{}{
 		"macos": {
 			"credential_helper": "osxkeychain",
-			"diff_tool":        "opendiff",
-			"homebrew_path":    "/opt/homebrew",
+			"diff_tool":         "opendiff",
+			"homebrew_path":     "/opt/homebrew",
 		},
 		"linux": {
 			"credential_helper": "cache",
-			"diff_tool":        "vimdiff", 
-			"homebrew_path":    "/home/linuxbrew/.linuxbrew",
+			"diff_tool":         "vimdiff",
+			"homebrew_path":     "/home/linuxbrew/.linuxbrew",
 		},
 		"windows": {
 			"credential_helper": "manager",
-			"diff_tool":        "vimdiff",
-			"homebrew_path":    "",
+			"diff_tool":         "vimdiff",
+			"homebrew_path":     "",
 		},
 	}
 
@@ -238,7 +238,7 @@ func TestPlatformSpecificTemplateVars(t *testing.T) {
 		},
 		{
 			name:             "Linux platform",
-			currentPlatform:  "linux", 
+			currentPlatform:  "linux",
 			expectedHelper:   "cache",
 			expectedDiffTool: "vimdiff",
 		},
@@ -260,11 +260,11 @@ func TestPlatformSpecificTemplateVars(t *testing.T) {
 
 			// Verify platform-specific variables are included
 			if context["credential_helper"] != tc.expectedHelper {
-				t.Errorf("Expected credential_helper %s, got %v", 
+				t.Errorf("Expected credential_helper %s, got %v",
 					tc.expectedHelper, context["credential_helper"])
 			}
 			if context["diff_tool"] != tc.expectedDiffTool {
-				t.Errorf("Expected diff_tool %s, got %v", 
+				t.Errorf("Expected diff_tool %s, got %v",
 					tc.expectedDiffTool, context["diff_tool"])
 			}
 		})
@@ -324,15 +324,15 @@ func CreateTemplateEngine(engineType string) (template.TemplateEngine, error) {
 func BuildPlatformAwareTemplateContext(systemInfo, userVars, contextVars map[string]interface{}) map[string]interface{} {
 	// This function should be implemented
 	context := make(map[string]interface{})
-	
+
 	// Add user vars
 	for k, v := range userVars {
 		context[k] = v
 	}
-	
+
 	// Add system info
 	context["system"] = systemInfo
-	
+
 	// Add platform-specific vars based on current platform
 	if platform, ok := systemInfo["platform"].(string); ok {
 		if platformVarsInterface, exists := contextVars["platform_vars"]; exists {
@@ -345,7 +345,7 @@ func BuildPlatformAwareTemplateContext(systemInfo, userVars, contextVars map[str
 			}
 		}
 	}
-	
+
 	return context
 }
 
@@ -367,7 +367,7 @@ func toCamelCase(s string) string {
 	if len(parts) == 0 {
 		return s
 	}
-	
+
 	result := parts[0]
 	for i := 1; i < len(parts); i++ {
 		if len(parts[i]) > 0 {

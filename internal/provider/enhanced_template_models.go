@@ -18,7 +18,7 @@ type EnhancedFileResourceModelWithTemplate struct {
 	TemplateFunctions    types.Map    `tfsdk:"template_functions"`
 }
 
-// EnhancedSymlinkResourceModelWithTemplate extends EnhancedSymlinkResourceModelWithBackup with template features  
+// EnhancedSymlinkResourceModelWithTemplate extends EnhancedSymlinkResourceModelWithBackup with template features
 type EnhancedSymlinkResourceModelWithTemplate struct {
 	EnhancedSymlinkResourceModelWithBackup
 	TemplateEngine       types.String `tfsdk:"template_engine"`
@@ -32,7 +32,7 @@ type EnhancedFileResourceModelWithApplicationDetection struct {
 	RequireApplication    types.String `tfsdk:"require_application"`
 	ApplicationVersionMin types.String `tfsdk:"application_version_min"`
 	ApplicationVersionMax types.String `tfsdk:"application_version_max"`
-	SkipIfAppMissing     types.Bool   `tfsdk:"skip_if_app_missing"`
+	SkipIfAppMissing      types.Bool   `tfsdk:"skip_if_app_missing"`
 }
 
 // ApplicationDetectionConfig represents application detection configuration
@@ -57,10 +57,10 @@ func GetEnhancedTemplateAttributes() map[string]schema.Attribute {
 			ElementType: types.ObjectType{
 				AttrTypes: map[string]attr.Type{
 					"credential_helper": types.StringType,
-					"diff_tool":        types.StringType,
-					"homebrew_path":    types.StringType,
-					"config_dir":       types.StringType,
-					"shell":           types.StringType,
+					"diff_tool":         types.StringType,
+					"homebrew_path":     types.StringType,
+					"config_dir":        types.StringType,
+					"shell":             types.StringType,
 				},
 			},
 			MarkdownDescription: "Platform-specific template variables (macos, linux, windows)",

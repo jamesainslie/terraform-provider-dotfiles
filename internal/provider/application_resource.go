@@ -175,10 +175,6 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 				MarkdownDescription: "Result of the last detection attempt",
 			},
 		},
-		Blocks: map[string]schema.Block{
-			"detection_methods": GetDetectionMethodsSchemaBlock(),
-			"config_mappings":   GetConfigMappingsSchemaBlock(),
-		},
 	}
 }
 
@@ -404,8 +400,7 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 	cmd := fmt.Sprintf("command -v %s", appName)
 
 	// Execute command using the same shell execution logic as hooks
-	err := executeShellCommand(ctx, cmd)
-	if err != nil {
+	if executeShellCommand(ctx, cmd) != nil {
 		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 
@@ -419,6 +414,11 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 
 // detectByFile detects application by checking file/directory existence
 func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, platformProvider platform.PlatformProvider) (*ApplicationDetectionResult, error) {
+	// Use context for structured logging and to avoid unused parameter warnings
+	tflog.Debug(ctx, "detectByFile invoked", map[string]interface{}{
+		"application": appName,
+		"platform":    platformProvider.GetPlatform(),
+	})
 	// Define common application installation paths by platform
 	var searchPaths []string
 
@@ -482,8 +482,7 @@ func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, 
 func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName string) (*ApplicationDetectionResult, error) {
 	cmd := fmt.Sprintf("brew list --cask | grep -q '^%s$'", appName)
 
-	err := executeShellCommand(ctx, cmd)
-	if err != nil {
+	if executeShellCommand(ctx, cmd) != nil {
 		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 
@@ -523,8 +522,7 @@ func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appNam
 		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 
-	err := executeShellCommand(ctx, cmd)
-	if err != nil {
+	if executeShellCommand(ctx, cmd) != nil {
 		return &ApplicationDetectionResult{Installed: false}, nil
 	}
 

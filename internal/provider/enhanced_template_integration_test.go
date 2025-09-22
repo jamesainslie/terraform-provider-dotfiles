@@ -18,24 +18,18 @@ import (
 // TestEnhancedTemplateIntegration tests the complete enhanced template workflow
 func TestEnhancedTemplateIntegration(t *testing.T) {
 	// Create temporary directories
-	tempDir, err := os.MkdirTemp("", "enhanced-template-integration-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
-	
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create source directory: %v", err)
-	}
-	
-	err = os.MkdirAll(targetDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create target directory: %v", err)
-	}
+
+    if err := os.MkdirAll(sourceDir, 0755); err != nil {
+        t.Fatalf("Failed to create source directory: %v", err)
+    }
+    
+    if err := os.MkdirAll(targetDir, 0755); err != nil {
+        t.Fatalf("Failed to create target directory: %v", err)
+    }
 
 	t.Run("Enhanced template with platform-specific variables", func(t *testing.T) {
 		// Create template file with platform-specific content
@@ -72,10 +66,10 @@ func TestEnhancedTemplateIntegration(t *testing.T) {
 						IsTemplate: types.BoolValue(true),
 						TemplateVars: func() types.Map {
 							vars := map[string]attr.Value{
-								"user_name":    types.StringValue("Test User"),
-								"user_email":   types.StringValue("test@example.com"),
-								"editor":       types.StringValue("vim"),
-								"signing_key":  types.StringValue("ABC123DEF"),
+								"user_name":   types.StringValue("Test User"),
+								"user_email":  types.StringValue("test@example.com"),
+								"editor":      types.StringValue("vim"),
+								"signing_key": types.StringValue("ABC123DEF"),
 							}
 							mapVal, _ := types.MapValue(types.StringType, vars)
 							return mapVal
@@ -89,13 +83,13 @@ func TestEnhancedTemplateIntegration(t *testing.T) {
 					"macos": func() types.Object {
 						attrs := map[string]attr.Value{
 							"credential_helper": types.StringValue("osxkeychain"),
-							"diff_tool":        types.StringValue("opendiff"),
-							"homebrew_path":    types.StringValue("/opt/homebrew"),
+							"diff_tool":         types.StringValue("opendiff"),
+							"homebrew_path":     types.StringValue("/opt/homebrew"),
 						}
 						objType := map[string]attr.Type{
 							"credential_helper": types.StringType,
-							"diff_tool":        types.StringType,
-							"homebrew_path":    types.StringType,
+							"diff_tool":         types.StringType,
+							"homebrew_path":     types.StringType,
 						}
 						objVal, _ := types.ObjectValue(objType, attrs)
 						return objVal
@@ -103,13 +97,13 @@ func TestEnhancedTemplateIntegration(t *testing.T) {
 					"linux": func() types.Object {
 						attrs := map[string]attr.Value{
 							"credential_helper": types.StringValue("cache"),
-							"diff_tool":        types.StringValue("vimdiff"),
-							"homebrew_path":    types.StringValue("/home/linuxbrew/.linuxbrew"),
+							"diff_tool":         types.StringValue("vimdiff"),
+							"homebrew_path":     types.StringValue("/home/linuxbrew/.linuxbrew"),
 						}
 						objType := map[string]attr.Type{
 							"credential_helper": types.StringType,
-							"diff_tool":        types.StringType,
-							"homebrew_path":    types.StringType,
+							"diff_tool":         types.StringType,
+							"homebrew_path":     types.StringType,
 						}
 						objVal, _ := types.ObjectValue(objType, attrs)
 						return objVal
@@ -119,8 +113,8 @@ func TestEnhancedTemplateIntegration(t *testing.T) {
 					types.ObjectType{
 						AttrTypes: map[string]attr.Type{
 							"credential_helper": types.StringType,
-							"diff_tool":        types.StringType,
-							"homebrew_path":    types.StringType,
+							"diff_tool":         types.StringType,
+							"homebrew_path":     types.StringType,
 						},
 					},
 					platformVars,
@@ -175,7 +169,7 @@ func TestEnhancedTemplateIntegration(t *testing.T) {
 	t.Run("Template processing with different engines", func(t *testing.T) {
 		// Test different template engines
 		engines := []string{"go", "handlebars", "mustache"}
-		
+
 		for _, engineType := range engines {
 			t.Run("Engine: "+engineType, func(t *testing.T) {
 				// Create simple template file
@@ -281,11 +275,7 @@ Camel: {{camelCase "hello_world"}}`
 
 // TestTemplateEngineCompatibility tests backward compatibility with existing template functionality
 func TestTemplateEngineCompatibility(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "template-compatibility-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	t.Run("Legacy template processing still works", func(t *testing.T) {
 		// Test that existing FileResourceModel still works
@@ -393,19 +383,14 @@ func TestTemplateEngineCompatibility(t *testing.T) {
 
 // TestTemplateProcessingEndToEnd tests complete template processing workflow
 func TestTemplateProcessingEndToEnd(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "template-e2e-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	sourceDir := filepath.Join(tempDir, "templates")
 	targetDir := filepath.Join(tempDir, "output")
-	
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create source directory: %v", err)
-	}
+
+    if err := os.MkdirAll(sourceDir, 0755); err != nil {
+        t.Fatalf("Failed to create source directory: %v", err)
+    }
 
 	t.Run("Complete template workflow with all features", func(t *testing.T) {
 		// Create comprehensive template
@@ -459,7 +444,7 @@ Title case: {{title .user_name}}`
 			platformVars := map[string]map[string]interface{}{
 				"macos": {
 					"credential_helper": "osxkeychain",
-					"diff_tool":        "opendiff",
+					"diff_tool":         "opendiff",
 				},
 			}
 
@@ -486,7 +471,7 @@ Title case: {{title .user_name}}`
 			}
 
 			processedContent := string(content)
-			
+
 			// Check user variables
 			if !strings.Contains(processedContent, "Test User") {
 				t.Error("Should contain user name")
@@ -494,7 +479,7 @@ Title case: {{title .user_name}}`
 			if !strings.Contains(processedContent, "test@example.com") {
 				t.Error("Should contain user email")
 			}
-			
+
 			// Check platform-specific content
 			if !strings.Contains(processedContent, "osxkeychain") {
 				t.Error("Should contain macOS credential helper")
@@ -502,7 +487,7 @@ Title case: {{title .user_name}}`
 			if !strings.Contains(processedContent, "opendiff") {
 				t.Error("Should contain macOS diff tool")
 			}
-			
+
 			// Check custom functions
 			if !strings.Contains(processedContent, "~/.config/git") {
 				t.Error("Should contain processed configPath function")
@@ -513,12 +498,12 @@ Title case: {{title .user_name}}`
 			if !strings.Contains(processedContent, "Test User") {
 				t.Error("Should contain title case processed name")
 			}
-			
+
 			// Check conditional content (macOS section should be included)
 			if !strings.Contains(processedContent, "# macOS-specific configuration") {
 				t.Error("Should contain macOS-specific section")
 			}
-			
+
 			// Check that Linux section is not included
 			if strings.Contains(processedContent, "# Linux-specific configuration") {
 				t.Error("Should not contain Linux-specific section on macOS")
@@ -541,7 +526,7 @@ Title case: {{title .user_name}}`
 			platformVars := map[string]map[string]interface{}{
 				"linux": {
 					"credential_helper": "cache",
-					"diff_tool":        "vimdiff",
+					"diff_tool":         "vimdiff",
 				},
 			}
 
@@ -568,7 +553,7 @@ Title case: {{title .user_name}}`
 			}
 
 			processedContent := string(content)
-			
+
 			// Check platform-specific content
 			if !strings.Contains(processedContent, "cache") {
 				t.Error("Should contain Linux credential helper")
@@ -576,12 +561,12 @@ Title case: {{title .user_name}}`
 			if !strings.Contains(processedContent, "vimdiff") {
 				t.Error("Should contain Linux diff tool")
 			}
-			
+
 			// Check conditional content (Linux section should be included)
 			if !strings.Contains(processedContent, "# Linux-specific configuration") {
 				t.Error("Should contain Linux-specific section")
 			}
-			
+
 			// Check that macOS section is not included
 			if strings.Contains(processedContent, "# macOS-specific configuration") {
 				t.Error("Should not contain macOS-specific section on Linux")

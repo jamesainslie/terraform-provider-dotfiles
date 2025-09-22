@@ -17,11 +17,7 @@ import (
 // TestApplicationDetectionFullWorkflow tests a complete real-world application detection scenario
 func TestApplicationDetectionFullWorkflow(t *testing.T) {
 	// Create temporary directories
-	tempDir, err := os.MkdirTemp("", "app-detection-full-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	sourceDir := filepath.Join(tempDir, "dotfiles")
 	targetDir := filepath.Join(tempDir, "target")
@@ -90,7 +86,7 @@ set -gx EDITOR {{.editor}}
 
 	t.Run("Git configuration with application detection", func(t *testing.T) {
 		ctx := context.Background()
-		
+
 		// Test conditional Git configuration that only applies if Git is installed
 		fileModel := &EnhancedFileResourceModelWithApplicationDetection{
 			EnhancedFileResourceModelWithTemplate: EnhancedFileResourceModelWithTemplate{
@@ -154,7 +150,7 @@ set -gx EDITOR {{.editor}}
 
 	t.Run("Cursor configuration with strict detection", func(t *testing.T) {
 		ctx := context.Background()
-		
+
 		// Test application that likely won't be installed - should skip
 		fileModel := &EnhancedFileResourceModelWithApplicationDetection{
 			EnhancedFileResourceModelWithTemplate: EnhancedFileResourceModelWithTemplate{
@@ -198,7 +194,7 @@ set -gx EDITOR {{.editor}}
 
 	t.Run("Fish shell configuration with detection", func(t *testing.T) {
 		ctx := context.Background()
-		
+
 		// Test shell configuration that requires Fish shell
 		fileModel := &EnhancedFileResourceModelWithApplicationDetection{
 			EnhancedFileResourceModelWithTemplate: EnhancedFileResourceModelWithTemplate{
@@ -416,11 +412,7 @@ func TestApplicationDetectionFeatureCompleteness(t *testing.T) {
 
 // TestApplicationDetectionRealWorldScenarios tests scenarios that mirror actual usage
 func TestApplicationDetectionRealWorldScenarios(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "app-detection-real-world-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	config := &DotfilesConfig{
 		DotfilesRoot:       tempDir,

@@ -19,11 +19,7 @@ import (
 // TestEnhancedBackupIntegration tests enhanced backup with file operations
 func TestEnhancedBackupIntegration(t *testing.T) {
 	// Create temporary directories for testing
-	tempDir, err := os.MkdirTemp("", "enhanced-backup-integration-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create source and target directories
 	sourceDir := filepath.Join(tempDir, "source")
@@ -287,11 +283,7 @@ func pathExists(path string) bool {
 // TestRecoveryAndValidation tests backup recovery and validation features
 func TestRecoveryAndValidation(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "recovery-validation-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
@@ -372,11 +364,7 @@ func TestRecoveryAndValidation(t *testing.T) {
 
 // TestBackupFormatSupport tests different backup format implementations
 func TestBackupFormatSupport(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "backup-format-support-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	testFile := filepath.Join(tempDir, "format-test.txt")
 	err = os.WriteFile(testFile, []byte("format test content"), 0644)

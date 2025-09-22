@@ -81,11 +81,7 @@ func TestEnhancedBackupConfiguration(t *testing.T) {
 
 // TestBackupFormats tests different backup naming formats
 func TestBackupFormats(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "backup-formats-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
@@ -156,11 +152,7 @@ func TestBackupFormats(t *testing.T) {
 
 // TestBackupCompression tests backup compression functionality
 func TestBackupCompression(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "backup-compression-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file with some content
 	testContent := strings.Repeat("This is test content for compression testing. ", 100)
@@ -249,11 +241,7 @@ func TestBackupCompression(t *testing.T) {
 
 // TestBackupRetention tests backup retention management
 func TestBackupRetention(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "backup-retention-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "config.txt")
@@ -320,11 +308,7 @@ func TestBackupRetention(t *testing.T) {
 
 // TestBackupMetadata tests backup metadata storage and retrieval
 func TestBackupMetadata(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "backup-metadata-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
@@ -410,11 +394,7 @@ func TestBackupMetadata(t *testing.T) {
 
 // TestIncrementalBackup tests incremental backup functionality
 func TestIncrementalBackup(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "incremental-backup-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "config.txt")

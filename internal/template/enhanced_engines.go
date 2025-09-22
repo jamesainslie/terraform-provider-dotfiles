@@ -49,7 +49,7 @@ func (e *HandlebarsTemplateEngine) ProcessTemplate(templateContent string, conte
 	// {{#if}} -> {{if}}
 	// {{/if}} -> {{end}}
 	converted := convertHandlebarsToGo(templateContent)
-	
+
 	// Create Go template with functions
 	tmpl, err := template.New("handlebars").Funcs(e.functions).Parse(converted)
 	if err != nil {
@@ -119,7 +119,7 @@ func (e *MustacheTemplateEngine) ProcessTemplate(templateContent string, context
 	// {{#section}} -> {{with .section}}
 	// {{/section}} -> {{end}}
 	converted := convertMustacheToGo(templateContent)
-	
+
 	// Create Go template with functions
 	tmpl, err := template.New("mustache").Funcs(e.functions).Parse(converted)
 	if err != nil {
@@ -189,7 +189,7 @@ func convertHandlebarsToGo(content string) string {
 	// Simple conversion for basic compatibility
 	// This is a simplified implementation - a full implementation would need a proper parser
 	result := content
-	
+
 	// Convert {{var}} to {{.var}} if not already prefixed with dot
 	// This is a basic regex-like replacement for demo purposes
 	lines := strings.Split(result, "\n")
@@ -205,7 +205,7 @@ func convertHandlebarsToGo(content string) string {
 		}
 		lines[i] = line
 	}
-	
+
 	return strings.Join(lines, "\n")
 }
 
@@ -214,7 +214,7 @@ func convertMustacheToGo(content string) string {
 	// Simple conversion for basic compatibility
 	// Convert {{var}} to {{.var}} and handle basic logic
 	result := content
-	
+
 	// Similar to Handlebars but with Mustache-specific logic
 	lines := strings.Split(result, "\n")
 	for i, line := range lines {
@@ -226,7 +226,7 @@ func convertMustacheToGo(content string) string {
 		}
 		lines[i] = line
 	}
-	
+
 	return strings.Join(lines, "\n")
 }
 
@@ -263,15 +263,15 @@ func CreateTemplateEngineWithFunctions(engineType string, customFunctions map[st
 // BuildPlatformAwareTemplateContext creates template context with platform-specific variables.
 func BuildPlatformAwareTemplateContext(systemInfo, userVars map[string]interface{}, platformVars map[string]map[string]interface{}) map[string]interface{} {
 	context := make(map[string]interface{})
-	
+
 	// Add user vars at root level
 	for k, v := range userVars {
 		context[k] = v
 	}
-	
+
 	// Add system info
 	context["system"] = systemInfo
-	
+
 	// Add platform-specific vars based on current platform
 	if platform, ok := systemInfo["platform"].(string); ok {
 		if platformSpecific, exists := platformVars[platform]; exists {
@@ -280,9 +280,9 @@ func BuildPlatformAwareTemplateContext(systemInfo, userVars map[string]interface
 			}
 		}
 	}
-	
+
 	// Add platform vars to context for template functions
 	context["platform_vars"] = platformVars
-	
+
 	return context
 }

@@ -17,21 +17,17 @@ import (
 // TestFileResourcePermissionIntegration tests the FileResource with permission management
 func TestFileResourcePermissionIntegration(t *testing.T) {
 	// Create temporary directories for testing
-	tempDir, err := os.MkdirTemp("", "file-resource-permissions-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create source and target directories
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
-	
+
 	err = os.MkdirAll(sourceDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
-	
+
 	err = os.MkdirAll(targetDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
@@ -39,10 +35,10 @@ func TestFileResourcePermissionIntegration(t *testing.T) {
 
 	// Create test source files
 	testFiles := map[string]string{
-		"id_rsa":       "private key content",
-		"id_rsa.pub":   "public key content",
-		"config":       "ssh config content",
-		"known_hosts":  "known hosts content",
+		"id_rsa":      "private key content",
+		"id_rsa.pub":  "public key content",
+		"config":      "ssh config content",
+		"known_hosts": "known hosts content",
 	}
 
 	for filename, content := range testFiles {
@@ -91,9 +87,9 @@ func TestFileResourcePermissionIntegration(t *testing.T) {
 			},
 			PermissionRules: func() types.Map {
 				rules := map[string]attr.Value{
-					"*.pub":      types.StringValue("0644"),
-					"config":     types.StringValue("0600"),
-					"id_*":       types.StringValue("0600"),
+					"*.pub":  types.StringValue("0644"),
+					"config": types.StringValue("0600"),
+					"id_*":   types.StringValue("0600"),
 				}
 				mapVal, _ := types.MapValue(types.StringType, rules)
 				return mapVal
@@ -138,31 +134,23 @@ func TestFileResourcePermissionIntegration(t *testing.T) {
 // TestSymlinkResourcePermissionIntegration tests symlink creation with permissions
 func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 	// Test symlink support by trying to create one
-	tempTestDir, err := os.MkdirTemp("", "symlink-support-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp test directory: %v", err)
-	}
-	defer os.RemoveAll(tempTestDir)
-	
+	tempTestDir := t.TempDir()
+
 	testFile := filepath.Join(tempTestDir, "test")
 	testLink := filepath.Join(tempTestDir, "test-link")
-	
+
 	os.WriteFile(testFile, []byte("test"), 0644)
 	if err := os.Symlink(testFile, testLink); err != nil {
 		t.Skip("Platform does not support symlinks")
 	}
 
 	// Create temporary directories for testing
-	tempDir, err := os.MkdirTemp("", "symlink-resource-permissions-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create source directory structure
 	sourceDir := filepath.Join(tempDir, "source", "ssh")
 	targetDir := filepath.Join(tempDir, "target")
-	
+
 	err = os.MkdirAll(sourceDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
@@ -173,10 +161,10 @@ func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 		content    string
 		shouldPerm string
 	}{
-		"id_rsa":       {"private key", "0600"},
-		"id_rsa.pub":   {"public key", "0644"},
-		"config":       {"ssh config", "0600"},
-		"known_hosts":  {"known hosts", "0600"},
+		"id_rsa":      {"private key", "0600"},
+		"id_rsa.pub":  {"public key", "0644"},
+		"config":      {"ssh config", "0600"},
+		"known_hosts": {"known hosts", "0600"},
 	}
 
 	for filename, info := range sshFiles {
@@ -205,8 +193,8 @@ func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 		},
 		PermissionRules: func() types.Map {
 			rules := map[string]attr.Value{
-				"*.pub":      types.StringValue("0644"),
-				"id_*":       types.StringValue("0600"),
+				"*.pub":       types.StringValue("0644"),
+				"id_*":        types.StringValue("0600"),
 				"known_hosts": types.StringValue("0600"),
 			}
 			mapVal, _ := types.MapValue(types.StringType, rules)
