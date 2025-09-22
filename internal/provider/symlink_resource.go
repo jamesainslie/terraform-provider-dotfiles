@@ -51,53 +51,66 @@ func (r *SymlinkResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *SymlinkResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	// Build base attributes
+	baseAttributes := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:            true,
+			MarkdownDescription: "Symlink identifier",
+		},
+		"repository": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Repository ID this symlink belongs to",
+		},
+		"name": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Symlink name/identifier",
+		},
+		"source_path": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Path to source in repository",
+		},
+		"target_path": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Target symlink path",
+		},
+		"force_update": schema.BoolAttribute{
+			Optional:            true,
+			MarkdownDescription: "Force update existing symlinks",
+		},
+		"create_parents": schema.BoolAttribute{
+			Optional:            true,
+			MarkdownDescription: "Create parent directories",
+		},
+		"permission_rules": GetPermissionRulesAttribute(),
+		"link_exists": schema.BoolAttribute{
+			Computed:            true,
+			MarkdownDescription: "Whether the symlink exists",
+		},
+		"is_symlink": schema.BoolAttribute{
+			Computed:            true,
+			MarkdownDescription: "Whether the target is actually a symlink",
+		},
+		"link_target": schema.StringAttribute{
+			Computed:            true,
+			MarkdownDescription: "The target that the symlink points to",
+		},
+		"last_modified": schema.StringAttribute{
+			Computed:            true,
+			MarkdownDescription: "Last modification timestamp of the symlink",
+		},
+	}
+	
+	// Add post-hooks attributes
+	postHooksAttrs := GetPostHooksAttributes()
+	for key, attr := range postHooksAttrs {
+		baseAttributes[key] = attr
+	}
+	
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages symbolic links to dotfiles",
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Symlink identifier",
-			},
-			"repository": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Repository ID this symlink belongs to",
-			},
-			"name": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Symlink name/identifier",
-			},
-			"source_path": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path to source in repository",
-			},
-			"target_path": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Target symlink path",
-			},
-			"force_update": schema.BoolAttribute{
-				Optional:            true,
-				MarkdownDescription: "Force update existing symlinks",
-			},
-			"create_parents": schema.BoolAttribute{
-				Optional:            true,
-				MarkdownDescription: "Create parent directories",
-			},
-			"link_exists": schema.BoolAttribute{
-				Computed:            true,
-				MarkdownDescription: "Whether the symlink exists",
-			},
-			"is_symlink": schema.BoolAttribute{
-				Computed:            true,
-				MarkdownDescription: "Whether the target is actually a symlink",
-			},
-			"link_target": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "The target that the symlink points to",
-			},
-			"last_modified": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Last modification timestamp of the symlink",
-			},
+		MarkdownDescription: "Manages symbolic links to dotfiles with comprehensive permission management",
+		Attributes:          baseAttributes,
+		Blocks: map[string]schema.Block{
+			"permissions": GetPermissionsSchemaBlock(),
 		},
 	}
 }

@@ -8,7 +8,10 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -59,58 +62,71 @@ func (r *FileResource) Metadata(ctx context.Context, req resource.MetadataReques
 }
 
 func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	// Get post-hooks attributes and merge with base attributes
+	baseAttributes := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:            true,
+			MarkdownDescription: "File identifier",
+		},
+		"repository": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Repository ID this file belongs to",
+		},
+		"name": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "File name/identifier",
+		},
+		"source_path": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Path to source file in repository",
+		},
+		"target_path": schema.StringAttribute{
+			Required:            true,
+			MarkdownDescription: "Target path where file should be placed",
+		},
+		"is_template": schema.BoolAttribute{
+			Optional:            true,
+			MarkdownDescription: "Whether the file should be processed as a template",
+		},
+		"file_mode": schema.StringAttribute{
+			Optional:            true,
+			MarkdownDescription: "File permissions (e.g., '0644') - deprecated, use permissions block",
+		},
+		"backup_enabled": schema.BoolAttribute{
+			Optional:            true,
+			MarkdownDescription: "Whether to backup existing files",
+		},
+		"template_vars": schema.MapAttribute{
+			Optional:            true,
+			ElementType:         types.StringType,
+			MarkdownDescription: "Variables for template processing",
+		},
+		"permission_rules": GetPermissionRulesAttribute(),
+		"content_hash": schema.StringAttribute{
+			Computed:            true,
+			MarkdownDescription: "SHA256 hash of file content",
+		},
+		"last_modified": schema.StringAttribute{
+			Computed:            true,
+			MarkdownDescription: "Last modification timestamp",
+		},
+		"file_exists": schema.BoolAttribute{
+			Computed:            true,
+			MarkdownDescription: "Whether the target file exists",
+		},
+	}
+	
+	// Add post-hooks attributes
+	postHooksAttrs := GetPostHooksAttributes()
+	for key, attr := range postHooksAttrs {
+		baseAttributes[key] = attr
+	}
+	
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages individual dotfiles",
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "File identifier",
-			},
-			"repository": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Repository ID this file belongs to",
-			},
-			"name": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "File name/identifier",
-			},
-			"source_path": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Path to source file in repository",
-			},
-			"target_path": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "Target path where file should be placed",
-			},
-			"is_template": schema.BoolAttribute{
-				Optional:            true,
-				MarkdownDescription: "Whether the file should be processed as a template",
-			},
-			"file_mode": schema.StringAttribute{
-				Optional:            true,
-				MarkdownDescription: "File permissions (e.g., '0644')",
-			},
-			"backup_enabled": schema.BoolAttribute{
-				Optional:            true,
-				MarkdownDescription: "Whether to backup existing files",
-			},
-			"template_vars": schema.MapAttribute{
-				Optional:            true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Variables for template processing",
-			},
-			"content_hash": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "SHA256 hash of file content",
-			},
-			"last_modified": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Last modification timestamp",
-			},
-			"file_exists": schema.BoolAttribute{
-				Computed:            true,
-				MarkdownDescription: "Whether the target file exists",
-			},
+		MarkdownDescription: "Manages individual dotfiles with comprehensive permission management",
+		Attributes:          baseAttributes,
+		Blocks: map[string]schema.Block{
+			"permissions": GetPermissionsSchemaBlock(),
 		},
 	}
 }
@@ -133,7 +149,7 @@ func (r *FileResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data FileResourceModel
+	var data EnhancedFileResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -168,10 +184,14 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Create file manager
 	fileManager := fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 
-	// Determine file mode
-	fileMode := "0644" // default
-	if !data.FileMode.IsNull() {
-		fileMode = data.FileMode.ValueString()
+	// Build permission configuration
+	permConfig, err := buildFilePermissionConfig(&data)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid permission configuration",
+			fmt.Sprintf("Failed to build permission config: %s", err.Error()),
+		)
+		return
 	}
 
 	// Check if backup is needed
@@ -211,14 +231,18 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 			}
 		}
 
-		// Process template
-		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, fileMode)
+		// Process template with enhanced permissions
+		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, permConfig.FileMode)
+		if finalErr == nil {
+			// Apply comprehensive permissions after template processing
+			finalErr = fileManager.ApplyPermissions(expandedTargetPath, permConfig)
+		}
 	} else {
-		// Regular file copy
+		// Regular file copy with enhanced permissions
 		if backupEnabled {
-			finalErr = fileManager.CopyFileWithBackup(sourcePath, expandedTargetPath, fileMode, r.client.Config.BackupDirectory)
+			finalErr = fileManager.CopyFileWithBackup(sourcePath, expandedTargetPath, permConfig.FileMode, r.client.Config.BackupDirectory)
 		} else {
-			finalErr = fileManager.CopyFile(sourcePath, expandedTargetPath, fileMode)
+			finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
 		}
 	}
 
@@ -230,8 +254,16 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	// Execute post-create commands
+	if err := executePostCommands(ctx, data.PostCreateCommands, "post-create"); err != nil {
+		resp.Diagnostics.AddWarning(
+			"Post-create commands failed",
+			fmt.Sprintf("File created successfully but post-create commands failed: %s", err.Error()),
+		)
+	}
+
 	// Update computed attributes
-	if err := r.updateComputedAttributes(ctx, &data, expandedTargetPath); err != nil {
+	if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
 		resp.Diagnostics.AddWarning(
 			"Could not update file metadata",
 			fmt.Sprintf("File created successfully but could not update metadata: %s", err.Error()),
@@ -250,7 +282,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data FileResourceModel
+	var data EnhancedFileResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -276,7 +308,7 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		}
 
 		// Update computed attributes with current file state
-		if err := r.updateComputedAttributes(ctx, &data, expandedTargetPath); err != nil {
+		if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
 			resp.Diagnostics.AddWarning(
 				"Could not read file metadata",
 				fmt.Sprintf("Could not update file metadata: %s", err.Error()),
@@ -296,7 +328,7 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data FileResourceModel
+	var data EnhancedFileResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -330,10 +362,14 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// Create file manager
 	fileManager := fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 
-	// Determine file mode
-	fileMode := "0644" // default
-	if !data.FileMode.IsNull() {
-		fileMode = data.FileMode.ValueString()
+	// Build permission configuration
+	permConfig, err := buildFilePermissionConfig(&data)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid permission configuration",
+			fmt.Sprintf("Failed to build permission config: %s", err.Error()),
+		)
+		return
 	}
 
 	// Check if backup is needed
@@ -373,14 +409,18 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			}
 		}
 
-		// Process template
-		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, fileMode)
+		// Process template with enhanced permissions
+		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, permConfig.FileMode)
+		if finalErr == nil {
+			// Apply comprehensive permissions after template processing
+			finalErr = fileManager.ApplyPermissions(expandedTargetPath, permConfig)
+		}
 	} else {
-		// Regular file copy for update
+		// Regular file copy with enhanced permissions
 		if backupEnabled {
-			finalErr = fileManager.CopyFileWithBackup(sourcePath, expandedTargetPath, fileMode, r.client.Config.BackupDirectory)
+			finalErr = fileManager.CopyFileWithBackup(sourcePath, expandedTargetPath, permConfig.FileMode, r.client.Config.BackupDirectory)
 		} else {
-			finalErr = fileManager.CopyFile(sourcePath, expandedTargetPath, fileMode)
+			finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
 		}
 	}
 
@@ -392,8 +432,16 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	// Execute post-update commands
+	if err := executePostCommands(ctx, data.PostUpdateCommands, "post-update"); err != nil {
+		resp.Diagnostics.AddWarning(
+			"Post-update commands failed",
+			fmt.Sprintf("File updated successfully but post-update commands failed: %s", err.Error()),
+		)
+	}
+
 	// Update computed attributes
-	if err := r.updateComputedAttributes(ctx, &data, expandedTargetPath); err != nil {
+	if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
 		resp.Diagnostics.AddWarning(
 			"Could not update file metadata",
 			fmt.Sprintf("File updated successfully but could not update metadata: %s", err.Error()),
@@ -409,7 +457,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data FileResourceModel
+	var data EnhancedFileResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -420,6 +468,14 @@ func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		"name":        data.Name.ValueString(),
 		"target_path": data.TargetPath.ValueString(),
 	})
+
+	// Execute pre-destroy commands
+	if err := executePostCommands(ctx, data.PreDestroyCommands, "pre-destroy"); err != nil {
+		resp.Diagnostics.AddWarning(
+			"Pre-destroy commands failed",
+			fmt.Sprintf("Pre-destroy commands failed: %s", err.Error()),
+		)
+	}
 
 	// For file resources, we typically remove the managed file
 	// but preserve any backups
@@ -491,5 +547,111 @@ func (r *FileResource) updateComputedAttributes(ctx context.Context, data *FileR
 		data.ContentHash = types.StringNull()
 	}
 
+	return nil
+}
+
+// buildFilePermissionConfig builds a PermissionConfig from the enhanced model data
+func buildFilePermissionConfig(data *EnhancedFileResourceModel) (*fileops.PermissionConfig, error) {
+	config := &fileops.PermissionConfig{}
+
+	// Handle permissions block
+	if data.Permissions != nil {
+		if !data.Permissions.Directory.IsNull() {
+			config.DirectoryMode = data.Permissions.Directory.ValueString()
+		}
+		if !data.Permissions.Files.IsNull() {
+			config.FileMode = data.Permissions.Files.ValueString()
+		}
+		if !data.Permissions.Recursive.IsNull() {
+			config.Recursive = data.Permissions.Recursive.ValueBool()
+		}
+	}
+
+	// Handle permission rules
+	if !data.PermissionRules.IsNull() && !data.PermissionRules.IsUnknown() {
+		config.Rules = make(map[string]string)
+		elements := data.PermissionRules.Elements()
+		for pattern, permValue := range elements {
+			if strPerm, ok := permValue.(types.String); ok {
+				config.Rules[pattern] = strPerm.ValueString()
+			}
+		}
+	}
+
+	// Fallback to legacy file_mode if no permissions are set
+	if config.FileMode == "" && !data.FileMode.IsNull() {
+		config.FileMode = data.FileMode.ValueString()
+	}
+
+	return config, fileops.ValidatePermissionConfig(config)
+}
+
+// executePostCommands executes post-creation/update commands
+func executePostCommands(ctx context.Context, commands types.List, operation string) error {
+	if commands.IsNull() || commands.IsUnknown() {
+		return nil
+	}
+
+	tflog.Debug(ctx, fmt.Sprintf("Executing %s commands", operation))
+	
+	elements := commands.Elements()
+	for i, cmdValue := range elements {
+		if strCmd, ok := cmdValue.(types.String); ok {
+			cmd := strCmd.ValueString()
+			tflog.Debug(ctx, fmt.Sprintf("Executing %s command %d: %s", operation, i+1, cmd))
+			
+			if err := executeShellCommand(ctx, cmd); err != nil {
+				return fmt.Errorf("command %d failed: %w", i+1, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// executeShellCommand executes a shell command safely
+func executeShellCommand(ctx context.Context, cmdStr string) error {
+	// Parse command and arguments
+	parts := strings.Fields(cmdStr)
+	if len(parts) == 0 {
+		return fmt.Errorf("empty command")
+	}
+
+	// Use shell to execute complex commands
+	var cmd *exec.Cmd
+	
+	// Determine shell based on OS
+	var shell, shellFlag string
+	if strings.Contains(os.Getenv("SHELL"), "fish") {
+		shell = "fish"
+		shellFlag = "-c"
+	} else if runtime.GOOS == "windows" {
+		shell = "cmd"
+		shellFlag = "/c"
+	} else {
+		shell = "sh"
+		shellFlag = "-c"
+	}
+
+	cmd = exec.CommandContext(ctx, shell, shellFlag, cmdStr)
+	
+	// Set environment variables
+	cmd.Env = os.Environ()
+	
+	// Capture output
+	output, err := cmd.CombinedOutput()
+	
+	if err != nil {
+		tflog.Error(ctx, fmt.Sprintf("Command failed: %s", cmdStr), map[string]interface{}{
+			"error":  err.Error(),
+			"output": string(output),
+		})
+		return fmt.Errorf("command '%s' failed: %w (output: %s)", cmdStr, err, string(output))
+	}
+	
+	tflog.Info(ctx, fmt.Sprintf("Command executed successfully: %s", cmdStr), map[string]interface{}{
+		"output": string(output),
+	})
+	
 	return nil
 }
