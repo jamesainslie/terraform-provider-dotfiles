@@ -4,9 +4,9 @@
 package provider
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -188,17 +188,9 @@ func TestPlatformDetection(t *testing.T) {
 
 	t.Run("getConfigDir with environment variables", func(t *testing.T) {
 		// Test Windows with APPDATA environment variable
-		originalAppData := os.Getenv("APPDATA")
 		testAppData := "C:\\Users\\test\\AppData\\Roaming"
 
-		os.Setenv("APPDATA", testAppData)
-		defer func() {
-			if originalAppData != "" {
-				os.Setenv("APPDATA", originalAppData)
-			} else {
-				os.Unsetenv("APPDATA")
-			}
-		}()
+		t.Setenv("APPDATA", testAppData)
 
 		configDir, err := getConfigDir("windows", "C:\\Users\\test")
 		if err != nil {
@@ -255,10 +247,10 @@ func TestDotfilesConfigEdgeCases(t *testing.T) {
 		}
 
 		for _, expectedError := range expectedErrors {
-			if !contains([]string{errorMsg}, expectedError) &&
-				!contains([]string{errorMsg}, expectedError) { // Check if error message contains the expected text
+			if !strings.Contains(errorMsg, expectedError) {
 				// Let's just verify the error is not nil for comprehensive validation
 				// The exact error message format may vary
+				t.Logf("Error message validation: %s", errorMsg)
 			}
 		}
 	})

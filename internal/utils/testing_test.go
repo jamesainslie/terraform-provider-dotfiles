@@ -107,15 +107,11 @@ func TestFormatFileMode(t *testing.T) {
 
 func TestPathExists(t *testing.T) {
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "utils-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.txt")
-	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	err := os.WriteFile(testFile, []byte("test content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -139,15 +135,11 @@ func TestPathExists(t *testing.T) {
 
 func TestIsSymlink(t *testing.T) {
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "utils-symlink-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.txt")
-	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	err := os.WriteFile(testFile, []byte("test content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -184,11 +176,7 @@ func TestIsSymlink(t *testing.T) {
 
 func TestCreateTempDotfilesRepo(t *testing.T) {
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "dotfiles-repo-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test dotfiles repo
 	repoPath, err := CreateTempDotfilesRepo(tempDir)
@@ -263,11 +251,7 @@ func TestGenerateTestID(t *testing.T) {
 
 func TestCompareFileContent(t *testing.T) {
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "file-compare-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test files
 	file1 := filepath.Join(tempDir, "file1.txt")
@@ -278,7 +262,7 @@ func TestCompareFileContent(t *testing.T) {
 	content2 := "identical content"
 	content3 := "different content"
 
-	err = os.WriteFile(file1, []byte(content1), 0644)
+	err := os.WriteFile(file1, []byte(content1), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create file1: %v", err)
 	}

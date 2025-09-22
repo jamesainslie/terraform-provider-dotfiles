@@ -402,7 +402,7 @@ func (r *RepositoryResource) Delete(ctx context.Context, req resource.DeleteRequ
 	})
 }
 
-// setupGitRepository handles cloning and setting up a Git repository
+// setupGitRepository handles cloning and setting up a Git repository.
 func (r *RepositoryResource) setupGitRepository(ctx context.Context, data *RepositoryResourceModel) (*git.RepositoryInfo, error) {
 	sourcePath := data.SourcePath.ValueString()
 
@@ -491,7 +491,7 @@ func (r *RepositoryResource) setupGitRepository(ctx context.Context, data *Repos
 	return info, nil
 }
 
-// setupLocalRepository handles validation of a local repository
+// setupLocalRepository handles validation of a local repository.
 func (r *RepositoryResource) setupLocalRepository(ctx context.Context, data *RepositoryResourceModel) error {
 	sourcePath := data.SourcePath.ValueString()
 
@@ -532,7 +532,7 @@ func (r *RepositoryResource) setupLocalRepository(ctx context.Context, data *Rep
 	return nil
 }
 
-// buildAuthConfig creates authentication config from resource data
+// buildAuthConfig creates authentication config from resource data.
 func (r *RepositoryResource) buildAuthConfig(data *RepositoryResourceModel) *git.AuthConfig {
 	authConfig := &git.AuthConfig{}
 

@@ -312,13 +312,9 @@ func TestPlatformInterfaces(t *testing.T) {
 
 func TestPlatformFileOperations(t *testing.T) {
 	platform := DetectPlatform()
-
+	
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "platform-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	t.Run("CopyFile", func(t *testing.T) {
 		// Create source file

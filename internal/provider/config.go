@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// DotfilesConfig holds the provider configuration
+// DotfilesConfig holds the provider configuration.
 type DotfilesConfig struct {
 	DotfilesRoot       string
 	BackupEnabled      bool
@@ -25,7 +25,7 @@ type DotfilesConfig struct {
 	LogLevel           string
 }
 
-// Validate validates and sets defaults for the provider configuration
+// Validate validates and sets defaults for the provider configuration.
 func (c *DotfilesConfig) Validate() error {
 	var errs []string
 
@@ -125,7 +125,7 @@ func (c *DotfilesConfig) Validate() error {
 	return nil
 }
 
-// contains checks if a slice contains a string
+// contains checks if a slice contains a string.
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {

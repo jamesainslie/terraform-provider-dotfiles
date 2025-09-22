@@ -10,7 +10,7 @@ import (
 	"runtime"
 )
 
-// DotfilesClient provides the client interface for dotfiles operations
+// DotfilesClient provides the client interface for dotfiles operations.
 type DotfilesClient struct {
 	Config       *DotfilesConfig
 	Platform     string
@@ -19,7 +19,7 @@ type DotfilesClient struct {
 	ConfigDir    string
 }
 
-// NewDotfilesClient creates a new dotfiles client with the provided configuration
+// NewDotfilesClient creates a new dotfiles client with the provided configuration.
 func NewDotfilesClient(config *DotfilesConfig) (*DotfilesClient, error) {
 	client := &DotfilesClient{
 		Config:       config,
@@ -50,7 +50,7 @@ func NewDotfilesClient(config *DotfilesConfig) (*DotfilesClient, error) {
 	return client, nil
 }
 
-// detectPlatform detects the current platform
+// detectPlatform detects the current platform.
 func detectPlatform() string {
 	switch runtime.GOOS {
 	case "darwin":
@@ -64,14 +64,14 @@ func detectPlatform() string {
 	}
 }
 
-// getHomeDir returns the user's home directory
+// getHomeDir returns the user's home directory.
 func getHomeDir() (string, error) {
 	// This is a placeholder - will be replaced with platform-specific implementation
 	// For now, use the OS package
 	return os.UserHomeDir()
 }
 
-// getConfigDir returns the user's config directory based on platform
+// getConfigDir returns the user's config directory based on platform.
 func getConfigDir(platform, homeDir string) (string, error) {
 	switch platform {
 	case "macos", "linux":
@@ -87,7 +87,7 @@ func getConfigDir(platform, homeDir string) (string, error) {
 	}
 }
 
-// GetPlatformInfo returns platform information
+// GetPlatformInfo returns platform information.
 func (c *DotfilesClient) GetPlatformInfo() map[string]interface{} {
 	return map[string]interface{}{
 		"platform":     c.Platform,

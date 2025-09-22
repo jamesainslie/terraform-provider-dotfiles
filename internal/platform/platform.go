@@ -8,7 +8,7 @@ import (
 	"runtime"
 )
 
-// PlatformProvider defines the interface for platform-specific operations
+// PlatformProvider defines the interface for platform-specific operations.
 type PlatformProvider interface {
 	// Platform information
 	GetPlatform() string
@@ -35,7 +35,7 @@ type PlatformProvider interface {
 	GetApplicationPaths(name string) (map[string]string, error)
 }
 
-// ApplicationInfo represents information about an installed application
+// ApplicationInfo represents information about an installed application.
 type ApplicationInfo struct {
 	Name             string
 	Installed        bool
@@ -46,23 +46,23 @@ type ApplicationInfo struct {
 	DataPaths        []string
 }
 
-// BasePlatform provides common functionality for all platforms
+// BasePlatform provides common functionality for all platforms.
 type BasePlatform struct {
 	platform     string
 	architecture string
 }
 
-// GetPlatform returns the platform name
+// GetPlatform returns the platform name.
 func (p *BasePlatform) GetPlatform() string {
 	return p.platform
 }
 
-// GetArchitecture returns the architecture
+// GetArchitecture returns the architecture.
 func (p *BasePlatform) GetArchitecture() string {
 	return p.architecture
 }
 
-// GetPathSeparator returns the path separator for the platform
+// GetPathSeparator returns the path separator for the platform.
 func (p *BasePlatform) GetPathSeparator() string {
 	if p.platform == "windows" {
 		return ";"
@@ -70,7 +70,7 @@ func (p *BasePlatform) GetPathSeparator() string {
 	return ":"
 }
 
-// DetectPlatform detects and returns the appropriate platform provider
+// DetectPlatform detects and returns the appropriate platform provider.
 func DetectPlatform() PlatformProvider {
 	switch runtime.GOOS {
 	case "darwin":

@@ -38,13 +38,13 @@ func FormatFileMode(mode os.FileMode) string {
 	return "0" + strconv.FormatUint(uint64(mode.Perm()), 8)
 }
 
-// PathExists checks if a path exists
+// PathExists checks if a path exists.
 func PathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// IsSymlink checks if a path is a symbolic link
+// IsSymlink checks if a path is a symbolic link.
 func IsSymlink(path string) bool {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -53,7 +53,7 @@ func IsSymlink(path string) bool {
 	return info.Mode()&os.ModeSymlink != 0
 }
 
-// CreateTempDotfilesRepo creates a temporary dotfiles repository for testing
+// CreateTempDotfilesRepo creates a temporary dotfiles repository for testing.
 func CreateTempDotfilesRepo(tempDir string) (string, error) {
 	repoDir := filepath.Join(tempDir, "dotfiles")
 	err := os.MkdirAll(repoDir, 0755)
@@ -107,12 +107,12 @@ set -gx EDITOR vim`,
 	return repoDir, nil
 }
 
-// GenerateTestID generates a unique test ID
+// GenerateTestID generates a unique test ID.
 func GenerateTestID(prefix string) string {
 	return prefix + "-" + strconv.Itoa(os.Getpid())
 }
 
-// CompareFileContent compares the content of two files
+// CompareFileContent compares the content of two files.
 func CompareFileContent(file1, file2 string) (bool, error) {
 	content1, err := os.ReadFile(file1)
 	if err != nil {

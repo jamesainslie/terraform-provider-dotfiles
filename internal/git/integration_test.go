@@ -13,11 +13,7 @@ import (
 
 func TestGitManagerIntegration(t *testing.T) {
 	// Create temporary directory for test repositories
-	tempDir, err := os.MkdirTemp("", "git-integration-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	t.Run("LocalRepositoryOperations", func(t *testing.T) {
 		// Create a local Git repository for testing
@@ -159,7 +155,7 @@ func TestGitManagerIntegration(t *testing.T) {
 	})
 }
 
-// createTestRepository creates a local Git repository for testing
+// createTestRepository creates a local Git repository for testing.
 func createTestRepository(repoPath string) (*git.Repository, error) {
 	// Initialize repository
 	repo, err := git.PlainInit(repoPath, false)

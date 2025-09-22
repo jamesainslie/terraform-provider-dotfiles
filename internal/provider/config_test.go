@@ -10,13 +10,6 @@ import (
 )
 
 func TestDotfilesConfigComprehensive(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "config-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
 	t.Run("Path expansion and validation", func(t *testing.T) {
 		config := &DotfilesConfig{
 			DotfilesRoot:    "~/test-dotfiles",

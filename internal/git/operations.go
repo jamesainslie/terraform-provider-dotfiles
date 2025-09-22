@@ -21,12 +21,12 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
-// GitManager handles Git operations for dotfiles repositories
+// GitManager handles Git operations for dotfiles repositories.
 type GitManager struct {
 	auth transport.AuthMethod
 }
 
-// RepositoryInfo contains information about a Git repository
+// RepositoryInfo contains information about a Git repository.
 type RepositoryInfo struct {
 	URL        string
 	LocalPath  string
@@ -35,7 +35,7 @@ type RepositoryInfo struct {
 	LastUpdate time.Time
 }
 
-// AuthConfig contains authentication configuration
+// AuthConfig contains authentication configuration.
 type AuthConfig struct {
 	// Personal Access Token for HTTPS authentication
 	PersonalAccessToken string
@@ -47,7 +47,7 @@ type AuthConfig struct {
 	SSHPassphrase string
 }
 
-// NewGitManager creates a new Git manager with authentication
+// NewGitManager creates a new Git manager with authentication.
 func NewGitManager(authConfig *AuthConfig) (*GitManager, error) {
 	manager := &GitManager{}
 
@@ -62,7 +62,7 @@ func NewGitManager(authConfig *AuthConfig) (*GitManager, error) {
 	return manager, nil
 }
 
-// IsGitURL checks if the given string is a valid Git URL
+// IsGitURL checks if the given string is a valid Git URL.
 func IsGitURL(sourceURL string) bool {
 	// Match GitHub URLs
 	githubPatterns := []string{
@@ -95,7 +95,7 @@ func IsGitURL(sourceURL string) bool {
 	return false
 }
 
-// NormalizeGitURL converts various Git URL formats to standard format
+// NormalizeGitURL converts various Git URL formats to standard format.
 func NormalizeGitURL(sourceURL string) (string, error) {
 	// Handle GitHub shorthand formats
 	if matched, _ := regexp.MatchString(`^github\.com[:/][\w\-\.]+/[\w\-\.]+`, sourceURL); matched {
@@ -118,7 +118,7 @@ func NormalizeGitURL(sourceURL string) (string, error) {
 	return sourceURL, nil
 }
 
-// CloneRepository clones a Git repository to the specified local path
+// CloneRepository clones a Git repository to the specified local path.
 func (g *GitManager) CloneRepository(ctx context.Context, repoURL, localPath, branch string) (*RepositoryInfo, error) {
 	// Normalize the URL
 	normalizedURL, err := NormalizeGitURL(repoURL)
@@ -162,7 +162,7 @@ func (g *GitManager) CloneRepository(ctx context.Context, repoURL, localPath, br
 	return info, nil
 }
 
-// UpdateRepository pulls the latest changes from the remote repository
+// UpdateRepository pulls the latest changes from the remote repository.
 func (g *GitManager) UpdateRepository(ctx context.Context, localPath string) (*RepositoryInfo, error) {
 	// Open existing repository
 	repo, err := git.PlainOpen(localPath)
@@ -207,7 +207,7 @@ func (g *GitManager) UpdateRepository(ctx context.Context, localPath string) (*R
 	return info, nil
 }
 
-// GetRepositoryInfo returns information about a local Git repository
+// GetRepositoryInfo returns information about a local Git repository.
 func (g *GitManager) GetRepositoryInfo(localPath string) (*RepositoryInfo, error) {
 	repo, err := git.PlainOpen(localPath)
 	if err != nil {
@@ -228,7 +228,7 @@ func (g *GitManager) GetRepositoryInfo(localPath string) (*RepositoryInfo, error
 	return g.getRepositoryInfo(repo, remoteURL, localPath)
 }
 
-// ValidateRepository checks if a local path contains a valid Git repository
+// ValidateRepository checks if a local path contains a valid Git repository.
 func (g *GitManager) ValidateRepository(localPath string) error {
 	_, err := git.PlainOpen(localPath)
 	if err != nil {
@@ -237,7 +237,7 @@ func (g *GitManager) ValidateRepository(localPath string) error {
 	return nil
 }
 
-// getRepositoryInfo extracts information from a Git repository
+// getRepositoryInfo extracts information from a Git repository.
 func (g *GitManager) getRepositoryInfo(repo *git.Repository, url, localPath string) (*RepositoryInfo, error) {
 	// Get HEAD reference
 	head, err := repo.Head()
@@ -266,7 +266,7 @@ func (g *GitManager) getRepositoryInfo(repo *git.Repository, url, localPath stri
 	}, nil
 }
 
-// buildAuthMethod creates appropriate authentication method
+// buildAuthMethod creates appropriate authentication method.
 func buildAuthMethod(authConfig *AuthConfig) (transport.AuthMethod, error) {
 	// SSH authentication
 	if authConfig.SSHPrivateKeyPath != "" {
@@ -294,7 +294,7 @@ func buildAuthMethod(authConfig *AuthConfig) (transport.AuthMethod, error) {
 	return nil, nil
 }
 
-// GetLocalCachePath returns the local cache path for a Git repository
+// GetLocalCachePath returns the local cache path for a Git repository.
 func GetLocalCachePath(cacheRoot, repoURL string) (string, error) {
 	// Parse the URL to create a safe directory name
 	parsedURL, err := url.Parse(repoURL)

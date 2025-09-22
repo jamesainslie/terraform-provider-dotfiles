@@ -12,17 +12,17 @@ import (
 	"strings"
 )
 
-// LinuxProvider implements PlatformProvider for Linux
+// LinuxProvider implements PlatformProvider for Linux.
 type LinuxProvider struct {
 	BasePlatform
 }
 
-// GetHomeDir returns the user's home directory
+// GetHomeDir returns the user's home directory.
 func (p *LinuxProvider) GetHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
-// GetConfigDir returns the user's config directory
+// GetConfigDir returns the user's config directory.
 func (p *LinuxProvider) GetConfigDir() (string, error) {
 	// Follow XDG Base Directory specification
 	if configHome := os.Getenv("XDG_CONFIG_HOME"); configHome != "" {
@@ -36,7 +36,7 @@ func (p *LinuxProvider) GetConfigDir() (string, error) {
 	return filepath.Join(home, ".config"), nil
 }
 
-// GetAppSupportDir returns the user's data directory
+// GetAppSupportDir returns the user's data directory.
 func (p *LinuxProvider) GetAppSupportDir() (string, error) {
 	// Follow XDG Base Directory specification
 	if dataHome := os.Getenv("XDG_DATA_HOME"); dataHome != "" {
@@ -50,12 +50,12 @@ func (p *LinuxProvider) GetAppSupportDir() (string, error) {
 	return filepath.Join(home, ".local", "share"), nil
 }
 
-// ResolvePath resolves a path to its absolute form
+// ResolvePath resolves a path to its absolute form.
 func (p *LinuxProvider) ResolvePath(path string) (string, error) {
 	return p.ExpandPath(path)
 }
 
-// ExpandPath expands ~ and environment variables in the path
+// ExpandPath expands ~ and environment variables in the path.
 func (p *LinuxProvider) ExpandPath(path string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("empty path")
@@ -88,7 +88,7 @@ func (p *LinuxProvider) ExpandPath(path string) (string, error) {
 	return absPath, nil
 }
 
-// CreateSymlink creates a symbolic link
+// CreateSymlink creates a symbolic link.
 func (p *LinuxProvider) CreateSymlink(source, target string) error {
 	// Expand paths
 	expandedSource, err := p.ExpandPath(source)
@@ -127,7 +127,7 @@ func (p *LinuxProvider) CreateSymlink(source, target string) error {
 	return nil
 }
 
-// CopyFile copies a file from source to target
+// CopyFile copies a file from source to target.
 func (p *LinuxProvider) CopyFile(source, target string) error {
 	// Expand paths
 	expandedSource, err := p.ExpandPath(source)
@@ -179,7 +179,7 @@ func (p *LinuxProvider) CopyFile(source, target string) error {
 	return nil
 }
 
-// SetPermissions sets file permissions
+// SetPermissions sets file permissions.
 func (p *LinuxProvider) SetPermissions(path string, mode os.FileMode) error {
 	expandedPath, err := p.ExpandPath(path)
 	if err != nil {
@@ -193,7 +193,7 @@ func (p *LinuxProvider) SetPermissions(path string, mode os.FileMode) error {
 	return nil
 }
 
-// GetFileInfo returns file information
+// GetFileInfo returns file information.
 func (p *LinuxProvider) GetFileInfo(path string) (os.FileInfo, error) {
 	expandedPath, err := p.ExpandPath(path)
 	if err != nil {
@@ -203,7 +203,7 @@ func (p *LinuxProvider) GetFileInfo(path string) (os.FileInfo, error) {
 	return os.Stat(expandedPath)
 }
 
-// DetectApplication detects if an application is installed
+// DetectApplication detects if an application is installed.
 func (p *LinuxProvider) DetectApplication(name string) (*ApplicationInfo, error) {
 	info := &ApplicationInfo{
 		Name:      name,
@@ -252,7 +252,7 @@ func (p *LinuxProvider) DetectApplication(name string) (*ApplicationInfo, error)
 	return info, nil
 }
 
-// GetApplicationPaths returns application-specific paths
+// GetApplicationPaths returns application-specific paths.
 func (p *LinuxProvider) GetApplicationPaths(name string) (map[string]string, error) {
 	paths := make(map[string]string)
 

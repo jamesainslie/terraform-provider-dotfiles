@@ -12,17 +12,17 @@ import (
 	"strings"
 )
 
-// DarwinProvider implements PlatformProvider for macOS
+// DarwinProvider implements PlatformProvider for macOS.
 type DarwinProvider struct {
 	BasePlatform
 }
 
-// GetHomeDir returns the user's home directory
+// GetHomeDir returns the user's home directory.
 func (p *DarwinProvider) GetHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
-// GetConfigDir returns the user's config directory
+// GetConfigDir returns the user's config directory.
 func (p *DarwinProvider) GetConfigDir() (string, error) {
 	home, err := p.GetHomeDir()
 	if err != nil {
@@ -31,7 +31,7 @@ func (p *DarwinProvider) GetConfigDir() (string, error) {
 	return filepath.Join(home, ".config"), nil
 }
 
-// GetAppSupportDir returns the user's Application Support directory
+// GetAppSupportDir returns the user's Application Support directory.
 func (p *DarwinProvider) GetAppSupportDir() (string, error) {
 	home, err := p.GetHomeDir()
 	if err != nil {
@@ -40,12 +40,12 @@ func (p *DarwinProvider) GetAppSupportDir() (string, error) {
 	return filepath.Join(home, "Library", "Application Support"), nil
 }
 
-// ResolvePath resolves a path to its absolute form
+// ResolvePath resolves a path to its absolute form.
 func (p *DarwinProvider) ResolvePath(path string) (string, error) {
 	return p.ExpandPath(path)
 }
 
-// ExpandPath expands ~ and environment variables in the path
+// ExpandPath expands ~ and environment variables in the path.
 func (p *DarwinProvider) ExpandPath(path string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("empty path")
@@ -78,7 +78,7 @@ func (p *DarwinProvider) ExpandPath(path string) (string, error) {
 	return absPath, nil
 }
 
-// CreateSymlink creates a symbolic link
+// CreateSymlink creates a symbolic link.
 func (p *DarwinProvider) CreateSymlink(source, target string) error {
 	// Expand paths
 	expandedSource, err := p.ExpandPath(source)
@@ -117,7 +117,7 @@ func (p *DarwinProvider) CreateSymlink(source, target string) error {
 	return nil
 }
 
-// CopyFile copies a file from source to target
+// CopyFile copies a file from source to target.
 func (p *DarwinProvider) CopyFile(source, target string) error {
 	// Expand paths
 	expandedSource, err := p.ExpandPath(source)
@@ -169,7 +169,7 @@ func (p *DarwinProvider) CopyFile(source, target string) error {
 	return nil
 }
 
-// SetPermissions sets file permissions
+// SetPermissions sets file permissions.
 func (p *DarwinProvider) SetPermissions(path string, mode os.FileMode) error {
 	expandedPath, err := p.ExpandPath(path)
 	if err != nil {
@@ -183,7 +183,7 @@ func (p *DarwinProvider) SetPermissions(path string, mode os.FileMode) error {
 	return nil
 }
 
-// GetFileInfo returns file information
+// GetFileInfo returns file information.
 func (p *DarwinProvider) GetFileInfo(path string) (os.FileInfo, error) {
 	expandedPath, err := p.ExpandPath(path)
 	if err != nil {
@@ -193,7 +193,7 @@ func (p *DarwinProvider) GetFileInfo(path string) (os.FileInfo, error) {
 	return os.Stat(expandedPath)
 }
 
-// DetectApplication detects if an application is installed
+// DetectApplication detects if an application is installed.
 func (p *DarwinProvider) DetectApplication(name string) (*ApplicationInfo, error) {
 	info := &ApplicationInfo{
 		Name:      name,
@@ -201,11 +201,16 @@ func (p *DarwinProvider) DetectApplication(name string) (*ApplicationInfo, error
 	}
 
 	// Check common application locations
+	var titleName string
+	if len(name) > 0 {
+		titleName = strings.ToUpper(name[:1]) + name[1:]
+	}
+	
 	appPaths := []string{
 		fmt.Sprintf("/Applications/%s.app", name),
-		fmt.Sprintf("/Applications/%s.app", strings.Title(name)),
+		fmt.Sprintf("/Applications/%s.app", titleName),
 		fmt.Sprintf("/System/Applications/%s.app", name),
-		fmt.Sprintf("/System/Applications/%s.app", strings.Title(name)),
+		fmt.Sprintf("/System/Applications/%s.app", titleName),
 	}
 
 	for _, appPath := range appPaths {
@@ -240,7 +245,7 @@ func (p *DarwinProvider) DetectApplication(name string) (*ApplicationInfo, error
 	return info, nil
 }
 
-// GetApplicationPaths returns application-specific paths
+// GetApplicationPaths returns application-specific paths.
 func (p *DarwinProvider) GetApplicationPaths(name string) (map[string]string, error) {
 	paths := make(map[string]string)
 

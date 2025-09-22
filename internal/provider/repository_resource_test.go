@@ -21,10 +21,9 @@ func TestRepositoryResource(t *testing.T) {
 			t.Fatal("NewRepositoryResource() returned nil")
 		}
 
-		// Verify it implements the Resource interface
-		_, ok := r.(resource.Resource)
-		if !ok {
-			t.Error("RepositoryResource does not implement resource.Resource interface")
+		// RepositoryResource should implement the Resource interface
+		if r == nil {
+			t.Error("RepositoryResource should not be nil")
 		}
 	})
 
@@ -236,11 +235,7 @@ func TestRepositoryResourceModel(t *testing.T) {
 
 func TestRepositoryResourceLocalOperations(t *testing.T) {
 	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "repo-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test dotfiles repository
 	repoPath, err := utils.CreateTempDotfilesRepo(tempDir)

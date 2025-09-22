@@ -12,17 +12,17 @@ import (
 	"strings"
 )
 
-// WindowsProvider implements PlatformProvider for Windows
+// WindowsProvider implements PlatformProvider for Windows.
 type WindowsProvider struct {
 	BasePlatform
 }
 
-// GetHomeDir returns the user's home directory
+// GetHomeDir returns the user's home directory.
 func (p *WindowsProvider) GetHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
-// GetConfigDir returns the user's config directory
+// GetConfigDir returns the user's config directory.
 func (p *WindowsProvider) GetConfigDir() (string, error) {
 	appData := os.Getenv("APPDATA")
 	if appData != "" {
@@ -36,17 +36,17 @@ func (p *WindowsProvider) GetConfigDir() (string, error) {
 	return filepath.Join(home, "AppData", "Roaming"), nil
 }
 
-// GetAppSupportDir returns the user's application data directory
+// GetAppSupportDir returns the user's application data directory.
 func (p *WindowsProvider) GetAppSupportDir() (string, error) {
 	return p.GetConfigDir() // Same as config on Windows
 }
 
-// ResolvePath resolves a path to its absolute form
+// ResolvePath resolves a path to its absolute form.
 func (p *WindowsProvider) ResolvePath(path string) (string, error) {
 	return p.ExpandPath(path)
 }
 
-// ExpandPath expands ~ and environment variables in the path
+// ExpandPath expands ~ and environment variables in the path.
 func (p *WindowsProvider) ExpandPath(path string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("empty path")
@@ -79,7 +79,7 @@ func (p *WindowsProvider) ExpandPath(path string) (string, error) {
 	return filepath.FromSlash(absPath), nil
 }
 
-// CreateSymlink creates a symbolic link (requires elevated privileges on Windows)
+// CreateSymlink creates a symbolic link (requires elevated privileges on Windows).
 func (p *WindowsProvider) CreateSymlink(source, target string) error {
 	// Expand paths
 	expandedSource, err := p.ExpandPath(source)
@@ -119,16 +119,17 @@ func (p *WindowsProvider) CreateSymlink(source, target string) error {
 		return p.CopyFile(source, target)
 	}
 
-	// For directories, we may need to handle differently
+	// For directories, we may need to handle differently on Windows
 	if sourceInfo.IsDir() {
 		// Directory symlinks work differently on Windows
-		// This is a simplified implementation
+		// For now, we use the same approach as files
+		// TODO: Implement directory-specific symlink handling for Windows
 	}
 
 	return nil
 }
 
-// CopyFile copies a file from source to target
+// CopyFile copies a file from source to target.
 func (p *WindowsProvider) CopyFile(source, target string) error {
 	// Expand paths
 	expandedSource, err := p.ExpandPath(source)
@@ -181,7 +182,7 @@ func (p *WindowsProvider) CopyFile(source, target string) error {
 	return nil
 }
 
-// SetPermissions sets file permissions (simplified for Windows)
+// SetPermissions sets file permissions (simplified for Windows).
 func (p *WindowsProvider) SetPermissions(path string, mode os.FileMode) error {
 	expandedPath, err := p.ExpandPath(path)
 	if err != nil {
@@ -198,7 +199,7 @@ func (p *WindowsProvider) SetPermissions(path string, mode os.FileMode) error {
 	return nil
 }
 
-// GetFileInfo returns file information
+// GetFileInfo returns file information.
 func (p *WindowsProvider) GetFileInfo(path string) (os.FileInfo, error) {
 	expandedPath, err := p.ExpandPath(path)
 	if err != nil {
@@ -208,7 +209,7 @@ func (p *WindowsProvider) GetFileInfo(path string) (os.FileInfo, error) {
 	return os.Stat(expandedPath)
 }
 
-// DetectApplication detects if an application is installed
+// DetectApplication detects if an application is installed.
 func (p *WindowsProvider) DetectApplication(name string) (*ApplicationInfo, error) {
 	info := &ApplicationInfo{
 		Name:      name,
@@ -229,17 +230,22 @@ func (p *WindowsProvider) DetectApplication(name string) (*ApplicationInfo, erro
 		programFiles := os.Getenv("PROGRAMFILES")
 		programFilesX86 := os.Getenv("PROGRAMFILES(X86)")
 
+		var titleName string
+		if len(name) > 0 {
+			titleName = strings.ToUpper(name[:1]) + name[1:]
+		}
+		
 		checkPaths := []string{}
 		if programFiles != "" {
-			checkPaths = append(checkPaths,
+			checkPaths = append(checkPaths, 
 				filepath.Join(programFiles, name),
-				filepath.Join(programFiles, strings.Title(name)),
+				filepath.Join(programFiles, titleName),
 			)
 		}
 		if programFilesX86 != "" {
 			checkPaths = append(checkPaths,
 				filepath.Join(programFilesX86, name),
-				filepath.Join(programFilesX86, strings.Title(name)),
+				filepath.Join(programFilesX86, titleName),
 			)
 		}
 
@@ -268,7 +274,7 @@ func (p *WindowsProvider) DetectApplication(name string) (*ApplicationInfo, erro
 	return info, nil
 }
 
-// GetApplicationPaths returns application-specific paths
+// GetApplicationPaths returns application-specific paths.
 func (p *WindowsProvider) GetApplicationPaths(name string) (map[string]string, error) {
 	paths := make(map[string]string)
 

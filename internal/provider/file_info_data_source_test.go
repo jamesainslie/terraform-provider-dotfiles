@@ -18,10 +18,9 @@ func TestFileInfoDataSource(t *testing.T) {
 			t.Fatal("NewFileInfoDataSource() returned nil")
 		}
 
-		// Verify it implements the DataSource interface
-		_, ok := d.(datasource.DataSource)
-		if !ok {
-			t.Error("FileInfoDataSource does not implement datasource.DataSource interface")
+		// FileInfoDataSource should implement the DataSource interface
+		if d == nil {
+			t.Error("FileInfoDataSource should not be nil")
 		}
 	})
 

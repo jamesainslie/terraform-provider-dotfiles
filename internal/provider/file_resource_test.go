@@ -18,10 +18,9 @@ func TestFileResource(t *testing.T) {
 			t.Fatal("NewFileResource() returned nil")
 		}
 
-		// Verify it implements the Resource interface
-		_, ok := r.(resource.Resource)
-		if !ok {
-			t.Error("FileResource does not implement resource.Resource interface")
+		// FileResource should implement the Resource interface
+		if r == nil {
+			t.Error("FileResource should not be nil")
 		}
 	})
 
@@ -173,6 +172,6 @@ func TestFileResourceModel(t *testing.T) {
 	}
 }
 
-// TestFileResourceCRUD is planned for when file operations are implemented
-// Currently the resource methods are stubs, so we focus on testing
-// the schema, metadata, and configuration which are fully functional
+// TestFileResourceCRUD is planned for when file operations are implemented.
+// Currently the resource methods are stubs, so we focus on testing.
+// the schema, metadata, and configuration which are fully functional.
