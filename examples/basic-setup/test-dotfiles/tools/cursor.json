@@ -1,0 +1,8 @@
+{
+    "editor.fontSize": 14,
+    "editor.fontFamily": "Fira Code",
+    "editor.fontLigatures": true,
+    "workbench.colorTheme": "Dark+ (default dark)",
+    "files.autoSave": "onFocusChange",
+    "terminal.integrated.shell.osx": "/bin/fish"
+}

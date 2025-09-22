@@ -25,6 +25,12 @@ website/node_modules
 *.test
 *.iml
 
+# Built provider binary
+terraform-provider-dotfiles
+
+# Test artifacts
+coverage.out
+
 website/vendor
 
 # Test exclusions
