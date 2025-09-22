@@ -101,7 +101,7 @@ func (p *DotfilesProvider) Schema(ctx context.Context, req provider.SchemaReques
 }
 
 func (p *DotfilesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data DotfilesProviderModel
+	var data EnhancedProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
