@@ -1,0 +1,17 @@
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    AddKeysToAgent yes
+    UseKeychain yes
+
+Host *.example.com
+    User admin
+    IdentityFile ~/.ssh/id_rsa
+    Port 2222
+
+Host bastion
+    HostName bastion.example.com
+    User admin
+    Port 22
+    ProxyJump none
