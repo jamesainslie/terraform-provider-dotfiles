@@ -402,7 +402,7 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 	// Execute command using the same shell execution logic as hooks
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}, err
 	}
 
 	// TODO: Extract version information if possible
@@ -485,7 +485,7 @@ func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName stri
 
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}, err
 	}
 
 	return &ApplicationDetectionResult{
@@ -526,7 +526,7 @@ func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appNam
 
 	err := executeShellCommand(ctx, cmd)
 	if err != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}, err
 	}
 
 	return &ApplicationDetectionResult{
