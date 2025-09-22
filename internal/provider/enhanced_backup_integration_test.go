@@ -37,8 +37,7 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 	// Create test source file
 	sourceFile := filepath.Join(sourceDir, "config.txt")
 	initialContent := "initial configuration content"
-	err = os.WriteFile(sourceFile, []byte(initialContent), 0644)
-	if err != nil {
+	if err := os.WriteFile(sourceFile, []byte(initialContent), 0644); err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
@@ -135,8 +134,7 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 		targetFile := filepath.Join(targetDir, "enhanced-config.txt")
 
 		// Create initial target file
-		err = os.WriteFile(targetFile, []byte("original target content"), 0644)
-		if err != nil {
+		if err := os.WriteFile(targetFile, []byte("original target content"), 0644); err != nil {
 			t.Fatalf("Failed to create target file: %v", err)
 		}
 
@@ -286,8 +284,7 @@ func TestRecoveryAndValidation(t *testing.T) {
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
 	testContent := "test configuration for recovery"
-	err = os.WriteFile(testFile, []byte(testContent), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte(testContent), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -365,8 +362,7 @@ func TestBackupFormatSupport(t *testing.T) {
 	tempDir := t.TempDir()
 
 	testFile := filepath.Join(tempDir, "format-test.txt")
-	err = os.WriteFile(testFile, []byte("format test content"), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte("format test content"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
