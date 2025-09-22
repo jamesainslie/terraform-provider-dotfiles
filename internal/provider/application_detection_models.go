@@ -7,7 +7,25 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// DetectionMethodModel describes a detection method configuration.
+type DetectionMethodModel struct {
+	Type    types.String `tfsdk:"type"`
+	Test    types.String `tfsdk:"test"`
+	Path    types.String `tfsdk:"path"`
+	Name    types.String `tfsdk:"name"`
+	Manager types.String `tfsdk:"manager"`
+}
+
+// ConfigMappingModel describes a configuration mapping.
+type ConfigMappingModel struct {
+	TargetPath         types.String `tfsdk:"target_path"`
+	TargetPathTemplate types.String `tfsdk:"target_path_template"`
+	MergeStrategy      types.String `tfsdk:"merge_strategy"`
+	Required           types.Bool   `tfsdk:"required"`
+}
 
 // DetectionMethodsModel represents detection methods configuration.
 type DetectionMethodsModel struct {

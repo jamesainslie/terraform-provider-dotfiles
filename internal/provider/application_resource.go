@@ -60,22 +60,6 @@ type ApplicationResourceModel struct {
 	DetectionResult  types.String `tfsdk:"detection_result"`
 }
 
-// DetectionMethodModel describes a detection method configuration.
-type DetectionMethodModel struct {
-	Type    types.String `tfsdk:"type"`
-	Test    types.String `tfsdk:"test"`
-	Path    types.String `tfsdk:"path"`
-	Name    types.String `tfsdk:"name"`
-	Manager types.String `tfsdk:"manager"`
-}
-
-// ConfigMappingModel describes a configuration mapping.
-type ConfigMappingModel struct {
-	TargetPath         types.String `tfsdk:"target_path"`
-	TargetPathTemplate types.String `tfsdk:"target_path_template"`
-	MergeStrategy      types.String `tfsdk:"merge_strategy"`
-	Required           types.Bool   `tfsdk:"required"`
-}
 
 func (r *ApplicationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_application"
@@ -174,6 +158,10 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 				Computed:            true,
 				MarkdownDescription: "Result of the last detection attempt",
 			},
+		},
+		Blocks: map[string]schema.Block{
+			"detection_methods": GetDetectionMethodsSchemaBlock(),
+			"config_mappings":   GetConfigMappingsSchemaBlock(),
 		},
 	}
 }
