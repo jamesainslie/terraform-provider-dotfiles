@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -92,6 +92,10 @@ func (p *DotfilesProvider) Schema(ctx context.Context, req provider.SchemaReques
 				MarkdownDescription: "Log level: debug, info (default), warn, or error",
 				Optional:            true,
 			},
+		},
+		Blocks: map[string]schema.Block{
+			"backup_strategy": GetBackupStrategySchemaBlock(),
+			"recovery":        GetRecoverySchemaBlock(),
 		},
 	}
 }
@@ -221,6 +225,7 @@ func (p *DotfilesProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewFileResource,
 		NewSymlinkResource,
 		NewDirectoryResource,
+		NewApplicationResource,
 	}
 }
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -259,7 +259,7 @@ func TestProviderResources(t *testing.T) {
 		t.Error("no resources returned")
 	}
 
-	expectedResources := 4 // repository, file, symlink, directory
+	expectedResources := 5 // repository, file, symlink, directory, application
 	if len(resources) != expectedResources {
 		t.Errorf("expected %d resources, got %d", expectedResources, len(resources))
 	}

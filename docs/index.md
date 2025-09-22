@@ -25,10 +25,35 @@ provider "scaffolding" {
 - `auto_detect_platform` (Boolean) Automatically detect the target platform. Defaults to true
 - `backup_directory` (String) Directory to store backup files. Defaults to ~/.dotfiles-backups
 - `backup_enabled` (Boolean) Enable automatic backups of existing files before modification. Defaults to true
+- `backup_strategy` (Block, Optional) Enhanced backup strategy configuration (see [below for nested schema](#nestedblock--backup_strategy))
 - `conflict_resolution` (String) How to handle conflicts: backup (default), overwrite, skip, or prompt
 - `dotfiles_root` (String) Root directory of the dotfiles repository. Defaults to ~/dotfiles
 - `dry_run` (Boolean) Preview changes without applying them. Defaults to false
 - `log_level` (String) Log level: debug, info (default), warn, or error
+- `recovery` (Block, Optional) Recovery and validation configuration (see [below for nested schema](#nestedblock--recovery))
 - `strategy` (String) Default strategy for file management: symlink (default), copy, or template
 - `target_platform` (String) Target platform: auto (default), macos, linux, or windows
 - `template_engine` (String) Template engine to use: go (default), handlebars, or none
+
+<a id="nestedblock--backup_strategy"></a>
+### Nested Schema for `backup_strategy`
+
+Optional:
+
+- `compression` (Boolean) Enable backup compression (gzip)
+- `directory` (String) Directory to store backup files
+- `enabled` (Boolean) Enable enhanced backup features
+- `incremental` (Boolean) Only backup when content changes
+- `max_backups` (Number) Maximum number of backups to keep per file
+- `retention_policy` (String) Backup retention policy (e.g., '30d', '7d', '1y')
+
+
+<a id="nestedblock--recovery"></a>
+### Nested Schema for `recovery`
+
+Optional:
+
+- `backup_index` (Boolean) Create searchable backup index
+- `create_restore_scripts` (Boolean) Generate restore scripts for backups
+- `test_recovery` (Boolean) Test backup recovery functionality
+- `validate_backups` (Boolean) Validate backup integrity with checksums

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package fileops
 
@@ -522,7 +522,7 @@ func TestFileManager_ConflictResolution(t *testing.T) {
 	})
 }
 
-// contains function removed - not used in this test file
+// contains function removed - not used in this test file.
 
 // Helper function to check if string contains substring.
 func containsSubstring(str, substr string) bool {
