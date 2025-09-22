@@ -249,10 +249,52 @@ func (r *ApplicationResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	// Re-run the same logic as Create for updates
-	// TODO: Implement differential updates for configuration changes
+	tflog.Debug(ctx, "Updating application resource", map[string]interface{}{
+		"application":         data.Application.ValueString(),
+		"source_path":         data.SourcePath.ValueString(),
+		"detect_installation": data.DetectInstallation.ValueBool(),
+	})
 
+	// Perform application detection (same as Create method)
+	detectionResult := r.performApplicationDetection(ctx, &data)
+
+	// Update computed attributes with detection results
+	data.Installed = types.BoolValue(detectionResult.Installed)
+	data.Version = types.StringValue(detectionResult.Version)
+	data.InstallationPath = types.StringValue(detectionResult.InstallationPath)
+	data.LastChecked = types.StringValue(time.Now().Format(time.RFC3339))
+	data.DetectionResult = types.StringValue(detectionResult.Method)
+
+	// Handle conditional behavior
+	if data.SkipIfNotInstalled.ValueBool() && !detectionResult.Installed {
+		tflog.Info(ctx, "Skipping application configuration update - not installed", map[string]interface{}{
+			"application": data.Application.ValueString(),
+		})
+		// Update ID and save state (but don't configure files)
+		data.ID = data.Application
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	if data.WarnIfNotInstalled.ValueBool() && !detectionResult.Installed {
+		resp.Diagnostics.AddWarning(
+			"Application not installed",
+			fmt.Sprintf("Application %s is not installed but configuration update will proceed", data.Application.ValueString()),
+		)
+	}
+
+	// TODO: Implement application configuration management here
+	// This would handle the config_mappings and copy/symlink configuration files
+
+	// Set ID and save state
+	data.ID = data.Application
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
+	tflog.Info(ctx, "Application resource updated successfully", map[string]interface{}{
+		"application": data.Application.ValueString(),
+		"installed":   detectionResult.Installed,
+		"version":     detectionResult.Version,
+	})
 }
 
 func (r *ApplicationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
