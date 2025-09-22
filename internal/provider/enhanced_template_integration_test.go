@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -15,7 +15,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
 )
 
-// TestEnhancedTemplateIntegration tests the complete enhanced template workflow
+// TestEnhancedTemplateIntegration tests the complete enhanced template workflow.
 func TestEnhancedTemplateIntegration(t *testing.T) {
 	// Create temporary directories
 	tempDir := t.TempDir()
@@ -273,7 +273,7 @@ Camel: {{camelCase "hello_world"}}`
 	})
 }
 
-// TestTemplateEngineCompatibility tests backward compatibility with existing template functionality
+// TestTemplateEngineCompatibility tests backward compatibility with existing template functionality.
 func TestTemplateEngineCompatibility(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -381,7 +381,7 @@ func TestTemplateEngineCompatibility(t *testing.T) {
 	})
 }
 
-// TestTemplateProcessingEndToEnd tests complete template processing workflow
+// TestTemplateProcessingEndToEnd tests complete template processing workflow.
 func TestTemplateProcessingEndToEnd(t *testing.T) {
 	tempDir := t.TempDir()
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package fileops
 
@@ -14,7 +14,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
 )
 
-// PermissionConfig represents permission configuration for operations
+// PermissionConfig represents permission configuration for operations.
 type PermissionConfig struct {
 	DirectoryMode string
 	FileMode      string
@@ -22,7 +22,7 @@ type PermissionConfig struct {
 	Rules         map[string]string // pattern -> permission mapping
 }
 
-// ApplyPermissions applies permission configuration to a path
+// ApplyPermissions applies permission configuration to a path.
 func (fm *FileManager) ApplyPermissions(targetPath string, config *PermissionConfig) error {
 	if config == nil {
 		return nil
@@ -47,7 +47,7 @@ func (fm *FileManager) ApplyPermissions(targetPath string, config *PermissionCon
 	return fm.applyFilePermissions(targetPath, config)
 }
 
-// applyDirectoryPermissions applies permissions to a directory
+// applyDirectoryPermissions applies permissions to a directory.
 func (fm *FileManager) applyDirectoryPermissions(dirPath string, config *PermissionConfig) error {
 	// Apply directory permission to the directory itself
 	if config.DirectoryMode != "" {
@@ -69,7 +69,7 @@ func (fm *FileManager) applyDirectoryPermissions(dirPath string, config *Permiss
 	return nil
 }
 
-// applyFilePermissions applies permissions to a single file
+// applyFilePermissions applies permissions to a single file.
 func (fm *FileManager) applyFilePermissions(filePath string, config *PermissionConfig) error {
 	fileName := filepath.Base(filePath)
 
@@ -107,7 +107,7 @@ func (fm *FileManager) applyFilePermissions(filePath string, config *PermissionC
 	return fm.platform.SetPermissions(filePath, mode)
 }
 
-// applyPermissionsRecursively applies permissions recursively to directory contents
+// applyPermissionsRecursively applies permissions recursively to directory contents.
 func (fm *FileManager) applyPermissionsRecursively(dirPath string, config *PermissionConfig) error {
 	return filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -141,7 +141,7 @@ func (fm *FileManager) applyPermissionsRecursively(dirPath string, config *Permi
 	})
 }
 
-// CreateSymlinkWithPermissions creates a symlink and applies permissions to the source
+// CreateSymlinkWithPermissions creates a symlink and applies permissions to the source.
 func (fm *FileManager) CreateSymlinkWithPermissions(sourcePath, targetPath string, config *PermissionConfig) error {
 	if fm.dryRun {
 		fmt.Printf("DRY RUN: Would create symlink %s -> %s with permissions\n", targetPath, sourcePath)
@@ -162,7 +162,7 @@ func (fm *FileManager) CreateSymlinkWithPermissions(sourcePath, targetPath strin
 	return nil
 }
 
-// CreateSymlinkWithParentsAndPermissions creates a symlink with parent directories and permissions
+// CreateSymlinkWithParentsAndPermissions creates a symlink with parent directories and permissions.
 func (fm *FileManager) CreateSymlinkWithParentsAndPermissions(sourcePath, targetPath string, config *PermissionConfig) error {
 	if fm.dryRun {
 		fmt.Printf("DRY RUN: Would create symlink %s -> %s (with parents and permissions)\n", targetPath, sourcePath)
@@ -191,7 +191,7 @@ func (fm *FileManager) CreateSymlinkWithParentsAndPermissions(sourcePath, target
 	return fm.CreateSymlinkWithPermissions(sourcePath, targetPath, config)
 }
 
-// CopyFileWithPermissions copies a file and applies comprehensive permission configuration
+// CopyFileWithPermissions copies a file and applies comprehensive permission configuration.
 func (fm *FileManager) CopyFileWithPermissions(sourcePath, targetPath string, config *PermissionConfig) error {
 	if fm.dryRun {
 		fmt.Printf("DRY RUN: Would copy %s to %s with permissions\n", sourcePath, targetPath)
@@ -215,7 +215,7 @@ func (fm *FileManager) CopyFileWithPermissions(sourcePath, targetPath string, co
 	return nil
 }
 
-// parsePermissionString parses a permission string to os.FileMode
+// parsePermissionString parses a permission string to os.FileMode.
 func parsePermissionString(perm string) (os.FileMode, error) {
 	if perm == "" {
 		return 0644, nil
@@ -241,7 +241,7 @@ func parsePermissionString(perm string) (os.FileMode, error) {
 	return os.FileMode(parsed), nil
 }
 
-// matchPattern matches a filename against a pattern (simple glob support)
+// matchPattern matches a filename against a pattern (simple glob support).
 func matchPattern(pattern, filename string) bool {
 	matched, err := filepath.Match(pattern, filename)
 	if err != nil {
@@ -267,7 +267,7 @@ func isMoreSpecific(pattern1, pattern2 string) bool {
 	return exactChars1 > exactChars2
 }
 
-// ValidatePermissionConfig validates a permission configuration
+// ValidatePermissionConfig validates a permission configuration.
 func ValidatePermissionConfig(config *PermissionConfig) error {
 	if config == nil {
 		return nil

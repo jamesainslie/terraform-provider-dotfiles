@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -16,7 +16,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 )
 
-// TestApplicationDetectionMethods tests the application detection functionality
+// TestApplicationDetectionMethods tests the application detection functionality.
 func TestApplicationDetectionMethods(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
@@ -159,7 +159,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 	})
 }
 
-// TestApplicationDetectionIntegration tests complete application detection workflow
+// TestApplicationDetectionIntegration tests complete application detection workflow.
 func TestApplicationDetectionIntegration(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -306,7 +306,7 @@ func TestApplicationDetectionIntegration(t *testing.T) {
 	})
 }
 
-// TestApplicationDetectionUtilities tests utility functions for application detection
+// TestApplicationDetectionUtilities tests utility functions for application detection.
 func TestApplicationDetectionUtilities(t *testing.T) {
 	t.Run("capitalizeFirst", func(t *testing.T) {
 		testCases := []struct {
@@ -350,7 +350,7 @@ func TestApplicationDetectionUtilities(t *testing.T) {
 	})
 }
 
-// (isVersionCompatible is implemented in file_resource.go)
+// (isVersionCompatible is implemented in file_resource.go).
 
 func isValidVersion(version string) bool {
 	// Simplified version validation

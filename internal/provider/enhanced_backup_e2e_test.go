@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -16,7 +16,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 )
 
-// TestEnhancedBackupEndToEnd tests the complete enhanced backup workflow
+// TestEnhancedBackupEndToEnd tests the complete enhanced backup workflow.
 func TestEnhancedBackupEndToEnd(t *testing.T) {
 	// Create temporary directories
 	tempDir := t.TempDir()
@@ -337,7 +337,7 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 	})
 }
 
-// TestEnhancedBackupCompatibility tests backward compatibility with existing backup functionality
+// TestEnhancedBackupCompatibility tests backward compatibility with existing backup functionality.
 func TestEnhancedBackupCompatibility(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -429,7 +429,7 @@ func TestEnhancedBackupCompatibility(t *testing.T) {
 	})
 }
 
-// TestBackupFeatureCompletion tests that all required backup features are implemented
+// TestBackupFeatureCompletion tests that all required backup features are implemented.
 func TestBackupFeatureCompletion(t *testing.T) {
 	t.Run("All backup formats supported", func(t *testing.T) {
 		formats := []string{"timestamped", "numbered", "git_style"}

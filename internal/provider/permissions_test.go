@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestPermissionsSchemaExtensions tests that permission management
-// schema attributes are properly defined for resources
+// TestPermissionsSchemaExtensions tests that permission management.
+// schema attributes are properly defined for resources.
 func TestPermissionsSchemaExtensions(t *testing.T) {
 	t.Run("FileResource should support permissions", func(t *testing.T) {
 		r := NewFileResource()
@@ -64,7 +64,7 @@ func TestPermissionsSchemaExtensions(t *testing.T) {
 	})
 }
 
-// TestPermissionParsing tests parsing of permission values
+// TestPermissionParsing tests parsing of permission values.
 func TestPermissionParsing(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -127,7 +127,7 @@ func TestPermissionParsing(t *testing.T) {
 	}
 }
 
-// TestPermissionRuleMatching tests pattern matching for permission rules
+// TestPermissionRuleMatching tests pattern matching for permission rules.
 func TestPermissionRuleMatching(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -178,7 +178,7 @@ func TestPermissionRuleMatching(t *testing.T) {
 	}
 }
 
-// TestPermissionsResourceModel tests the enhanced resource model
+// TestPermissionsResourceModel tests the enhanced resource model.
 func TestPermissionsResourceModel(t *testing.T) {
 	// Test enhanced FileResourceModel with permissions
 	model := EnhancedFileResourceModel{

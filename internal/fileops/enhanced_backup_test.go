@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package fileops
 
@@ -16,7 +16,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 )
 
-// TestEnhancedBackupConfiguration tests the enhanced backup configuration
+// TestEnhancedBackupConfiguration tests the enhanced backup configuration.
 func TestEnhancedBackupConfiguration(t *testing.T) {
 	t.Run("EnhancedBackupConfig validation", func(t *testing.T) {
 		testCases := []struct {
@@ -79,7 +79,7 @@ func TestEnhancedBackupConfiguration(t *testing.T) {
 	})
 }
 
-// TestBackupFormats tests different backup naming formats
+// TestBackupFormats tests different backup naming formats.
 func TestBackupFormats(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -149,7 +149,7 @@ func TestBackupFormats(t *testing.T) {
 	}
 }
 
-// TestBackupCompression tests backup compression functionality
+// TestBackupCompression tests backup compression functionality.
 func TestBackupCompression(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -237,7 +237,7 @@ func TestBackupCompression(t *testing.T) {
 	})
 }
 
-// TestBackupRetention tests backup retention management
+// TestBackupRetention tests backup retention management.
 func TestBackupRetention(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -302,7 +302,7 @@ func TestBackupRetention(t *testing.T) {
 	}
 }
 
-// TestBackupMetadata tests backup metadata storage and retrieval
+// TestBackupMetadata tests backup metadata storage and retrieval.
 func TestBackupMetadata(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -385,7 +385,7 @@ func TestBackupMetadata(t *testing.T) {
 	})
 }
 
-// TestIncrementalBackup tests incremental backup functionality
+// TestIncrementalBackup tests incremental backup functionality.
 func TestIncrementalBackup(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -456,7 +456,7 @@ func TestIncrementalBackup(t *testing.T) {
 	})
 }
 
-// Helper function to check if path exists
+// Helper function to check if path exists.
 func PathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

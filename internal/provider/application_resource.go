@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -60,7 +60,7 @@ type ApplicationResourceModel struct {
 	DetectionResult  types.String `tfsdk:"detection_result"`
 }
 
-// DetectionMethodModel describes a detection method configuration
+// DetectionMethodModel describes a detection method configuration.
 type DetectionMethodModel struct {
 	Type    types.String `tfsdk:"type"`
 	Test    types.String `tfsdk:"test"`
@@ -69,7 +69,7 @@ type DetectionMethodModel struct {
 	Manager types.String `tfsdk:"manager"`
 }
 
-// ConfigMappingModel describes a configuration mapping
+// ConfigMappingModel describes a configuration mapping.
 type ConfigMappingModel struct {
 	TargetPath         types.String `tfsdk:"target_path"`
 	TargetPathTemplate types.String `tfsdk:"target_path_template"`
@@ -317,7 +317,7 @@ func (r *ApplicationResource) Delete(ctx context.Context, req resource.DeleteReq
 	// This would remove symlinks/files created by this resource
 }
 
-// ApplicationDetectionResult represents the result of application detection
+// ApplicationDetectionResult represents the result of application detection.
 type ApplicationDetectionResult struct {
 	Installed        bool
 	Version          string
@@ -325,7 +325,7 @@ type ApplicationDetectionResult struct {
 	Method           string
 }
 
-// performApplicationDetection performs application detection using configured methods
+// performApplicationDetection performs application detection using configured methods.
 func (r *ApplicationResource) performApplicationDetection(ctx context.Context, data *ApplicationResourceModel) (*ApplicationDetectionResult, error) {
 	if !data.DetectInstallation.ValueBool() {
 		return &ApplicationDetectionResult{
@@ -376,7 +376,7 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 	}, nil
 }
 
-// tryDetectionMethod attempts to detect application using specified method
+// tryDetectionMethod attempts to detect application using specified method.
 func (r *ApplicationResource) tryDetectionMethod(ctx context.Context, appName, method string) (*ApplicationDetectionResult, error) {
 	platformProvider := platform.DetectPlatform()
 
@@ -394,7 +394,7 @@ func (r *ApplicationResource) tryDetectionMethod(ctx context.Context, appName, m
 	}
 }
 
-// detectByCommand detects application by running a command
+// detectByCommand detects application by running a command.
 func (r *ApplicationResource) detectByCommand(ctx context.Context, appName string) (*ApplicationDetectionResult, error) {
 	// Use command -v to check if command exists in PATH
 	cmd := fmt.Sprintf("command -v %s", appName)
@@ -412,7 +412,7 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 	}, nil
 }
 
-// detectByFile detects application by checking file/directory existence
+// detectByFile detects application by checking file/directory existence.
 func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, platformProvider platform.PlatformProvider) (*ApplicationDetectionResult, error) {
 	// Use context for structured logging and to avoid unused parameter warnings
 	tflog.Debug(ctx, "detectByFile invoked", map[string]interface{}{
@@ -478,7 +478,7 @@ func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, 
 	return &ApplicationDetectionResult{Installed: false}, nil
 }
 
-// detectByBrewCask detects application installed via Homebrew cask
+// detectByBrewCask detects application installed via Homebrew cask.
 func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName string) (*ApplicationDetectionResult, error) {
 	cmd := fmt.Sprintf("brew list --cask | grep -q '^%s$'", appName)
 
@@ -493,7 +493,7 @@ func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName stri
 	}, nil
 }
 
-// detectByPackageManager detects application via system package manager
+// detectByPackageManager detects application via system package manager.
 func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appName string, platformProvider platform.PlatformProvider) (*ApplicationDetectionResult, error) {
 	var cmd string
 
@@ -532,7 +532,7 @@ func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appNam
 	}, nil
 }
 
-// capitalizeFirst capitalizes the first letter of a string
+// capitalizeFirst capitalizes the first letter of a string.
 func capitalizeFirst(s string) string {
 	if len(s) == 0 {
 		return s

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package template
 
@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// TestEnhancedTemplateEngines tests multiple template engine support
+// TestEnhancedTemplateEngines tests multiple template engine support.
 func TestEnhancedTemplateEngines(t *testing.T) {
 	testTemplate := `Hello {{.user_name}}!
 Your email is {{.user_email}}.
@@ -85,7 +85,7 @@ Editor: vim`
 	})
 }
 
-// TestCustomTemplateFunctions tests custom function support
+// TestCustomTemplateFunctions tests custom function support.
 func TestCustomTemplateFunctions(t *testing.T) {
 	t.Run("Go template engine with custom functions", func(t *testing.T) {
 		customFunctions := map[string]interface{}{
@@ -156,7 +156,7 @@ Camel: {{camelCase "hello_world"}}`
 	})
 }
 
-// TestPlatformAwareTemplateContext tests platform-specific template variable support
+// TestPlatformAwareTemplateContext tests platform-specific template variable support.
 func TestPlatformAwareTemplateContext(t *testing.T) {
 	systemInfo := map[string]interface{}{
 		"platform":     "macos",
@@ -242,7 +242,7 @@ func TestPlatformAwareTemplateContext(t *testing.T) {
 	})
 }
 
-// TestTemplateFileProcessing tests file-based template processing with enhanced features
+// TestTemplateFileProcessing tests file-based template processing with enhanced features.
 func TestTemplateFileProcessing(t *testing.T) {
 	tempDir := t.TempDir()
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -506,4 +506,4 @@ func TestCompleteProviderWorkflow(t *testing.T) {
 	})
 }
 
-// Use containsString from file_resource_integration_simple_test.go
+// Use containsString from file_resource_integration_simple_test.go.

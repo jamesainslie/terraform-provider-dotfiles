@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestExecutePostCommands tests the post-creation hooks functionality
+// TestExecutePostCommands tests the post-creation hooks functionality.
 func TestExecutePostCommands(t *testing.T) {
 	ctx := context.Background()
 
@@ -85,7 +85,7 @@ func TestExecutePostCommands(t *testing.T) {
 	})
 }
 
-// TestExecuteShellCommand tests individual shell command execution
+// TestExecuteShellCommand tests individual shell command execution.
 func TestExecuteShellCommand(t *testing.T) {
 	ctx := context.Background()
 
@@ -139,7 +139,7 @@ func TestExecuteShellCommand(t *testing.T) {
 	}
 }
 
-// TestPostCreationHooksIntegration tests hooks in the context of file operations
+// TestPostCreationHooksIntegration tests hooks in the context of file operations.
 func TestPostCreationHooksIntegration(t *testing.T) {
 	t.Run("FileResource with post-create hooks", func(t *testing.T) {
 		// Test the integration of post-creation hooks in file operations
@@ -205,7 +205,7 @@ func TestPostCreationHooksIntegration(t *testing.T) {
 	})
 }
 
-// TestHooksValidation tests validation of hook commands
+// TestHooksValidation tests validation of hook commands.
 func TestHooksValidation(t *testing.T) {
 	t.Run("Safe command validation", func(t *testing.T) {
 		// Test that basic commands work

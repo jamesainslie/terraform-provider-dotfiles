@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -14,7 +14,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/fileops"
 )
 
-// TestFileResourcePermissionIntegration tests the FileResource with permission management
+// TestFileResourcePermissionIntegration tests the FileResource with permission management.
 func TestFileResourcePermissionIntegration(t *testing.T) {
 	// Create temporary directories for testing
 	tempDir := t.TempDir()
@@ -128,7 +128,7 @@ func TestFileResourcePermissionIntegration(t *testing.T) {
 	})
 }
 
-// TestSymlinkResourcePermissionIntegration tests symlink creation with permissions
+// TestSymlinkResourcePermissionIntegration tests symlink creation with permissions.
 func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 	// Test symlink support by trying to create one
 	tempTestDir := t.TempDir()
@@ -219,8 +219,8 @@ func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 	}
 }
 
-// buildPermissionConfig creates a PermissionConfig from the enhanced model
-// This function should be implemented in the actual resource code
+// buildPermissionConfig creates a PermissionConfig from the enhanced model.
+// This function should be implemented in the actual resource code.
 func buildPermissionConfig(permissions *PermissionsModel, rules types.Map) (*fileops.PermissionConfig, error) {
 	config := &fileops.PermissionConfig{}
 

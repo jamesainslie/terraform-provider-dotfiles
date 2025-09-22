@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestApplicationResource tests the new dotfiles_application resource
+// TestApplicationResource tests the new dotfiles_application resource.
 func TestApplicationResource(t *testing.T) {
 	t.Run("NewApplicationResource", func(t *testing.T) {
 		r := NewApplicationResource()
@@ -102,7 +102,7 @@ func TestApplicationResource(t *testing.T) {
 	})
 }
 
-// TestApplicationResourceModel tests the application resource data model
+// TestApplicationResourceModel tests the application resource data model.
 func TestApplicationResourceModel(t *testing.T) {
 	// Test the application resource model with comprehensive configuration
 	model := ApplicationResourceModel{
@@ -146,7 +146,7 @@ func TestApplicationResourceModel(t *testing.T) {
 	}
 }
 
-// TestDetectionMethodsModel tests the detection methods configuration
+// TestDetectionMethodsModel tests the detection methods configuration.
 func TestDetectionMethodsModel(t *testing.T) {
 	// Test detection methods configuration
 	methods := []DetectionMethodModel{
@@ -207,7 +207,7 @@ func TestDetectionMethodsModel(t *testing.T) {
 	}
 }
 
-// TestConfigMappingsModel tests the configuration mappings model
+// TestConfigMappingsModel tests the configuration mappings model.
 func TestConfigMappingsModel(t *testing.T) {
 	// Test config mappings
 	mappings := map[string]ConfigMappingModel{

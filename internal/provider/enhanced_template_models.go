@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// EnhancedFileResourceModelWithTemplate extends EnhancedFileResourceModelWithBackup with template features
+// EnhancedFileResourceModelWithTemplate extends EnhancedFileResourceModelWithBackup with template features.
 type EnhancedFileResourceModelWithTemplate struct {
 	EnhancedFileResourceModelWithBackup
 	TemplateEngine       types.String `tfsdk:"template_engine"`
@@ -18,7 +18,7 @@ type EnhancedFileResourceModelWithTemplate struct {
 	TemplateFunctions    types.Map    `tfsdk:"template_functions"`
 }
 
-// EnhancedSymlinkResourceModelWithTemplate extends EnhancedSymlinkResourceModelWithBackup with template features
+// EnhancedSymlinkResourceModelWithTemplate extends EnhancedSymlinkResourceModelWithBackup with template features.
 type EnhancedSymlinkResourceModelWithTemplate struct {
 	EnhancedSymlinkResourceModelWithBackup
 	TemplateEngine       types.String `tfsdk:"template_engine"`
@@ -26,7 +26,7 @@ type EnhancedSymlinkResourceModelWithTemplate struct {
 	TemplateFunctions    types.Map    `tfsdk:"template_functions"`
 }
 
-// EnhancedFileResourceModelWithApplicationDetection extends template model with app detection
+// EnhancedFileResourceModelWithApplicationDetection extends template model with app detection.
 type EnhancedFileResourceModelWithApplicationDetection struct {
 	EnhancedFileResourceModelWithTemplate
 	RequireApplication    types.String `tfsdk:"require_application"`
@@ -35,7 +35,7 @@ type EnhancedFileResourceModelWithApplicationDetection struct {
 	SkipIfAppMissing      types.Bool   `tfsdk:"skip_if_app_missing"`
 }
 
-// ApplicationDetectionConfig represents application detection configuration
+// ApplicationDetectionConfig represents application detection configuration.
 type ApplicationDetectionConfig struct {
 	RequiredApplication string
 	MinVersion          string
@@ -43,7 +43,7 @@ type ApplicationDetectionConfig struct {
 	SkipIfMissing       bool
 }
 
-// GetEnhancedTemplateAttributes returns template-related schema attributes
+// GetEnhancedTemplateAttributes returns template-related schema attributes.
 func GetEnhancedTemplateAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"template_engine": schema.StringAttribute{

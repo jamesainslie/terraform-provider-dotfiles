@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -9,12 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 )
 
-// DetectionMethodsModel represents detection methods configuration
+// DetectionMethodsModel represents detection methods configuration.
 type DetectionMethodsModel struct {
 	Methods []DetectionMethodModel `tfsdk:"methods"`
 }
 
-// GetDetectionMethodsSchemaBlock returns the schema block for detection methods
+// GetDetectionMethodsSchemaBlock returns the schema block for detection methods.
 func GetDetectionMethodsSchemaBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
 		MarkdownDescription: "Application detection methods configuration",
@@ -45,12 +45,12 @@ func GetDetectionMethodsSchemaBlock() schema.ListNestedBlock {
 	}
 }
 
-// ConfigMappingsModel represents configuration mappings
+// ConfigMappingsModel represents configuration mappings.
 type ConfigMappingsModel struct {
 	Mappings map[string]ConfigMappingModel `tfsdk:"mappings"`
 }
 
-// GetConfigMappingsSchemaBlock returns the schema block for configuration mappings
+// GetConfigMappingsSchemaBlock returns the schema block for configuration mappings.
 func GetConfigMappingsSchemaBlock() schema.SingleNestedBlock {
 	return schema.SingleNestedBlock{
 		MarkdownDescription: "Configuration file mappings and strategies",
@@ -79,7 +79,7 @@ func GetConfigMappingsSchemaBlock() schema.SingleNestedBlock {
 	}
 }
 
-// GetApplicationDetectionAttributes returns attributes for application detection in existing resources
+// GetApplicationDetectionAttributes returns attributes for application detection in existing resources.
 func GetApplicationDetectionAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"require_application": schema.StringAttribute{

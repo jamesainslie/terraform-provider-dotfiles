@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -15,14 +15,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// PermissionsModel defines the permissions configuration block
+// PermissionsModel defines the permissions configuration block.
 type PermissionsModel struct {
 	Directory types.String `tfsdk:"directory"`
 	Files     types.String `tfsdk:"files"`
 	Recursive types.Bool   `tfsdk:"recursive"`
 }
 
-// EnhancedFileResourceModel extends FileResourceModel with permission management
+// EnhancedFileResourceModel extends FileResourceModel with permission management.
 type EnhancedFileResourceModel struct {
 	FileResourceModel
 	Permissions     *PermissionsModel `tfsdk:"permissions"`
@@ -34,7 +34,7 @@ type EnhancedFileResourceModel struct {
 	PreDestroyCommands types.List `tfsdk:"pre_destroy_commands"`
 }
 
-// EnhancedSymlinkResourceModel extends SymlinkResourceModel with permission management
+// EnhancedSymlinkResourceModel extends SymlinkResourceModel with permission management.
 type EnhancedSymlinkResourceModel struct {
 	SymlinkResourceModel
 	Permissions     *PermissionsModel `tfsdk:"permissions"`
@@ -46,7 +46,7 @@ type EnhancedSymlinkResourceModel struct {
 	PreDestroyCommands types.List `tfsdk:"pre_destroy_commands"`
 }
 
-// GetPermissionsSchemaBlock returns the schema block for permissions
+// GetPermissionsSchemaBlock returns the schema block for permissions.
 func GetPermissionsSchemaBlock() schema.SingleNestedBlock {
 	return schema.SingleNestedBlock{
 		MarkdownDescription: "Permission management for files and directories",
@@ -73,7 +73,7 @@ func GetPermissionsSchemaBlock() schema.SingleNestedBlock {
 	}
 }
 
-// GetPermissionRulesAttribute returns the schema attribute for permission rules
+// GetPermissionRulesAttribute returns the schema attribute for permission rules.
 func GetPermissionRulesAttribute() schema.MapAttribute {
 	return schema.MapAttribute{
 		Optional:            true,
@@ -82,7 +82,7 @@ func GetPermissionRulesAttribute() schema.MapAttribute {
 	}
 }
 
-// GetPostHooksAttributes returns the schema attributes for post-creation hooks
+// GetPostHooksAttributes returns the schema attributes for post-creation hooks.
 func GetPostHooksAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"post_create_commands": schema.ListAttribute{
@@ -103,7 +103,7 @@ func GetPostHooksAttributes() map[string]schema.Attribute {
 	}
 }
 
-// parsePermission parses a permission string (e.g., "0644") to uint32
+// parsePermission parses a permission string (e.g., "0644") to uint32.
 func parsePermission(perm string) (uint32, error) {
 	if perm == "" {
 		return 0, fmt.Errorf("permission cannot be empty")
@@ -129,7 +129,7 @@ func parsePermission(perm string) (uint32, error) {
 	return uint32(parsed), nil
 }
 
-// matchesPermissionPattern checks if a filename matches a permission rule pattern
+// matchesPermissionPattern checks if a filename matches a permission rule pattern.
 func matchesPermissionPattern(pattern, filename string) bool {
 	// Simple glob matching - can be enhanced with more sophisticated patterns
 	matched, err := filepath.Match(pattern, filename)
@@ -156,7 +156,7 @@ func isMoreSpecific(pattern1, pattern2 string) bool {
 	return exactChars1 > exactChars2
 }
 
-// ApplyPermissionRules applies permission rules to a file based on patterns
+// ApplyPermissionRules applies permission rules to a file based on patterns.
 func ApplyPermissionRules(filename string, rules types.Map, defaultPerm string) (string, error) {
 	if rules.IsNull() || rules.IsUnknown() {
 		return defaultPerm, nil
@@ -190,7 +190,7 @@ func ApplyPermissionRules(filename string, rules types.Map, defaultPerm string) 
 	return defaultPerm, nil
 }
 
-// ValidatePermissionsModel validates the permissions configuration
+// ValidatePermissionsModel validates the permissions configuration.
 func ValidatePermissionsModel(permissions *PermissionsModel) error {
 	if permissions == nil {
 		return nil
@@ -213,7 +213,7 @@ func ValidatePermissionsModel(permissions *PermissionsModel) error {
 	return nil
 }
 
-// ValidatePermissionRules validates permission rules map
+// ValidatePermissionRules validates permission rules map.
 func ValidatePermissionRules(rules types.Map) error {
 	if rules.IsNull() || rules.IsUnknown() {
 		return nil

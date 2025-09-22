@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestEnhancedBackupProviderSchema tests the enhanced backup configuration schema
+// TestEnhancedBackupProviderSchema tests the enhanced backup configuration schema.
 func TestEnhancedBackupProviderSchema(t *testing.T) {
 	t.Run("Provider schema should support backup_strategy block", func(t *testing.T) {
 		dotfilesProvider := &DotfilesProvider{}
@@ -39,7 +39,7 @@ func TestEnhancedBackupProviderSchema(t *testing.T) {
 	})
 }
 
-// TestEnhancedFileResourceBackupSchema tests file resource backup policy schema
+// TestEnhancedFileResourceBackupSchema tests file resource backup policy schema.
 func TestEnhancedFileResourceBackupSchema(t *testing.T) {
 	t.Run("FileResource should support backup_policy block", func(t *testing.T) {
 		r := NewFileResource()
@@ -66,7 +66,7 @@ func TestEnhancedFileResourceBackupSchema(t *testing.T) {
 	})
 }
 
-// TestBackupStrategyModel tests the backup strategy configuration model
+// TestBackupStrategyModel tests the backup strategy configuration model.
 func TestBackupStrategyModel(t *testing.T) {
 	// Test enhanced provider model with backup strategy
 	model := &EnhancedProviderModel{
@@ -114,7 +114,7 @@ func TestBackupStrategyModel(t *testing.T) {
 	}
 }
 
-// TestBackupPolicyModel tests the file-specific backup policy model
+// TestBackupPolicyModel tests the file-specific backup policy model.
 func TestBackupPolicyModel(t *testing.T) {
 	// Test enhanced file model with backup policy
 	model := &EnhancedFileResourceModelWithBackup{

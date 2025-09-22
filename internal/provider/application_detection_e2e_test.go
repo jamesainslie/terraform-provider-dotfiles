@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestApplicationDetectionEndToEnd tests the complete application detection workflow
+// TestApplicationDetectionEndToEnd tests the complete application detection workflow.
 func TestApplicationDetectionEndToEnd(t *testing.T) {
 	// Create temporary directories
 	tempDir := t.TempDir()
@@ -268,9 +268,9 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 	})
 }
 
-// (Mock state implementation removed for simplicity - focus on core detection logic)
+// (Mock state implementation removed for simplicity - focus on core detection logic).
 
-// (buildApplicationDetectionConfig is implemented in file_resource.go)
+// (buildApplicationDetectionConfig is implemented in file_resource.go).
 
 func isValidConfigStrategy(strategy string) bool {
 	validStrategies := []string{"symlink", "copy", "merge", "template"}
@@ -282,4 +282,4 @@ func isValidConfigStrategy(strategy string) bool {
 	return false
 }
 
-// (Types moved to enhanced_template_models.go)
+// (Types moved to enhanced_template_models.go).

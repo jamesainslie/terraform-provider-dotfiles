@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// BackupStrategyModel defines the backup strategy configuration block
+// BackupStrategyModel defines the backup strategy configuration block.
 type BackupStrategyModel struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	Directory       types.String `tfsdk:"directory"`
@@ -21,7 +21,7 @@ type BackupStrategyModel struct {
 	MaxBackups      types.Int64  `tfsdk:"max_backups"`
 }
 
-// RecoveryModel defines the recovery configuration block
+// RecoveryModel defines the recovery configuration block.
 type RecoveryModel struct {
 	CreateRestoreScripts types.Bool `tfsdk:"create_restore_scripts"`
 	ValidateBackups      types.Bool `tfsdk:"validate_backups"`
@@ -29,7 +29,7 @@ type RecoveryModel struct {
 	BackupIndex          types.Bool `tfsdk:"backup_index"`
 }
 
-// BackupPolicyModel defines file-specific backup policy
+// BackupPolicyModel defines file-specific backup policy.
 type BackupPolicyModel struct {
 	AlwaysBackup    types.Bool   `tfsdk:"always_backup"`
 	VersionedBackup types.Bool   `tfsdk:"versioned_backup"`
@@ -39,35 +39,35 @@ type BackupPolicyModel struct {
 	Compression     types.Bool   `tfsdk:"compression"`
 }
 
-// RecoveryTestModel defines recovery testing configuration
+// RecoveryTestModel defines recovery testing configuration.
 type RecoveryTestModel struct {
 	Enabled types.Bool   `tfsdk:"enabled"`
 	Command types.String `tfsdk:"command"`
 	Timeout types.String `tfsdk:"timeout"`
 }
 
-// EnhancedProviderModel extends DotfilesProviderModel with enhanced backup features
+// EnhancedProviderModel extends DotfilesProviderModel with enhanced backup features.
 type EnhancedProviderModel struct {
 	DotfilesProviderModel
 	BackupStrategy *BackupStrategyModel `tfsdk:"backup_strategy"`
 	Recovery       *RecoveryModel       `tfsdk:"recovery"`
 }
 
-// EnhancedFileResourceModelWithBackup extends EnhancedFileResourceModel with backup features
+// EnhancedFileResourceModelWithBackup extends EnhancedFileResourceModel with backup features.
 type EnhancedFileResourceModelWithBackup struct {
 	EnhancedFileResourceModel
 	BackupPolicy *BackupPolicyModel `tfsdk:"backup_policy"`
 	RecoveryTest *RecoveryTestModel `tfsdk:"recovery_test"`
 }
 
-// EnhancedSymlinkResourceModelWithBackup extends EnhancedSymlinkResourceModel with backup features
+// EnhancedSymlinkResourceModelWithBackup extends EnhancedSymlinkResourceModel with backup features.
 type EnhancedSymlinkResourceModelWithBackup struct {
 	EnhancedSymlinkResourceModel
 	BackupPolicy *BackupPolicyModel `tfsdk:"backup_policy"`
 	RecoveryTest *RecoveryTestModel `tfsdk:"recovery_test"`
 }
 
-// GetBackupStrategySchemaBlock returns the schema block for backup strategy
+// GetBackupStrategySchemaBlock returns the schema block for backup strategy.
 func GetBackupStrategySchemaBlock() schema.SingleNestedBlock {
 	return schema.SingleNestedBlock{
 		MarkdownDescription: "Enhanced backup strategy configuration",
@@ -112,7 +112,7 @@ func GetBackupStrategySchemaBlock() schema.SingleNestedBlock {
 	}
 }
 
-// GetRecoverySchemaBlock returns the schema block for recovery configuration
+// GetRecoverySchemaBlock returns the schema block for recovery configuration.
 func GetRecoverySchemaBlock() schema.SingleNestedBlock {
 	return schema.SingleNestedBlock{
 		MarkdownDescription: "Recovery and validation configuration",
@@ -145,7 +145,7 @@ func GetRecoverySchemaBlock() schema.SingleNestedBlock {
 	}
 }
 
-// GetBackupPolicySchemaBlock returns the schema block for file-specific backup policy
+// GetBackupPolicySchemaBlock returns the schema block for file-specific backup policy.
 func GetBackupPolicySchemaBlock() schema.SingleNestedBlock {
 	return schema.SingleNestedBlock{
 		MarkdownDescription: "File-specific backup policy configuration",
@@ -190,7 +190,7 @@ func GetBackupPolicySchemaBlock() schema.SingleNestedBlock {
 	}
 }
 
-// GetRecoveryTestSchemaBlock returns the schema block for recovery testing
+// GetRecoveryTestSchemaBlock returns the schema block for recovery testing.
 func GetRecoveryTestSchemaBlock() schema.SingleNestedBlock {
 	return schema.SingleNestedBlock{
 		MarkdownDescription: "Recovery testing configuration",

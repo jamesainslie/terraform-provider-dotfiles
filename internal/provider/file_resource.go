@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -608,7 +608,7 @@ func (r *FileResource) updateComputedAttributes(ctx context.Context, data *FileR
 	return nil
 }
 
-// buildEnhancedBackupConfigFromFileModel builds enhanced backup config from file model
+// buildEnhancedBackupConfigFromFileModel builds enhanced backup config from file model.
 func buildEnhancedBackupConfigFromFileModel(data *EnhancedFileResourceModelWithBackup) (*fileops.EnhancedBackupConfig, error) {
 	if data.BackupPolicy == nil {
 		return nil, nil
@@ -635,22 +635,22 @@ func buildEnhancedBackupConfigFromFileModel(data *EnhancedFileResourceModelWithB
 	return config, fileops.ValidateEnhancedBackupConfig(config)
 }
 
-// buildEnhancedBackupConfigFromTemplateModel builds enhanced backup config from template model
+// buildEnhancedBackupConfigFromTemplateModel builds enhanced backup config from template model.
 func buildEnhancedBackupConfigFromTemplateModel(data *EnhancedFileResourceModelWithTemplate) (*fileops.EnhancedBackupConfig, error) {
 	return buildEnhancedBackupConfigFromFileModel(&data.EnhancedFileResourceModelWithBackup)
 }
 
-// buildEnhancedTemplateConfigFromAppModel builds template config from application detection model
+// buildEnhancedTemplateConfigFromAppModel builds template config from application detection model.
 func buildEnhancedTemplateConfigFromAppModel(data *EnhancedFileResourceModelWithApplicationDetection) (*EnhancedTemplateConfig, error) {
 	return buildEnhancedTemplateConfig(&data.EnhancedFileResourceModelWithTemplate)
 }
 
-// buildEnhancedBackupConfigFromAppModel builds backup config from application detection model
+// buildEnhancedBackupConfigFromAppModel builds backup config from application detection model.
 func buildEnhancedBackupConfigFromAppModel(data *EnhancedFileResourceModelWithApplicationDetection) (*fileops.EnhancedBackupConfig, error) {
 	return buildEnhancedBackupConfigFromTemplateModel(&data.EnhancedFileResourceModelWithTemplate)
 }
 
-// buildEnhancedTemplateConfig builds template configuration from template model
+// buildEnhancedTemplateConfig builds template configuration from template model.
 func buildEnhancedTemplateConfig(data *EnhancedFileResourceModelWithTemplate) (*EnhancedTemplateConfig, error) {
 	config := &EnhancedTemplateConfig{
 		Engine:          "go", // default
@@ -705,7 +705,7 @@ func buildEnhancedTemplateConfig(data *EnhancedFileResourceModelWithTemplate) (*
 	return config, ValidateEnhancedTemplateConfig(config)
 }
 
-// EnhancedTemplateConfig represents enhanced template configuration
+// EnhancedTemplateConfig represents enhanced template configuration.
 type EnhancedTemplateConfig struct {
 	Engine          string
 	UserVars        map[string]interface{}
@@ -713,7 +713,7 @@ type EnhancedTemplateConfig struct {
 	CustomFunctions map[string]interface{}
 }
 
-// ValidateEnhancedTemplateConfig validates enhanced template configuration
+// ValidateEnhancedTemplateConfig validates enhanced template configuration.
 func ValidateEnhancedTemplateConfig(config *EnhancedTemplateConfig) error {
 	if config == nil {
 		return nil
@@ -735,7 +735,7 @@ func ValidateEnhancedTemplateConfig(config *EnhancedTemplateConfig) error {
 	return nil
 }
 
-// buildFilePermissionConfig builds a PermissionConfig from the enhanced model data
+// buildFilePermissionConfig builds a PermissionConfig from the enhanced model data.
 func buildFilePermissionConfig(data *EnhancedFileResourceModel) (*fileops.PermissionConfig, error) {
 	config := &fileops.PermissionConfig{}
 
@@ -771,7 +771,7 @@ func buildFilePermissionConfig(data *EnhancedFileResourceModel) (*fileops.Permis
 	return config, fileops.ValidatePermissionConfig(config)
 }
 
-// executePostCommands executes post-creation/update commands
+// executePostCommands executes post-creation/update commands.
 func executePostCommands(ctx context.Context, commands types.List, operation string) error {
 	if commands.IsNull() || commands.IsUnknown() {
 		return nil
@@ -794,7 +794,7 @@ func executePostCommands(ctx context.Context, commands types.List, operation str
 	return nil
 }
 
-// processEnhancedTemplate processes a template with enhanced features
+// processEnhancedTemplate processes a template with enhanced features.
 func (r *FileResource) processEnhancedTemplate(sourcePath, targetPath string, config *EnhancedTemplateConfig, permConfig *fileops.PermissionConfig) error {
 	// Create template engine based on configuration
 	var engine template.TemplateEngine
@@ -832,13 +832,13 @@ func (r *FileResource) processEnhancedTemplate(sourcePath, targetPath string, co
 	return nil
 }
 
-// fileManager creates a file manager instance for this resource
+// fileManager creates a file manager instance for this resource.
 func (r *FileResource) fileManager() *fileops.FileManager {
 	platformProvider := platform.DetectPlatform()
 	return fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 }
 
-// checkApplicationRequirements checks if required applications are available
+// checkApplicationRequirements checks if required applications are available.
 func (r *FileResource) checkApplicationRequirements(ctx context.Context, config *ApplicationDetectionConfig, diagnostics *diag.Diagnostics) (bool, error) {
 	if config.RequiredApplication == "" {
 		return false, nil // No application required
@@ -924,7 +924,7 @@ func buildApplicationDetectionConfig(data *EnhancedFileResourceModelWithApplicat
 	return config
 }
 
-// isVersionCompatible checks if a version is within specified bounds
+// isVersionCompatible checks if a version is within specified bounds.
 func isVersionCompatible(detected, minVersion, maxVersion string) bool {
 	// Simplified version comparison for now
 	// A real implementation would use proper semantic versioning
@@ -943,7 +943,7 @@ func isVersionCompatible(detected, minVersion, maxVersion string) bool {
 	return true
 }
 
-// executeShellCommand executes a shell command safely
+// executeShellCommand executes a shell command safely.
 func executeShellCommand(ctx context.Context, cmdStr string) error {
 	// Parse command and arguments
 	parts := strings.Fields(cmdStr)

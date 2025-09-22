@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package template
 
@@ -40,7 +40,7 @@ func NewMustacheTemplateEngine() (*MustacheTemplateEngine, error) {
 	return engine, nil
 }
 
-// (NewGoTemplateEngineWithFunctions is implemented in engine.go)
+// (NewGoTemplateEngineWithFunctions is implemented in engine.go).
 
 // ProcessTemplate processes a Handlebars-style template.
 func (e *HandlebarsTemplateEngine) ProcessTemplate(templateContent string, context map[string]interface{}) (string, error) {
@@ -182,7 +182,7 @@ func (e *MustacheTemplateEngine) ValidateTemplate(templateContent string) error 
 	return nil
 }
 
-// (getDefaultTemplateFunctions is implemented in engine.go)
+// (getDefaultTemplateFunctions is implemented in engine.go).
 
 // convertHandlebarsToGo converts Handlebars syntax to Go template syntax.
 func convertHandlebarsToGo(content string) string {

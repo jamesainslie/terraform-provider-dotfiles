@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestApplicationDetectionFullWorkflow tests a complete real-world application detection scenario
+// TestApplicationDetectionFullWorkflow tests a complete real-world application detection scenario.
 func TestApplicationDetectionFullWorkflow(t *testing.T) {
 	// Create temporary directories
 	tempDir := t.TempDir()
@@ -249,7 +249,7 @@ set -gx EDITOR {{.editor}}
 	})
 }
 
-// TestApplicationDetectionFeatureCompleteness tests that all application detection features work
+// TestApplicationDetectionFeatureCompleteness tests that all application detection features work.
 func TestApplicationDetectionFeatureCompleteness(t *testing.T) {
 	ctx := context.Background()
 
@@ -409,7 +409,7 @@ func TestApplicationDetectionFeatureCompleteness(t *testing.T) {
 	})
 }
 
-// TestApplicationDetectionRealWorldScenarios tests scenarios that mirror actual usage
+// TestApplicationDetectionRealWorldScenarios tests scenarios that mirror actual usage.
 func TestApplicationDetectionRealWorldScenarios(t *testing.T) {
 	tempDir := t.TempDir()
 

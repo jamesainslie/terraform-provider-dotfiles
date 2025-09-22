@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package fileops
 
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// EnhancedBackupConfig represents enhanced backup configuration
+// EnhancedBackupConfig represents enhanced backup configuration.
 type EnhancedBackupConfig struct {
 	Enabled         bool
 	Directory       string
@@ -30,7 +30,7 @@ type EnhancedBackupConfig struct {
 	BackupIndex     bool
 }
 
-// BackupMetadata represents metadata for a backup file
+// BackupMetadata represents metadata for a backup file.
 type BackupMetadata struct {
 	OriginalPath string    `json:"original_path"`
 	BackupPath   string    `json:"backup_path"`
@@ -42,13 +42,13 @@ type BackupMetadata struct {
 	FileMode     string    `json:"file_mode"`
 }
 
-// BackupIndex represents an index of all backups
+// BackupIndex represents an index of all backups.
 type BackupIndex struct {
 	LastUpdated time.Time        `json:"last_updated"`
 	Backups     []BackupMetadata `json:"backups"`
 }
 
-// CreateEnhancedBackup creates a backup with enhanced features
+// CreateEnhancedBackup creates a backup with enhanced features.
 func (fm *FileManager) CreateEnhancedBackup(filePath string, config *EnhancedBackupConfig) (string, error) {
 	if config == nil || !config.Enabled {
 		return "", nil
@@ -116,7 +116,7 @@ func (fm *FileManager) CreateEnhancedBackup(filePath string, config *EnhancedBac
 	return backupPath, nil
 }
 
-// generateBackupPath generates backup file path based on format
+// generateBackupPath generates backup file path based on format.
 func (fm *FileManager) generateBackupPath(filePath string, config *EnhancedBackupConfig) (string, error) {
 	fileName := filepath.Base(filePath)
 	var backupName string
@@ -145,7 +145,7 @@ func (fm *FileManager) generateBackupPath(filePath string, config *EnhancedBacku
 	return backupPath, nil
 }
 
-// generateNumberedBackupName generates a numbered backup name
+// generateNumberedBackupName generates a numbered backup name.
 func (fm *FileManager) generateNumberedBackupName(fileName, backupDir string) string {
 	pattern := filepath.Join(backupDir, fileName+".backup.*")
 	existing, _ := filepath.Glob(pattern)
@@ -175,7 +175,7 @@ func (fm *FileManager) generateNumberedBackupName(fileName, backupDir string) st
 	return fmt.Sprintf("%s.backup.%03d", fileName, nextNumber)
 }
 
-// createCompressedBackup creates a compressed backup using gzip
+// createCompressedBackup creates a compressed backup using gzip.
 func (fm *FileManager) createCompressedBackup(sourcePath, backupPath string) error {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
@@ -200,7 +200,7 @@ func (fm *FileManager) createCompressedBackup(sourcePath, backupPath string) err
 	return nil
 }
 
-// createBackupMetadata creates metadata for a backup
+// createBackupMetadata creates metadata for a backup.
 func (fm *FileManager) createBackupMetadata(originalPath, backupPath string, config *EnhancedBackupConfig) error {
 	// Get file info
 	originalInfo, err := os.Stat(originalPath)
@@ -248,7 +248,7 @@ func (fm *FileManager) createBackupMetadata(originalPath, backupPath string, con
 	return nil
 }
 
-// updateBackupIndex updates the backup index
+// updateBackupIndex updates the backup index.
 func (fm *FileManager) updateBackupIndex(originalPath, backupPath string, config *EnhancedBackupConfig) error {
 	indexPath := filepath.Join(config.Directory, ".backup_index.json")
 
@@ -292,7 +292,7 @@ func (fm *FileManager) updateBackupIndex(originalPath, backupPath string, config
 	return fm.saveBackupIndex(index, indexPath)
 }
 
-// shouldSkipIncrementalBackup checks if incremental backup should be skipped
+// shouldSkipIncrementalBackup checks if incremental backup should be skipped.
 func (fm *FileManager) shouldSkipIncrementalBackup(filePath string, config *EnhancedBackupConfig) (bool, error) {
 	indexPath := filepath.Join(config.Directory, ".backup_index.json")
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
@@ -322,7 +322,7 @@ func (fm *FileManager) shouldSkipIncrementalBackup(filePath string, config *Enha
 	return false, nil // Content has changed, create backup
 }
 
-// applyRetentionPolicy removes old backups based on retention policy
+// applyRetentionPolicy removes old backups based on retention policy.
 func (fm *FileManager) applyRetentionPolicy(originalPath string, config *EnhancedBackupConfig) error {
 	fileName := filepath.Base(originalPath)
 	pattern := filepath.Join(config.Directory, fileName+".backup.*")
@@ -380,7 +380,7 @@ func (fm *FileManager) applyRetentionPolicy(originalPath string, config *Enhance
 	return nil
 }
 
-// calculateFileChecksum calculates SHA256 checksum of a file
+// calculateFileChecksum calculates SHA256 checksum of a file.
 func (fm *FileManager) calculateFileChecksum(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -396,7 +396,7 @@ func (fm *FileManager) calculateFileChecksum(filePath string) (string, error) {
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
 
-// saveBackupIndex saves backup index to file
+// saveBackupIndex saves backup index to file.
 func (fm *FileManager) saveBackupIndex(index *BackupIndex, indexPath string) error {
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
@@ -413,7 +413,7 @@ func (fm *FileManager) saveBackupIndex(index *BackupIndex, indexPath string) err
 	return nil
 }
 
-// LoadBackupMetadata loads backup metadata from file
+// LoadBackupMetadata loads backup metadata from file.
 func LoadBackupMetadata(metadataPath string) (*BackupMetadata, error) {
 	file, err := os.Open(metadataPath)
 	if err != nil {
@@ -430,7 +430,7 @@ func LoadBackupMetadata(metadataPath string) (*BackupMetadata, error) {
 	return &metadata, nil
 }
 
-// LoadBackupIndex loads backup index from file
+// LoadBackupIndex loads backup index from file.
 func LoadBackupIndex(indexPath string) (*BackupIndex, error) {
 	file, err := os.Open(indexPath)
 	if err != nil {
@@ -447,7 +447,7 @@ func LoadBackupIndex(indexPath string) (*BackupIndex, error) {
 	return &index, nil
 }
 
-// ValidateEnhancedBackupConfig validates enhanced backup configuration
+// ValidateEnhancedBackupConfig validates enhanced backup configuration.
 func ValidateEnhancedBackupConfig(config *EnhancedBackupConfig) error {
 	if config == nil {
 		return nil
@@ -483,7 +483,7 @@ func ValidateEnhancedBackupConfig(config *EnhancedBackupConfig) error {
 	return nil
 }
 
-// isValidRetentionPolicy checks if retention policy is valid
+// isValidRetentionPolicy checks if retention policy is valid.
 func isValidRetentionPolicy(policy string) bool {
 	if len(policy) < 2 {
 		return false

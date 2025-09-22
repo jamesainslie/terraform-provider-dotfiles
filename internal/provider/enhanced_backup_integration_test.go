@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -16,7 +16,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 )
 
-// TestEnhancedBackupIntegration tests enhanced backup with file operations
+// TestEnhancedBackupIntegration tests enhanced backup with file operations.
 func TestEnhancedBackupIntegration(t *testing.T) {
 	// Create temporary directories for testing
 	tempDir := t.TempDir()
@@ -251,7 +251,7 @@ func TestEnhancedBackupIntegration(t *testing.T) {
 	})
 }
 
-// buildEnhancedBackupConfig builds fileops backup config from provider model
+// buildEnhancedBackupConfig builds fileops backup config from provider model.
 func buildEnhancedBackupConfig(policy *BackupPolicyModel) (*fileops.EnhancedBackupConfig, error) {
 	if policy == nil {
 		return nil, nil
@@ -270,13 +270,13 @@ func buildEnhancedBackupConfig(policy *BackupPolicyModel) (*fileops.EnhancedBack
 	return config, fileops.ValidateEnhancedBackupConfig(config)
 }
 
-// pathExists checks if a path exists
+// pathExists checks if a path exists.
 func pathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// TestRecoveryAndValidation tests backup recovery and validation features
+// TestRecoveryAndValidation tests backup recovery and validation features.
 func TestRecoveryAndValidation(t *testing.T) {
 	// Create temporary directory
 	tempDir := t.TempDir()
@@ -357,7 +357,7 @@ func TestRecoveryAndValidation(t *testing.T) {
 	})
 }
 
-// TestBackupFormatSupport tests different backup format implementations
+// TestBackupFormatSupport tests different backup format implementations.
 func TestBackupFormatSupport(t *testing.T) {
 	tempDir := t.TempDir()
 

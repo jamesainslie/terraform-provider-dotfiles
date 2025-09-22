@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -16,7 +16,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
 )
 
-// TestEnhancedTemplateSchema tests that enhanced template features are in the schema
+// TestEnhancedTemplateSchema tests that enhanced template features are in the schema.
 func TestEnhancedTemplateSchema(t *testing.T) {
 	t.Run("FileResource should support enhanced template features", func(t *testing.T) {
 		r := NewFileResource()
@@ -48,7 +48,7 @@ func TestEnhancedTemplateSchema(t *testing.T) {
 	})
 }
 
-// TestEnhancedTemplateModel tests the enhanced template resource model
+// TestEnhancedTemplateModel tests the enhanced template resource model.
 func TestEnhancedTemplateModel(t *testing.T) {
 	// Test enhanced file model with template features
 	model := &EnhancedFileResourceModelWithTemplate{
@@ -146,7 +146,7 @@ func TestEnhancedTemplateModel(t *testing.T) {
 	}
 }
 
-// TestTemplateEngineSelection tests template engine selection functionality
+// TestTemplateEngineSelection tests template engine selection functionality.
 func TestTemplateEngineSelection(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -204,7 +204,7 @@ func TestTemplateEngineSelection(t *testing.T) {
 	}
 }
 
-// TestPlatformSpecificTemplateVars tests platform-specific template variable handling
+// TestPlatformSpecificTemplateVars tests platform-specific template variable handling.
 func TestPlatformSpecificTemplateVars(t *testing.T) {
 	platformVars := map[string]map[string]interface{}{
 		"macos": {
@@ -271,7 +271,7 @@ func TestPlatformSpecificTemplateVars(t *testing.T) {
 	}
 }
 
-// TestCustomTemplateFunctions tests custom template function support
+// TestCustomTemplateFunctions tests custom template function support.
 func TestCustomTemplateFunctions(t *testing.T) {
 	t.Run("Custom function registration", func(t *testing.T) {
 		customFunctions := map[string]interface{}{
@@ -306,7 +306,7 @@ Camel: {{camelCase "hello_world"}}`
 	})
 }
 
-// Helper functions that need to be implemented
+// Helper functions that need to be implemented.
 func CreateTemplateEngine(engineType string) (template.TemplateEngine, error) {
 	// This function should be implemented in the template package
 	switch engineType {
