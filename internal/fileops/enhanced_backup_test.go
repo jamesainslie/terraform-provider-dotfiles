@@ -85,8 +85,7 @@ func TestBackupFormats(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
-	err = os.WriteFile(testFile, []byte("test content"), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -157,8 +156,7 @@ func TestBackupCompression(t *testing.T) {
 	// Create test file with some content
 	testContent := strings.Repeat("This is test content for compression testing. ", 100)
 	testFile := filepath.Join(tempDir, "test.txt")
-	err = os.WriteFile(testFile, []byte(testContent), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte(testContent), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -245,8 +243,7 @@ func TestBackupRetention(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "config.txt")
-	err = os.WriteFile(testFile, []byte("initial content"), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte("initial content"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -266,8 +263,7 @@ func TestBackupRetention(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		// Update file content
 		content := fmt.Sprintf("content version %d", i)
-		err = os.WriteFile(testFile, []byte(content), 0644)
-		if err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to update test file: %v", err)
 		}
 
@@ -313,8 +309,7 @@ func TestBackupMetadata(t *testing.T) {
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
 	testContent := "test configuration content"
-	err = os.WriteFile(testFile, []byte(testContent), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte(testContent), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -363,8 +358,7 @@ func TestBackupMetadata(t *testing.T) {
 		// Create multiple backups
 		for i := 0; i < 3; i++ {
 			content := fmt.Sprintf("content version %d", i)
-			err = os.WriteFile(testFile, []byte(content), 0644)
-			if err != nil {
+			if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
 				t.Fatalf("Failed to update test file: %v", err)
 			}
 
@@ -399,8 +393,7 @@ func TestIncrementalBackup(t *testing.T) {
 	// Create test file
 	testFile := filepath.Join(tempDir, "config.txt")
 	originalContent := "original content"
-	err = os.WriteFile(testFile, []byte(originalContent), 0644)
-	if err != nil {
+	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -446,8 +439,7 @@ func TestIncrementalBackup(t *testing.T) {
 	t.Run("Changed content should create new backup", func(t *testing.T) {
 		// Change file content
 		newContent := "modified content"
-		err = os.WriteFile(testFile, []byte(newContent), 0644)
-		if err != nil {
+		if err := os.WriteFile(testFile, []byte(newContent), 0644); err != nil {
 			t.Fatalf("Failed to update test file: %v", err)
 		}
 

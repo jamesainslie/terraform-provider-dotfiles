@@ -23,13 +23,13 @@ func TestEnhancedTemplateIntegration(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
 
-    if err := os.MkdirAll(sourceDir, 0755); err != nil {
-        t.Fatalf("Failed to create source directory: %v", err)
-    }
-    
-    if err := os.MkdirAll(targetDir, 0755); err != nil {
-        t.Fatalf("Failed to create target directory: %v", err)
-    }
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+		t.Fatalf("Failed to create source directory: %v", err)
+	}
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		t.Fatalf("Failed to create target directory: %v", err)
+	}
 
 	t.Run("Enhanced template with platform-specific variables", func(t *testing.T) {
 		// Create template file with platform-specific content
@@ -388,9 +388,9 @@ func TestTemplateProcessingEndToEnd(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "templates")
 	targetDir := filepath.Join(tempDir, "output")
 
-    if err := os.MkdirAll(sourceDir, 0755); err != nil {
-        t.Fatalf("Failed to create source directory: %v", err)
-    }
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+		t.Fatalf("Failed to create source directory: %v", err)
+	}
 
 	t.Run("Complete template workflow with all features", func(t *testing.T) {
 		// Create comprehensive template
