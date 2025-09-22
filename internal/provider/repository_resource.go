@@ -204,6 +204,33 @@ func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequ
 		data.LocalPath = data.SourcePath
 		data.LastUpdate = types.StringValue(time.Now().Format(time.RFC3339))
 
+		// Check if local repository is a Git repository and get commit info
+		localPath := data.SourcePath.ValueString()
+		if r.isGitRepository(localPath) {
+			gitManager, err := git.NewGitManager(nil) // No auth needed for local repos
+			if err == nil {
+				info, err := gitManager.GetRepositoryInfo(localPath)
+				if err == nil {
+					data.LastCommit = types.StringValue(info.LastCommit)
+					tflog.Debug(ctx, "Retrieved Git info for local repository", map[string]interface{}{
+						"local_path":  localPath,
+						"last_commit": info.LastCommit,
+					})
+				} else {
+					tflog.Warn(ctx, "Failed to get Git info for local repository", map[string]interface{}{
+						"error": err.Error(),
+					})
+					// Set empty but valid commit for non-Git local repos
+					data.LastCommit = types.StringValue("")
+				}
+			} else {
+				data.LastCommit = types.StringValue("")
+			}
+		} else {
+			// Not a Git repository, set empty but valid commit
+			data.LastCommit = types.StringValue("")
+		}
+
 		tflog.Info(ctx, "Local repository setup successfully", map[string]interface{}{
 			"source_path": sourcePath,
 		})
@@ -378,6 +405,33 @@ func (r *RepositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 
 		data.LocalPath = data.SourcePath
 		data.LastUpdate = types.StringValue(time.Now().Format(time.RFC3339))
+
+		// Check if local repository is a Git repository and get commit info
+		localPath := data.SourcePath.ValueString()
+		if r.isGitRepository(localPath) {
+			gitManager, err := git.NewGitManager(nil) // No auth needed for local repos
+			if err == nil {
+				info, err := gitManager.GetRepositoryInfo(localPath)
+				if err == nil {
+					data.LastCommit = types.StringValue(info.LastCommit)
+					tflog.Debug(ctx, "Retrieved Git info for local repository update", map[string]interface{}{
+						"local_path":  localPath,
+						"last_commit": info.LastCommit,
+					})
+				} else {
+					tflog.Warn(ctx, "Failed to get Git info for local repository update", map[string]interface{}{
+						"error": err.Error(),
+					})
+					// Set empty but valid commit for non-Git local repos
+					data.LastCommit = types.StringValue("")
+				}
+			} else {
+				data.LastCommit = types.StringValue("")
+			}
+		} else {
+			// Not a Git repository, set empty but valid commit
+			data.LastCommit = types.StringValue("")
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -562,4 +616,14 @@ func (r *RepositoryResource) buildAuthConfig(data *RepositoryResourceModel) *git
 	}
 
 	return authConfig
+}
+
+// isGitRepository checks if a local path contains a Git repository.
+func (r *RepositoryResource) isGitRepository(localPath string) bool {
+	gitDir := filepath.Join(localPath, ".git")
+	if stat, err := os.Stat(gitDir); err == nil {
+		// .git exists, check if it's a directory (normal repo) or file (worktree/submodule)
+		return stat.IsDir() || stat.Mode().IsRegular()
+	}
+	return false
 }
