@@ -9,6 +9,7 @@ before:
     - go mod tidy
     - go test ./...
     - go vet ./...
+
 builds:
 - env:
     # goreleaser does not work with CGO, it could also complicate

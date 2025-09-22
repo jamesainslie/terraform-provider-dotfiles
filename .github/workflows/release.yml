@@ -107,10 +107,7 @@ jobs:
           echo "Provider binary built successfully: $(file /tmp/terraform-provider-dotfiles)"
           echo "Provider schema validation completed"
           
-      - name: Generate provider documentation
-        run: |
-          go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
-          tfplugindocs generate --provider-name dotfiles
+      # Documentation is already generated and committed, skip regeneration to avoid dirty state
           
       - name: Check if release already exists
         id: check_release
