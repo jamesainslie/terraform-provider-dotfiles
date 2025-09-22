@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
@@ -178,14 +177,7 @@ func TestApplicationDetectionIntegration(t *testing.T) {
 			DetectInstallation: types.BoolValue(true),
 			SkipIfNotInstalled: types.BoolValue(false),
 			WarnIfNotInstalled: types.BoolValue(true),
-			DetectionMethods: func() types.List {
-				methods := []attr.Value{
-					types.StringValue("command"),
-					types.StringValue("package_manager"),
-				}
-				list, _ := types.ListValue(types.StringType, methods)
-				return list
-			}(),
+			// Detection methods will use defaults
 		}
 
 		// Perform application detection
@@ -213,13 +205,7 @@ func TestApplicationDetectionIntegration(t *testing.T) {
 			DetectInstallation: types.BoolValue(true),
 			SkipIfNotInstalled: types.BoolValue(true),
 			WarnIfNotInstalled: types.BoolValue(false),
-			DetectionMethods: func() types.List {
-				methods := []attr.Value{
-					types.StringValue("command"),
-				}
-				list, _ := types.ListValue(types.StringType, methods)
-				return list
-			}(),
+			// Detection methods will use defaults
 		}
 
 		// Perform detection

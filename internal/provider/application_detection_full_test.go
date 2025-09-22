@@ -436,15 +436,7 @@ func TestApplicationDetectionRealWorldScenarios(t *testing.T) {
 			model := ApplicationResourceModel{
 				Application:        types.StringValue(scenario.application),
 				DetectInstallation: types.BoolValue(true),
-				DetectionMethods: func() types.List {
-					methods := []attr.Value{
-						types.StringValue("command"),
-						types.StringValue("file"),
-						types.StringValue("package_manager"),
-					}
-					list, _ := types.ListValue(types.StringType, methods)
-					return list
-				}(),
+				// Detection methods will use defaults
 			}
 
 			result := appResource.performApplicationDetection(ctx, &model)

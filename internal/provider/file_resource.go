@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -844,16 +843,7 @@ func (r *FileResource) checkApplicationRequirements(ctx context.Context, config 
 	detectionModel := ApplicationResourceModel{
 		Application:        types.StringValue(config.RequiredApplication),
 		DetectInstallation: types.BoolValue(true),
-		DetectionMethods: func() types.List {
-			// Use default detection methods
-			methods := []attr.Value{
-				types.StringValue("command"),
-				types.StringValue("file"),
-				types.StringValue("package_manager"),
-			}
-			list, _ := types.ListValue(types.StringType, methods)
-			return list
-		}(),
+		// Detection methods will use defaults since blocks are handled separately
 	}
 
 	// Perform detection

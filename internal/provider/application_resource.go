@@ -48,9 +48,7 @@ type ApplicationResourceModel struct {
 	ConditionalOperation types.Bool   `tfsdk:"conditional"`
 	ConfigStrategy       types.String `tfsdk:"config_strategy"`
 
-	// Detection configuration (will be parsed from blocks)
-	DetectionMethods types.List `tfsdk:"detection_methods"`
-	ConfigMappings   types.Map  `tfsdk:"config_mappings"`
+	// Detection configuration will be handled through blocks, not attributes
 
 	// Computed attributes
 	Installed        types.Bool   `tfsdk:"installed"`
@@ -309,17 +307,8 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 
 	appName := data.Application.ValueString()
 
-	// Try default detection methods if no specific methods configured
+	// Use default detection methods since blocks are handled separately
 	detectionMethods := []string{"command", "file"}
-	if !data.DetectionMethods.IsNull() {
-		elements := data.DetectionMethods.Elements()
-		detectionMethods = make([]string, 0, len(elements))
-		for _, element := range elements {
-			if strValue, ok := element.(types.String); ok {
-				detectionMethods = append(detectionMethods, strValue.ValueString())
-			}
-		}
-	}
 
 	// Try each detection method
 	for _, method := range detectionMethods {

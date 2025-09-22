@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -84,14 +83,7 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 				DetectInstallation: types.BoolValue(true),
 				SkipIfNotInstalled: types.BoolValue(false),
 				WarnIfNotInstalled: types.BoolValue(true),
-				DetectionMethods: func() types.List {
-					methods := []attr.Value{
-						types.StringValue("command"),
-						types.StringValue("package_manager"),
-					}
-					list, _ := types.ListValue(types.StringType, methods)
-					return list
-				}(),
+				// Detection methods will use defaults
 			}
 
 			// Test detection directly
@@ -111,13 +103,7 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 			data := ApplicationResourceModel{
 				Application:        types.StringValue("unknownapp12345"),
 				DetectInstallation: types.BoolValue(true),
-				DetectionMethods: func() types.List {
-					methods := []attr.Value{
-						types.StringValue("command"),
-					}
-					list, _ := types.ListValue(types.StringType, methods)
-					return list
-				}(),
+				// Detection methods will use defaults
 			}
 
 			result := appResource.performApplicationDetection(ctx, &data)
@@ -235,14 +221,7 @@ func TestApplicationDetectionEndToEnd(t *testing.T) {
 				model := ApplicationResourceModel{
 					Application:        types.StringValue(scenario.application),
 					DetectInstallation: types.BoolValue(true),
-					DetectionMethods: func() types.List {
-						methods := make([]attr.Value, len(scenario.methods))
-						for i, method := range scenario.methods {
-							methods[i] = types.StringValue(method)
-						}
-						list, _ := types.ListValue(types.StringType, methods)
-						return list
-					}(),
+					// Detection methods will use defaults
 				}
 
 				result := appResource.performApplicationDetection(ctx, &model)
