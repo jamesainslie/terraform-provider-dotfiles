@@ -89,6 +89,8 @@ set -gx EDITOR {{.editor}}
 	}
 
 	t.Run("Git configuration with application detection", func(t *testing.T) {
+		ctx := context.Background()
+		
 		// Test conditional Git configuration that only applies if Git is installed
 		fileModel := &EnhancedFileResourceModelWithApplicationDetection{
 			EnhancedFileResourceModelWithTemplate: EnhancedFileResourceModelWithTemplate{
@@ -151,6 +153,8 @@ set -gx EDITOR {{.editor}}
 	})
 
 	t.Run("Cursor configuration with strict detection", func(t *testing.T) {
+		ctx := context.Background()
+		
 		// Test application that likely won't be installed - should skip
 		fileModel := &EnhancedFileResourceModelWithApplicationDetection{
 			EnhancedFileResourceModelWithTemplate: EnhancedFileResourceModelWithTemplate{
@@ -193,6 +197,8 @@ set -gx EDITOR {{.editor}}
 	})
 
 	t.Run("Fish shell configuration with detection", func(t *testing.T) {
+		ctx := context.Background()
+		
 		// Test shell configuration that requires Fish shell
 		fileModel := &EnhancedFileResourceModelWithApplicationDetection{
 			EnhancedFileResourceModelWithTemplate: EnhancedFileResourceModelWithTemplate{

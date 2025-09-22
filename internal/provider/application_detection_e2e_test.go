@@ -287,19 +287,4 @@ func isValidConfigStrategy(strategy string) bool {
 	return false
 }
 
-// ApplicationDetectionConfig represents application detection configuration
-type ApplicationDetectionConfig struct {
-	RequiredApplication string
-	MinVersion          string
-	MaxVersion          string
-	SkipIfMissing       bool
-}
-
-// EnhancedFileResourceModelWithApplicationDetection extends template model with app detection
-type EnhancedFileResourceModelWithApplicationDetection struct {
-	EnhancedFileResourceModelWithTemplate
-	RequireApplication    types.String `tfsdk:"require_application"`
-	ApplicationVersionMin types.String `tfsdk:"application_version_min"`
-	ApplicationVersionMax types.String `tfsdk:"application_version_max"`
-	SkipIfAppMissing      types.Bool   `tfsdk:"skip_if_app_missing"`
-}
+// (Types moved to enhanced_template_models.go)

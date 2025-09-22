@@ -26,6 +26,23 @@ type EnhancedSymlinkResourceModelWithTemplate struct {
 	TemplateFunctions    types.Map    `tfsdk:"template_functions"`
 }
 
+// EnhancedFileResourceModelWithApplicationDetection extends template model with app detection
+type EnhancedFileResourceModelWithApplicationDetection struct {
+	EnhancedFileResourceModelWithTemplate
+	RequireApplication    types.String `tfsdk:"require_application"`
+	ApplicationVersionMin types.String `tfsdk:"application_version_min"`
+	ApplicationVersionMax types.String `tfsdk:"application_version_max"`
+	SkipIfAppMissing     types.Bool   `tfsdk:"skip_if_app_missing"`
+}
+
+// ApplicationDetectionConfig represents application detection configuration
+type ApplicationDetectionConfig struct {
+	RequiredApplication string
+	MinVersion          string
+	MaxVersion          string
+	SkipIfMissing       bool
+}
+
 // GetEnhancedTemplateAttributes returns template-related schema attributes
 func GetEnhancedTemplateAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
