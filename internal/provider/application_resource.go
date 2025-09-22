@@ -10,11 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -119,21 +117,6 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 				Computed:            true,
 				Default:             stringdefault.StaticString("symlink"),
 				MarkdownDescription: "Configuration strategy: symlink, copy, merge, template",
-			},
-			"detection_methods": schema.ListAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Computed:    true,
-				Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("command"),
-					types.StringValue("file"),
-				})),
-				MarkdownDescription: "Detection methods to use: command, file, brew_cask, package_manager",
-			},
-			"config_mappings": schema.MapAttribute{
-				Optional:            true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Configuration file mappings (source -> target)",
 			},
 			"installed": schema.BoolAttribute{
 				Computed:            true,
