@@ -124,6 +124,7 @@ func (p *WindowsProvider) CreateSymlink(source, target string) error {
 		// Directory symlinks work differently on Windows
 		// For now, we use the same approach as files
 		// TODO: Implement directory-specific symlink handling for Windows
+		return nil
 	}
 
 	return nil
@@ -234,10 +235,10 @@ func (p *WindowsProvider) DetectApplication(name string) (*ApplicationInfo, erro
 		if len(name) > 0 {
 			titleName = strings.ToUpper(name[:1]) + name[1:]
 		}
-		
+
 		checkPaths := []string{}
 		if programFiles != "" {
-			checkPaths = append(checkPaths, 
+			checkPaths = append(checkPaths,
 				filepath.Join(programFiles, name),
 				filepath.Join(programFiles, titleName),
 			)

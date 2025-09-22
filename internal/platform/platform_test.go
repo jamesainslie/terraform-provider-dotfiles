@@ -312,7 +312,7 @@ func TestPlatformInterfaces(t *testing.T) {
 
 func TestPlatformFileOperations(t *testing.T) {
 	platform := DetectPlatform()
-	
+
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 

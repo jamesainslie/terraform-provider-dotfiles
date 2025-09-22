@@ -159,10 +159,7 @@ func TestPlatformDetection(t *testing.T) {
 					homeDir = "C:\\Users\\test"
 				}
 
-				configDir, err := getConfigDir(platform, homeDir)
-				if err != nil {
-					t.Errorf("getConfigDir failed for platform %s: %v", platform, err)
-				}
+				configDir := getConfigDir(platform, homeDir)
 
 				if configDir == "" {
 					t.Errorf("getConfigDir should not return empty string for platform %s", platform)
@@ -192,10 +189,7 @@ func TestPlatformDetection(t *testing.T) {
 
 		t.Setenv("APPDATA", testAppData)
 
-		configDir, err := getConfigDir("windows", "C:\\Users\\test")
-		if err != nil {
-			t.Errorf("getConfigDir failed with APPDATA set: %v", err)
-		}
+		configDir := getConfigDir("windows", "C:\\Users\\test")
 
 		if configDir != testAppData {
 			t.Errorf("Expected config dir %s, got %s", testAppData, configDir)

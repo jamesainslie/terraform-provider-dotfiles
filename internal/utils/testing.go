@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// ParseFileMode parses a file mode string like "0644" into os.FileMode
+// ParseFileMode parses a file mode string like "0644" into os.FileMode.
 func ParseFileMode(modeStr string) (os.FileMode, error) {
 	if modeStr == "" {
 		return 0644, nil // default
@@ -33,7 +33,7 @@ func ParseFileMode(modeStr string) (os.FileMode, error) {
 	return os.FileMode(mode), nil
 }
 
-// FormatFileMode formats an os.FileMode as an octal string like "0644"
+// FormatFileMode formats an os.FileMode as an octal string like "0644".
 func FormatFileMode(mode os.FileMode) string {
 	return "0" + strconv.FormatUint(uint64(mode.Perm()), 8)
 }

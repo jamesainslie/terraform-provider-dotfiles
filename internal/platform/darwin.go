@@ -205,7 +205,7 @@ func (p *DarwinProvider) DetectApplication(name string) (*ApplicationInfo, error
 	if len(name) > 0 {
 		titleName = strings.ToUpper(name[:1]) + name[1:]
 	}
-	
+
 	appPaths := []string{
 		fmt.Sprintf("/Applications/%s.app", name),
 		fmt.Sprintf("/Applications/%s.app", titleName),

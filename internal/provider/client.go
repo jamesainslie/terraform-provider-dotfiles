@@ -41,11 +41,7 @@ func NewDotfilesClient(config *DotfilesConfig) (*DotfilesClient, error) {
 	client.HomeDir = homeDir
 
 	// Get config directory
-	configDir, err := getConfigDir(client.Platform, homeDir)
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine config directory: %w", err)
-	}
-	client.ConfigDir = configDir
+	client.ConfigDir = getConfigDir(client.Platform, homeDir)
 
 	return client, nil
 }
@@ -72,18 +68,18 @@ func getHomeDir() (string, error) {
 }
 
 // getConfigDir returns the user's config directory based on platform.
-func getConfigDir(platform, homeDir string) (string, error) {
+func getConfigDir(platform, homeDir string) string {
 	switch platform {
 	case "macos", "linux":
-		return filepath.Join(homeDir, ".config"), nil
+		return filepath.Join(homeDir, ".config")
 	case "windows":
 		appData := os.Getenv("APPDATA")
 		if appData != "" {
-			return appData, nil
+			return appData
 		}
-		return filepath.Join(homeDir, "AppData", "Roaming"), nil
+		return filepath.Join(homeDir, "AppData", "Roaming")
 	default:
-		return filepath.Join(homeDir, ".config"), nil
+		return filepath.Join(homeDir, ".config")
 	}
 }
 
