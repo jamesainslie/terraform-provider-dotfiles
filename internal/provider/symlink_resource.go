@@ -5,10 +5,19 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/fileops"
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
 )
 
 var _ resource.Resource = &SymlinkResource{}
@@ -29,6 +38,12 @@ type SymlinkResourceModel struct {
 	TargetPath    types.String `tfsdk:"target_path"`
 	ForceUpdate   types.Bool   `tfsdk:"force_update"`
 	CreateParents types.Bool   `tfsdk:"create_parents"`
+	
+	// Computed attributes
+	LinkExists    types.Bool   `tfsdk:"link_exists"`
+	IsSymlink     types.Bool   `tfsdk:"is_symlink"`
+	LinkTarget    types.String `tfsdk:"link_target"`
+	LastModified  types.String `tfsdk:"last_modified"`
 }
 
 func (r *SymlinkResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -67,6 +82,22 @@ func (r *SymlinkResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Optional:            true,
 				MarkdownDescription: "Create parent directories",
 			},
+			"link_exists": schema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether the symlink exists",
+			},
+			"is_symlink": schema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether the target is actually a symlink",
+			},
+			"link_target": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The target that the symlink points to",
+			},
+			"last_modified": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Last modification timestamp of the symlink",
+			},
 		},
 	}
 }
@@ -95,8 +126,118 @@ func (r *SymlinkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	tflog.Debug(ctx, "Creating symlink resource", map[string]interface{}{
+		"name":        data.Name.ValueString(),
+		"source_path": data.SourcePath.ValueString(),
+		"target_path": data.TargetPath.ValueString(),
+	})
+
+	// Get repository local path
+	repositoryLocalPath, err := r.getRepositoryLocalPath(data.Repository.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Repository not found",
+			fmt.Sprintf("Could not find repository %s: %s", data.Repository.ValueString(), err.Error()),
+		)
+		return
+	}
+
+	// Build source path
+	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
+	targetPath := data.TargetPath.ValueString()
+
+	// Expand target path
+	platformProvider := platform.DetectPlatform()
+	expandedTargetPath, err := platformProvider.ExpandPath(targetPath)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid target path",
+			fmt.Sprintf("Could not expand target path %s: %s", targetPath, err.Error()),
+		)
+		return
+	}
+
+	// Expand source path
+	expandedSourcePath, err := platformProvider.ExpandPath(sourcePath)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid source path",
+			fmt.Sprintf("Could not expand source path %s: %s", sourcePath, err.Error()),
+		)
+		return
+	}
+
+	// Verify source exists
+	if !utils.PathExists(expandedSourcePath) {
+		resp.Diagnostics.AddError(
+			"Source not found",
+			fmt.Sprintf("Source path does not exist: %s", expandedSourcePath),
+		)
+		return
+	}
+
+	// Create file manager
+	fileManager := fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
+
+	// Handle existing target
+	if utils.PathExists(expandedTargetPath) {
+		if !data.ForceUpdate.ValueBool() {
+			// Create backup if enabled
+			if r.client.Config.BackupEnabled {
+				_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
+				if err != nil {
+					resp.Diagnostics.AddWarning(
+						"Backup failed",
+						fmt.Sprintf("Could not create backup of existing target: %s", err.Error()),
+					)
+				}
+			}
+		}
+		
+		// Remove existing target
+		err := os.Remove(expandedTargetPath)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Could not remove existing target",
+				fmt.Sprintf("Could not remove existing file at %s: %s", expandedTargetPath, err.Error()),
+			)
+			return
+		}
+	}
+
+	// Create symlink
+	var finalErr error
+	if data.CreateParents.ValueBool() {
+		finalErr = fileManager.CreateSymlinkWithParents(expandedSourcePath, expandedTargetPath)
+	} else {
+		finalErr = fileManager.CreateSymlink(expandedSourcePath, expandedTargetPath)
+	}
+
+	if finalErr != nil {
+		resp.Diagnostics.AddError(
+			"Symlink creation failed",
+			fmt.Sprintf("Could not create symlink %s -> %s: %s", expandedTargetPath, expandedSourcePath, finalErr.Error()),
+		)
+		return
+	}
+
+	// Update computed attributes
+	if err := r.updateComputedAttributes(ctx, &data, expandedTargetPath); err != nil {
+		resp.Diagnostics.AddWarning(
+			"Could not update symlink metadata",
+			fmt.Sprintf("Symlink created successfully but could not update metadata: %s", err.Error()),
+		)
+	}
+
+	// Set ID and save state
 	data.ID = data.Name
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
+	tflog.Info(ctx, "Symlink resource created successfully", map[string]interface{}{
+		"name":        data.Name.ValueString(),
+		"target_path": expandedTargetPath,
+		"source_path": expandedSourcePath,
+	})
 }
 
 func (r *SymlinkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -118,5 +259,87 @@ func (r *SymlinkResource) Update(ctx context.Context, req resource.UpdateRequest
 }
 
 func (r *SymlinkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// TODO: Implement symlink deletion logic
+	var data SymlinkResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Debug(ctx, "Deleting symlink resource", map[string]interface{}{
+		"name":        data.Name.ValueString(),
+		"target_path": data.TargetPath.ValueString(),
+	})
+
+	// Remove the symlink
+	targetPath := data.TargetPath.ValueString()
+	if targetPath != "" {
+		platformProvider := platform.DetectPlatform()
+		expandedTargetPath, err := platformProvider.ExpandPath(targetPath)
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"Could not expand target path",
+				fmt.Sprintf("Could not expand target path for cleanup: %s", err.Error()),
+			)
+			return
+		}
+
+		if utils.PathExists(expandedTargetPath) {
+			err := os.Remove(expandedTargetPath)
+			if err != nil {
+				resp.Diagnostics.AddWarning(
+					"Could not remove symlink",
+					fmt.Sprintf("Could not remove symlink %s: %s", expandedTargetPath, err.Error()),
+				)
+			} else {
+				tflog.Info(ctx, "Symlink resource removed", map[string]interface{}{
+					"target_path": expandedTargetPath,
+				})
+			}
+		}
+	}
+}
+
+// getRepositoryLocalPath returns the local path for a repository
+func (r *SymlinkResource) getRepositoryLocalPath(repositoryID string) (string, error) {
+	// For now, assume repository ID maps to the dotfiles root
+	// TODO: Implement proper repository lookup when repository state management is added
+	return r.client.Config.DotfilesRoot, nil
+}
+
+// updateComputedAttributes updates computed attributes for state tracking
+func (r *SymlinkResource) updateComputedAttributes(ctx context.Context, data *SymlinkResourceModel, targetPath string) error {
+	// Check if link exists
+	exists := utils.PathExists(targetPath)
+	data.LinkExists = types.BoolValue(exists)
+	
+	if exists {
+		// Check if it's actually a symlink
+		isSymlink := utils.IsSymlink(targetPath)
+		data.IsSymlink = types.BoolValue(isSymlink)
+		
+		if isSymlink {
+			// Get symlink target
+			linkTarget, err := os.Readlink(targetPath)
+			if err != nil {
+				return fmt.Errorf("failed to read symlink target: %w", err)
+			}
+			data.LinkTarget = types.StringValue(linkTarget)
+		} else {
+			data.LinkTarget = types.StringNull()
+		}
+		
+		// Get modification time
+		info, err := os.Lstat(targetPath) // Use Lstat to get symlink info, not target info
+		if err != nil {
+			return fmt.Errorf("failed to stat symlink: %w", err)
+		}
+		data.LastModified = types.StringValue(info.ModTime().Format(time.RFC3339))
+	} else {
+		data.IsSymlink = types.BoolValue(false)
+		data.LinkTarget = types.StringNull()
+		data.LastModified = types.StringNull()
+	}
+	
+	return nil
 }
