@@ -181,14 +181,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	// Check application requirements before proceeding
 	if !data.RequireApplication.IsNull() {
-		appDetectionConfig, err := buildApplicationDetectionConfig(&data)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid application detection configuration",
-				fmt.Sprintf("Failed to build application detection config: %s", err.Error()),
-			)
-			return
-		}
+		appDetectionConfig := buildApplicationDetectionConfig(&data)
 
 		shouldSkip, err := r.checkApplicationRequirements(ctx, appDetectionConfig, &resp.Diagnostics)
 		if err != nil {
@@ -911,8 +904,8 @@ func (r *FileResource) checkApplicationRequirements(ctx context.Context, config 
 	return false, nil // Don't skip
 }
 
-// buildApplicationDetectionConfig builds application detection config from model
-func buildApplicationDetectionConfig(data *EnhancedFileResourceModelWithApplicationDetection) (*ApplicationDetectionConfig, error) {
+// buildApplicationDetectionConfig builds application detection config from model.
+func buildApplicationDetectionConfig(data *EnhancedFileResourceModelWithApplicationDetection) *ApplicationDetectionConfig {
 	config := &ApplicationDetectionConfig{}
 
 	if !data.RequireApplication.IsNull() {
@@ -928,7 +921,7 @@ func buildApplicationDetectionConfig(data *EnhancedFileResourceModelWithApplicat
 		config.SkipIfMissing = data.SkipIfAppMissing.ValueBool()
 	}
 
-	return config, nil
+	return config
 }
 
 // isVersionCompatible checks if a version is within specified bounds

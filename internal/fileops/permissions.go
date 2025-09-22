@@ -83,7 +83,7 @@ func (fm *FileManager) applyFilePermissions(filePath string, config *PermissionC
 		for pattern, perm := range config.Rules {
 			if matched := matchPattern(pattern, fileName); matched {
 				// Prefer more specific patterns (patterns with more characters are generally more specific)
-				if bestMatch == "" || len(pattern) > len(bestMatch) || isMoreSpecific(pattern, bestMatch, fileName) {
+				if bestMatch == "" || len(pattern) > len(bestMatch) || isMoreSpecific(pattern, bestMatch) {
 					bestMatch = pattern
 					bestPerm = perm
 				}
@@ -250,8 +250,8 @@ func matchPattern(pattern, filename string) bool {
 	return matched
 }
 
-// isMoreSpecific determines if pattern1 is more specific than pattern2 for the given filename
-func isMoreSpecific(pattern1, pattern2, filename string) bool {
+// isMoreSpecific determines if pattern1 is more specific than pattern2.
+func isMoreSpecific(pattern1, pattern2 string) bool {
 	// Count wildcards - fewer wildcards means more specific
 	wildcards1 := strings.Count(pattern1, "*") + strings.Count(pattern1, "?")
 	wildcards2 := strings.Count(pattern2, "*") + strings.Count(pattern2, "?")

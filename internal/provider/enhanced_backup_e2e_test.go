@@ -19,24 +19,18 @@ import (
 // TestEnhancedBackupEndToEnd tests the complete enhanced backup workflow
 func TestEnhancedBackupEndToEnd(t *testing.T) {
 	// Create temporary directories
-	tempDir, err := os.MkdirTemp("", "enhanced-backup-e2e-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
 	backupDir := filepath.Join(tempDir, "backups")
 
 	// Create source directory and files
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
 
-	err = os.MkdirAll(targetDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
 	}
 
@@ -345,11 +339,7 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 
 // TestEnhancedBackupCompatibility tests backward compatibility with existing backup functionality
 func TestEnhancedBackupCompatibility(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "backup-compatibility-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	sourceFile := filepath.Join(tempDir, "source.txt")
 	targetFile := filepath.Join(tempDir, "target.txt")
