@@ -136,7 +136,7 @@ func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 	testFile := filepath.Join(tempTestDir, "test")
 	testLink := filepath.Join(tempTestDir, "test-link")
 
-	os.WriteFile(testFile, []byte("test"), 0644)
+	_ = os.WriteFile(testFile, []byte("test"), 0644)
 	if err := os.Symlink(testFile, testLink); err != nil {
 		t.Skip("Platform does not support symlinks")
 	}

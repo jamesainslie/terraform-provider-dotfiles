@@ -326,12 +326,12 @@ type ApplicationDetectionResult struct {
 }
 
 // performApplicationDetection performs application detection using configured methods.
-func (r *ApplicationResource) performApplicationDetection(ctx context.Context, data *ApplicationResourceModel) (*ApplicationDetectionResult, error) {
+func (r *ApplicationResource) performApplicationDetection(ctx context.Context, data *ApplicationResourceModel) *ApplicationDetectionResult {
 	if !data.DetectInstallation.ValueBool() {
 		return &ApplicationDetectionResult{
 			Installed: true, // Assume installed if detection is disabled
 			Method:    "disabled",
-		}, nil
+		}
 	}
 
 	appName := data.Application.ValueString()
@@ -373,7 +373,7 @@ func (r *ApplicationResource) performApplicationDetection(ctx context.Context, d
 	return &ApplicationDetectionResult{
 		Installed: false,
 		Method:    "not_found",
-	}, nil
+	}
 }
 
 // tryDetectionMethod attempts to detect application using specified method.
@@ -400,8 +400,9 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 	cmd := fmt.Sprintf("command -v %s", appName)
 
 	// Execute command using the same shell execution logic as hooks
-	if executeShellCommand(ctx, cmd) != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+	err := executeShellCommand(ctx, cmd)
+	if err != nil {
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	// TODO: Extract version information if possible
@@ -409,7 +410,7 @@ func (r *ApplicationResource) detectByCommand(ctx context.Context, appName strin
 		Installed: true,
 		Method:    "command",
 		Version:   "unknown", // Could be enhanced to extract version
-	}, nil
+	}
 }
 
 // detectByFile detects application by checking file/directory existence.
@@ -471,26 +472,27 @@ func (r *ApplicationResource) detectByFile(ctx context.Context, appName string, 
 				InstallationPath: expandedPath,
 				Method:           "file",
 				Version:          "unknown", // Could be enhanced to extract version from app bundle
-			}, nil
+			}
 		}
 	}
 
-	return &ApplicationDetectionResult{Installed: false}, nil
+	return &ApplicationDetectionResult{Installed: false}
 }
 
 // detectByBrewCask detects application installed via Homebrew cask.
 func (r *ApplicationResource) detectByBrewCask(ctx context.Context, appName string) (*ApplicationDetectionResult, error) {
 	cmd := fmt.Sprintf("brew list --cask | grep -q '^%s$'", appName)
 
-	if executeShellCommand(ctx, cmd) != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+	err := executeShellCommand(ctx, cmd)
+	if err != nil {
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	return &ApplicationDetectionResult{
 		Installed: true,
 		Method:    "brew_cask",
 		Version:   "unknown", // Could be enhanced to get brew cask version
-	}, nil
+	}
 }
 
 // detectByPackageManager detects application via system package manager.
@@ -514,22 +516,23 @@ func (r *ApplicationResource) detectByPackageManager(ctx context.Context, appNam
 				return &ApplicationDetectionResult{
 					Installed: true,
 					Method:    "package_manager",
-				}, nil
+				}
 			}
 		}
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	default:
-		return &ApplicationDetectionResult{Installed: false}, nil
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
-	if executeShellCommand(ctx, cmd) != nil {
-		return &ApplicationDetectionResult{Installed: false}, nil
+	err := executeShellCommand(ctx, cmd)
+	if err != nil {
+		return &ApplicationDetectionResult{Installed: false}
 	}
 
 	return &ApplicationDetectionResult{
 		Installed: true,
 		Method:    "package_manager",
-	}, nil
+	}
 }
 
 // capitalizeFirst capitalizes the first letter of a string.

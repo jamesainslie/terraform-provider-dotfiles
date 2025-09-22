@@ -184,7 +184,6 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 			fm := fileops.NewFileManager(platformProvider, false)
 
 			// Create multiple backups by changing content
-			backupPaths := make([]string, 0)
 			for i := 1; i <= 4; i++ {
 				content := fmt.Sprintf(`{"theme": "version%d", "fontSize": %d}`, i, 12+i)
 				err := os.WriteFile(targetFile, []byte(content), 0644)
@@ -192,13 +191,9 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 					t.Fatalf("Failed to update target file iteration %d: %v", i, err)
 				}
 
-				backupPath, err := fm.CreateEnhancedBackup(targetFile, config)
+				_, err = fm.CreateEnhancedBackup(targetFile, config)
 				if err != nil {
 					t.Fatalf("Failed to create backup iteration %d: %v", i, err)
-				}
-
-				if backupPath != "" {
-					backupPaths = append(backupPaths, backupPath)
 				}
 			}
 
@@ -413,7 +408,7 @@ func TestEnhancedBackupCompatibility(t *testing.T) {
 
 		// Should have enhanced backup configuration
 		if backupConfig == nil {
-			t.Error("Should have enhanced backup config when policy is configured")
+			t.Fatal("Should have enhanced backup config when policy is configured")
 		}
 		if !backupConfig.Enabled {
 			t.Error("Enhanced backup should be enabled even when legacy backup is disabled")

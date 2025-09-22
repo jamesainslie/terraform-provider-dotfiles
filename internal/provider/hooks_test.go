@@ -81,7 +81,7 @@ func TestExecutePostCommands(t *testing.T) {
 			types.StringValue("rm -f /tmp/test-hook-file"),
 		}
 		cleanupList, _ := types.ListValue(types.StringType, cleanupCommands)
-		executePostCommands(ctx, cleanupList, "cleanup")
+		_ = executePostCommands(ctx, cleanupList, "cleanup")
 	})
 }
 
@@ -201,7 +201,7 @@ func TestPostCreationHooksIntegration(t *testing.T) {
 			types.StringValue("rm -f /tmp/test-hook-log /tmp/test-file /tmp/test-file.backup"),
 		}
 		cleanupList, _ := types.ListValue(types.StringType, cleanupCommands)
-		executePostCommands(ctx, cleanupList, "cleanup")
+		_ = executePostCommands(ctx, cleanupList, "cleanup")
 	})
 }
 
