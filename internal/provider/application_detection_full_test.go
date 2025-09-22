@@ -135,10 +135,7 @@ set -gx EDITOR {{.editor}}
 
 		// Test application requirement checking
 		fileResource := &FileResource{client: client}
-		shouldSkip, err := fileResource.checkApplicationRequirements(ctx, appConfig, nil)
-		if err != nil {
-			t.Fatalf("Application requirement check failed: %v", err)
-		}
+		shouldSkip := fileResource.checkApplicationRequirements(ctx, appConfig, nil)
 
 		// The result depends on whether git is actually installed
 		t.Logf("Git detection result: shouldSkip=%v", shouldSkip)
@@ -172,10 +169,7 @@ set -gx EDITOR {{.editor}}
 
 		// Create mock diagnostics for testing
 		var diagnostics diag.Diagnostics
-		shouldSkip, err := fileResource.checkApplicationRequirements(ctx, appConfig, &diagnostics)
-		if err != nil {
-			t.Fatalf("Application requirement check failed: %v", err)
-		}
+		shouldSkip := fileResource.checkApplicationRequirements(ctx, appConfig, &diagnostics)
 
 		// Cursor is unlikely to be installed in test environment, so should skip
 		if !shouldSkip {
@@ -225,10 +219,7 @@ set -gx EDITOR {{.editor}}
 		appConfig := buildApplicationDetectionConfig(fileModel)
 
 		fileResource := &FileResource{client: client}
-		shouldSkip, err := fileResource.checkApplicationRequirements(ctx, appConfig, nil)
-		if err != nil {
-			t.Fatalf("Application requirement check failed: %v", err)
-		}
+		shouldSkip := fileResource.checkApplicationRequirements(ctx, appConfig, nil)
 
 		// Fish may or may not be installed - test should handle both cases
 		t.Logf("Fish shell detection result: shouldSkip=%v", shouldSkip)
@@ -259,11 +250,8 @@ func TestApplicationDetectionFeatureCompleteness(t *testing.T) {
 		for _, method := range methods {
 			t.Run("Method: "+method, func(t *testing.T) {
 				// Test that each method can be called without error
-				_, err := appResource.tryDetectionMethod(ctx, "test-app", method)
+				_ = appResource.tryDetectionMethod(ctx, "test-app", method)
 				// Some methods may fail depending on environment, but should not panic
-				if err != nil {
-					t.Logf("Detection method %s failed as expected: %v", method, err)
-				}
 			})
 		}
 	})

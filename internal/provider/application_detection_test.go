@@ -74,10 +74,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				result, err := appResource.detectByCommand(ctx, tc.command)
-				if err != nil {
-					t.Fatalf("Command detection failed: %v", err)
-				}
+				result := appResource.detectByCommand(ctx, tc.command)
 
 				if result.Installed != tc.shouldExist {
 					t.Errorf("Expected command %s existence to be %v, got %v",
@@ -104,10 +101,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 		defer os.RemoveAll(testAppPath)
 
 		// Test file detection with existing file
-		result, err := appResource.detectByFile(ctx, "TestApp", platformProvider)
-		if err != nil {
-			t.Fatalf("File detection failed: %v", err)
-		}
+		result := appResource.detectByFile(ctx, "TestApp", platformProvider)
 
 		// Should detect the test app we created (on macOS)
 		if platformProvider.GetPlatform() == "macos" {
@@ -123,10 +117,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 		}
 
 		// Test file detection with non-existent app
-		result2, err := appResource.detectByFile(ctx, "NonExistentApp", platformProvider)
-		if err != nil {
-			t.Fatalf("File detection failed: %v", err)
-		}
+		result2 := appResource.detectByFile(ctx, "NonExistentApp", platformProvider)
 
 		if result2.Installed {
 			t.Error("Should not detect non-existent application")
@@ -137,10 +128,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 		platformProvider := platform.DetectPlatform()
 
 		// Test with a known package (git is usually installed)
-		result, err := appResource.detectByPackageManager(ctx, "git", platformProvider)
-		if err != nil {
-			t.Fatalf("Package manager detection failed: %v", err)
-		}
+		result := appResource.detectByPackageManager(ctx, "git", platformProvider)
 
 		// git might or might not be installed via package manager, but should not error
 		if result.Method != "package_manager" && result.Installed {
@@ -148,10 +136,7 @@ func TestApplicationDetectionMethods(t *testing.T) {
 		}
 
 		// Test with non-existent package
-		result2, err := appResource.detectByPackageManager(ctx, "thispackagedoesnotexist12345", platformProvider)
-		if err != nil {
-			t.Fatalf("Package manager detection failed: %v", err)
-		}
+		result2 := appResource.detectByPackageManager(ctx, "thispackagedoesnotexist12345", platformProvider)
 
 		if result2.Installed {
 			t.Error("Should not detect non-existent package")
