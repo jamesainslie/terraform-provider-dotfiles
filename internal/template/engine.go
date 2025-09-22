@@ -37,7 +37,7 @@ func NewGoTemplateEngine() (*GoTemplateEngine, error) {
 			"homebrewBin": func(prefix string) string {
 				return filepath.Join(prefix, "bin")
 			},
-			
+
 			// String helper functions
 			"upper": strings.ToUpper,
 			"lower": strings.ToLower,
@@ -47,7 +47,7 @@ func NewGoTemplateEngine() (*GoTemplateEngine, error) {
 				}
 				return strings.ToUpper(s[:1]) + s[1:]
 			},
-			
+
 			// Conditional helpers
 			"default": func(defaultValue, value interface{}) interface{} {
 				if value == nil || value == "" {
@@ -55,14 +55,14 @@ func NewGoTemplateEngine() (*GoTemplateEngine, error) {
 				}
 				return value
 			},
-			
+
 			// Platform helpers
 			"isLinux":   func(platform string) bool { return platform == "linux" },
 			"isMacOS":   func(platform string) bool { return platform == "macos" },
 			"isWindows": func(platform string) bool { return platform == "windows" },
 		},
 	}
-	
+
 	return engine, nil
 }
 
@@ -73,14 +73,14 @@ func (e *GoTemplateEngine) ProcessTemplate(templateContent string, context map[s
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
-	
+
 	// Execute template
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, context)
 	if err != nil {
 		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
-	
+
 	return buf.String(), nil
 }
 
@@ -91,32 +91,32 @@ func (e *GoTemplateEngine) ProcessTemplateFile(templatePath, outputPath string, 
 	if err != nil {
 		return fmt.Errorf("failed to read template file: %w", err)
 	}
-	
+
 	// Process template
 	result, err := e.ProcessTemplate(string(templateContent), context)
 	if err != nil {
 		return fmt.Errorf("failed to process template: %w", err)
 	}
-	
+
 	// Parse file mode
 	mode, err := utils.ParseFileMode(fileMode)
 	if err != nil {
 		return fmt.Errorf("invalid file mode: %w", err)
 	}
-	
+
 	// Create parent directories
 	parentDir := filepath.Dir(outputPath)
 	err = os.MkdirAll(parentDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create parent directories: %w", err)
 	}
-	
+
 	// Write result to output file
 	err = os.WriteFile(outputPath, []byte(result), mode)
 	if err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -132,24 +132,24 @@ func (e *GoTemplateEngine) ValidateTemplate(templateContent string) error {
 // CreateTemplateContext creates a template context with system and user variables.
 func CreateTemplateContext(systemInfo, userVars map[string]interface{}) map[string]interface{} {
 	context := make(map[string]interface{})
-	
+
 	// Add system information
 	context["system"] = systemInfo
-	
+
 	// Add user variables at root level
 	for key, value := range userVars {
 		context[key] = value
 	}
-	
+
 	return context
 }
 
 // CreateTemplateContextWithFeatures creates a template context with system, user, and feature variables.
 func CreateTemplateContextWithFeatures(systemInfo, userVars, features map[string]interface{}) map[string]interface{} {
 	context := CreateTemplateContext(systemInfo, userVars)
-	
+
 	// Add features
 	context["features"] = features
-	
+
 	return context
 }

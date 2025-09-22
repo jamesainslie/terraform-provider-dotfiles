@@ -27,7 +27,11 @@ Manages individual dotfiles
 - `backup_enabled` (Boolean) Whether to backup existing files
 - `file_mode` (String) File permissions (e.g., '0644')
 - `is_template` (Boolean) Whether the file should be processed as a template
+- `template_vars` (Map of String) Variables for template processing
 
 ### Read-Only
 
+- `content_hash` (String) SHA256 hash of file content
+- `file_exists` (Boolean) Whether the target file exists
 - `id` (String) File identifier
+- `last_modified` (String) Last modification timestamp

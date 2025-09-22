@@ -38,12 +38,12 @@ type SymlinkResourceModel struct {
 	TargetPath    types.String `tfsdk:"target_path"`
 	ForceUpdate   types.Bool   `tfsdk:"force_update"`
 	CreateParents types.Bool   `tfsdk:"create_parents"`
-	
+
 	// Computed attributes
-	LinkExists    types.Bool   `tfsdk:"link_exists"`
-	IsSymlink     types.Bool   `tfsdk:"is_symlink"`
-	LinkTarget    types.String `tfsdk:"link_target"`
-	LastModified  types.String `tfsdk:"last_modified"`
+	LinkExists   types.Bool   `tfsdk:"link_exists"`
+	IsSymlink    types.Bool   `tfsdk:"is_symlink"`
+	LinkTarget   types.String `tfsdk:"link_target"`
+	LastModified types.String `tfsdk:"last_modified"`
 }
 
 func (r *SymlinkResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -193,7 +193,7 @@ func (r *SymlinkResource) Create(ctx context.Context, req resource.CreateRequest
 				}
 			}
 		}
-		
+
 		// Remove existing target
 		err := os.Remove(expandedTargetPath)
 		if err != nil {
@@ -300,24 +300,26 @@ func (r *SymlinkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 }
 
-// getRepositoryLocalPath returns the local path for a repository
+// getRepositoryLocalPath returns the local path for a repository.
 func (r *SymlinkResource) getRepositoryLocalPath(repositoryID string) (string, error) {
 	// For now, assume repository ID maps to the dotfiles root
 	// TODO: Implement proper repository lookup when repository state management is added
+	_ = repositoryID // TODO: Use repositoryID when repository lookup is implemented
 	return r.client.Config.DotfilesRoot, nil
 }
 
-// updateComputedAttributes updates computed attributes for state tracking
+// updateComputedAttributes updates computed attributes for state tracking.
 func (r *SymlinkResource) updateComputedAttributes(ctx context.Context, data *SymlinkResourceModel, targetPath string) error {
+	_ = ctx // Context reserved for future logging
 	// Check if link exists
 	exists := utils.PathExists(targetPath)
 	data.LinkExists = types.BoolValue(exists)
-	
+
 	if exists {
 		// Check if it's actually a symlink
 		isSymlink := utils.IsSymlink(targetPath)
 		data.IsSymlink = types.BoolValue(isSymlink)
-		
+
 		if isSymlink {
 			// Get symlink target
 			linkTarget, err := os.Readlink(targetPath)
@@ -328,7 +330,7 @@ func (r *SymlinkResource) updateComputedAttributes(ctx context.Context, data *Sy
 		} else {
 			data.LinkTarget = types.StringNull()
 		}
-		
+
 		// Get modification time
 		info, err := os.Lstat(targetPath) // Use Lstat to get symlink info, not target info
 		if err != nil {
@@ -340,6 +342,6 @@ func (r *SymlinkResource) updateComputedAttributes(ctx context.Context, data *Sy
 		data.LinkTarget = types.StringNull()
 		data.LastModified = types.StringNull()
 	}
-	
+
 	return nil
 }

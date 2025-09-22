@@ -41,25 +41,25 @@ func (fm *FileManager) CopyFile(sourcePath, targetPath, fileMode string) error {
 		fmt.Printf("DRY RUN: Would copy %s to %s with mode %s\n", sourcePath, targetPath, fileMode)
 		return nil
 	}
-	
+
 	// Parse file mode
 	mode, err := utils.ParseFileMode(fileMode)
 	if err != nil {
 		return fmt.Errorf("invalid file mode %s: %w", fileMode, err)
 	}
-	
+
 	// Use platform provider to copy file
 	err = fm.platform.CopyFile(sourcePath, targetPath)
 	if err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
 	}
-	
+
 	// Set permissions
 	err = fm.platform.SetPermissions(targetPath, mode)
 	if err != nil {
 		return fmt.Errorf("failed to set permissions: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -73,7 +73,7 @@ func (fm *FileManager) CopyFileWithBackup(sourcePath, targetPath, fileMode, back
 			return fmt.Errorf("failed to create backup: %w", err)
 		}
 	}
-	
+
 	// Copy the file
 	return fm.CopyFile(sourcePath, targetPath, fileMode)
 }
@@ -84,7 +84,7 @@ func (fm *FileManager) CreateSymlink(sourcePath, targetPath string) error {
 		fmt.Printf("DRY RUN: Would create symlink %s -> %s\n", targetPath, sourcePath)
 		return nil
 	}
-	
+
 	return fm.platform.CreateSymlink(sourcePath, targetPath)
 }
 
@@ -94,14 +94,14 @@ func (fm *FileManager) CreateSymlinkWithParents(sourcePath, targetPath string) e
 		fmt.Printf("DRY RUN: Would create symlink %s -> %s (with parents)\n", targetPath, sourcePath)
 		return nil
 	}
-	
+
 	// Create parent directories
 	parentDir := filepath.Dir(targetPath)
 	err := os.MkdirAll(parentDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create parent directories: %w", err)
 	}
-	
+
 	return fm.platform.CreateSymlink(sourcePath, targetPath)
 }
 
@@ -110,25 +110,25 @@ func (fm *FileManager) CreateBackup(filePath, backupDir string) (string, error) 
 	if fm.dryRun {
 		return fmt.Sprintf("%s/backup-dry-run", backupDir), nil
 	}
-	
+
 	// Create backup directory
 	err := os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
-	
+
 	// Generate backup filename with timestamp
 	fileName := filepath.Base(filePath)
 	timestamp := time.Now().Format("2006-01-02-150405")
 	backupFileName := fmt.Sprintf("%s.backup.%s", fileName, timestamp)
 	backupPath := filepath.Join(backupDir, backupFileName)
-	
+
 	// Copy file to backup location
 	err = fm.platform.CopyFile(filePath, backupPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to copy file to backup: %w", err)
 	}
-	
+
 	return backupPath, nil
 }
 
@@ -137,7 +137,7 @@ func (fm *FileManager) ResolveConflict(existingPath, backupDir, strategy string)
 	result := &ConflictResolution{
 		Action: strategy,
 	}
-	
+
 	switch strategy {
 	case "backup":
 		if utils.PathExists(existingPath) {
@@ -148,17 +148,17 @@ func (fm *FileManager) ResolveConflict(existingPath, backupDir, strategy string)
 			result.BackupPath = backupPath
 		}
 		result.ShouldProceed = true
-		
+
 	case "overwrite":
 		result.ShouldProceed = true
-		
+
 	case "skip":
 		result.ShouldProceed = false
-		
+
 	default:
 		return nil, fmt.Errorf("unknown conflict resolution strategy: %s", strategy)
 	}
-	
+
 	return result, nil
 }
 
@@ -168,18 +168,18 @@ func (fm *FileManager) ProcessTemplate(templatePath, targetPath string, variable
 		fmt.Printf("DRY RUN: Would process template %s to %s\n", templatePath, targetPath)
 		return nil
 	}
-	
+
 	// Create template engine
 	engine, err := template.NewGoTemplateEngine()
 	if err != nil {
 		return fmt.Errorf("failed to create template engine: %w", err)
 	}
-	
+
 	// Process template file
 	err = engine.ProcessTemplateFile(templatePath, targetPath, variables, fileMode)
 	if err != nil {
 		return fmt.Errorf("failed to process template: %w", err)
 	}
-	
+
 	return nil
 }

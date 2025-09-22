@@ -44,10 +44,10 @@ type FileResourceModel struct {
 	IsTemplate    types.Bool   `tfsdk:"is_template"`
 	FileMode      types.String `tfsdk:"file_mode"`
 	BackupEnabled types.Bool   `tfsdk:"backup_enabled"`
-	
+
 	// Template variables (for template processing)
 	TemplateVars types.Map `tfsdk:"template_vars"`
-	
+
 	// Computed attributes for state tracking
 	ContentHash  types.String `tfsdk:"content_hash"`
 	LastModified types.String `tfsdk:"last_modified"`
@@ -192,7 +192,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if data.IsTemplate.ValueBool() {
 		// Process template
 		templateVars := make(map[string]interface{})
-		
+
 		// Add template variables if provided
 		if !data.TemplateVars.IsNull() {
 			elements := data.TemplateVars.Elements()
@@ -202,11 +202,11 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 				}
 			}
 		}
-		
+
 		// Add system context
 		systemInfo := r.client.GetPlatformInfo()
 		context := template.CreateTemplateContext(systemInfo, templateVars)
-		
+
 		if backupEnabled && utils.PathExists(expandedTargetPath) {
 			// Create backup first
 			_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
@@ -217,7 +217,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 				)
 			}
 		}
-		
+
 		// Process template
 		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, fileMode)
 	} else {
@@ -361,7 +361,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if data.IsTemplate.ValueBool() {
 		// Process template for update
 		templateVars := make(map[string]interface{})
-		
+
 		// Add template variables if provided
 		if !data.TemplateVars.IsNull() {
 			elements := data.TemplateVars.Elements()
@@ -371,11 +371,11 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 				}
 			}
 		}
-		
+
 		// Add system context
 		systemInfo := r.client.GetPlatformInfo()
 		context := template.CreateTemplateContext(systemInfo, templateVars)
-		
+
 		if backupEnabled && utils.PathExists(expandedTargetPath) {
 			// Create backup before update
 			_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
@@ -386,7 +386,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 				)
 			}
 		}
-		
+
 		// Process template
 		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, fileMode)
 	} else {
@@ -467,41 +467,43 @@ func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 }
 
-// getRepositoryLocalPath returns the local path for a repository
+// getRepositoryLocalPath returns the local path for a repository.
 func (r *FileResource) getRepositoryLocalPath(repositoryID string) (string, error) {
 	// For now, assume repository ID maps to the dotfiles root
 	// TODO: Implement proper repository lookup when repository state management is added
+	_ = repositoryID // TODO: Use repositoryID when repository lookup is implemented
 	return r.client.Config.DotfilesRoot, nil
 }
 
-// updateComputedAttributes updates computed attributes for state tracking
+// updateComputedAttributes updates computed attributes for state tracking.
 func (r *FileResource) updateComputedAttributes(ctx context.Context, data *FileResourceModel, targetPath string) error {
+	_ = ctx // Context reserved for future logging
 	// Check if file exists
 	exists := utils.PathExists(targetPath)
 	data.FileExists = types.BoolValue(exists)
-	
+
 	if exists {
 		// Get file info
 		info, err := os.Stat(targetPath)
 		if err != nil {
 			return fmt.Errorf("failed to stat file: %w", err)
 		}
-		
+
 		// Set last modified time
 		data.LastModified = types.StringValue(info.ModTime().Format(time.RFC3339))
-		
+
 		// Calculate content hash
 		content, err := os.ReadFile(targetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read file for hash: %w", err)
 		}
-		
+
 		hash := sha256.Sum256(content)
 		data.ContentHash = types.StringValue(fmt.Sprintf("%x", hash))
 	} else {
 		data.LastModified = types.StringNull()
 		data.ContentHash = types.StringNull()
 	}
-	
+
 	return nil
 }
