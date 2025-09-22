@@ -23,13 +23,11 @@ func TestFileResourcePermissionIntegration(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "source")
 	targetDir := filepath.Join(tempDir, "target")
 
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
 
-	err = os.MkdirAll(targetDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
 	}
 
@@ -63,8 +61,7 @@ func TestFileResourcePermissionIntegration(t *testing.T) {
 	}
 
 	// Create client for future use (currently unused in this test)
-	_, err = NewDotfilesClient(config)
-	if err != nil {
+	if _, err := NewDotfilesClient(config); err != nil {
 		t.Fatalf("Failed to create dotfiles client: %v", err)
 	}
 
@@ -151,8 +148,7 @@ func TestSymlinkResourcePermissionIntegration(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "source", "ssh")
 	targetDir := filepath.Join(tempDir, "target")
 
-	err = os.MkdirAll(sourceDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatalf("Failed to create source directory: %v", err)
 	}
 
