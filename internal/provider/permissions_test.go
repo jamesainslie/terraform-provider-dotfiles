@@ -18,45 +18,45 @@ func TestPermissionsSchemaExtensions(t *testing.T) {
 	t.Run("FileResource should support permissions", func(t *testing.T) {
 		r := NewFileResource()
 		ctx := context.Background()
-		
+
 		req := resource.SchemaRequest{}
 		resp := &resource.SchemaResponse{}
-		
+
 		r.Schema(ctx, req, resp)
-		
+
 		if resp.Diagnostics.HasError() {
 			t.Fatalf("Schema validation failed: %v", resp.Diagnostics)
 		}
-		
+
 		// Check for permissions block
 		if _, exists := resp.Schema.Blocks["permissions"]; !exists {
 			t.Error("permissions block should be defined in file resource schema")
 		}
-		
+
 		// Check for permission_rules attribute
 		if _, exists := resp.Schema.Attributes["permission_rules"]; !exists {
 			t.Error("permission_rules attribute should be defined in file resource schema")
 		}
 	})
-	
+
 	t.Run("SymlinkResource should support permissions", func(t *testing.T) {
 		r := NewSymlinkResource()
 		ctx := context.Background()
-		
+
 		req := resource.SchemaRequest{}
 		resp := &resource.SchemaResponse{}
-		
+
 		r.Schema(ctx, req, resp)
-		
+
 		if resp.Diagnostics.HasError() {
 			t.Fatalf("Schema validation failed: %v", resp.Diagnostics)
 		}
-		
+
 		// Check for permissions block
 		if _, exists := resp.Schema.Blocks["permissions"]; !exists {
 			t.Error("permissions block should be defined in symlink resource schema")
 		}
-		
+
 		// Check for permission_rules attribute
 		if _, exists := resp.Schema.Attributes["permission_rules"]; !exists {
 			t.Error("permission_rules attribute should be defined in symlink resource schema")
@@ -107,7 +107,7 @@ func TestPermissionParsing(t *testing.T) {
 			expectError: true,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := parsePermission(tc.input)
@@ -166,7 +166,7 @@ func TestPermissionRuleMatching(t *testing.T) {
 			matches:  true,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := matchesPermissionPattern(tc.pattern, tc.filename)
@@ -196,15 +196,15 @@ func TestPermissionsResourceModel(t *testing.T) {
 		},
 		PermissionRules: func() types.Map {
 			rules := map[string]attr.Value{
-				"id_*":       types.StringValue("0600"),
-				"*.pub":      types.StringValue("0644"),
+				"id_*":        types.StringValue("0600"),
+				"*.pub":       types.StringValue("0644"),
 				"known_hosts": types.StringValue("0600"),
 			}
 			mapVal, _ := types.MapValue(types.StringType, rules)
 			return mapVal
 		}(),
 	}
-	
+
 	// Verify permissions model
 	if model.Permissions.Directory.ValueString() != "0700" {
 		t.Error("Directory permission not set correctly")
@@ -215,7 +215,7 @@ func TestPermissionsResourceModel(t *testing.T) {
 	if !model.Permissions.Recursive.ValueBool() {
 		t.Error("Recursive permission not set correctly")
 	}
-	
+
 	// Verify permission rules
 	rules := model.PermissionRules.Elements()
 	if len(rules) != 3 {

@@ -27,7 +27,7 @@ type EnhancedFileResourceModel struct {
 	FileResourceModel
 	Permissions     *PermissionsModel `tfsdk:"permissions"`
 	PermissionRules types.Map         `tfsdk:"permission_rules"`
-	
+
 	// Post-creation hooks (Priority 2 feature)
 	PostCreateCommands types.List `tfsdk:"post_create_commands"`
 	PostUpdateCommands types.List `tfsdk:"post_update_commands"`
@@ -39,7 +39,7 @@ type EnhancedSymlinkResourceModel struct {
 	SymlinkResourceModel
 	Permissions     *PermissionsModel `tfsdk:"permissions"`
 	PermissionRules types.Map         `tfsdk:"permission_rules"`
-	
+
 	// Post-creation hooks (Priority 2 feature)
 	PostCreateCommands types.List `tfsdk:"post_create_commands"`
 	PostUpdateCommands types.List `tfsdk:"post_update_commands"`
@@ -108,24 +108,24 @@ func parsePermission(perm string) (uint32, error) {
 	if perm == "" {
 		return 0, fmt.Errorf("permission cannot be empty")
 	}
-	
+
 	// Remove leading zeros for parsing, but preserve them for validation
 	trimmed := strings.TrimLeft(perm, "0")
 	if trimmed == "" {
 		trimmed = "0"
 	}
-	
+
 	// Parse as octal
 	parsed, err := strconv.ParseUint(trimmed, 8, 32)
 	if err != nil {
 		return 0, fmt.Errorf("invalid permission format %q: %w", perm, err)
 	}
-	
+
 	// Validate permission range (0-777)
 	if parsed > 0777 {
 		return 0, fmt.Errorf("permission %q is out of valid range (0-777)", perm)
 	}
-	
+
 	return uint32(parsed), nil
 }
 
@@ -144,15 +144,15 @@ func isMoreSpecific(pattern1, pattern2, filename string) bool {
 	// Count wildcards - fewer wildcards means more specific
 	wildcards1 := strings.Count(pattern1, "*") + strings.Count(pattern1, "?")
 	wildcards2 := strings.Count(pattern2, "*") + strings.Count(pattern2, "?")
-	
+
 	if wildcards1 != wildcards2 {
 		return wildcards1 < wildcards2
 	}
-	
+
 	// If same number of wildcards, prefer exact character matches
 	exactChars1 := len(pattern1) - wildcards1
 	exactChars2 := len(pattern2) - wildcards2
-	
+
 	return exactChars1 > exactChars2
 }
 
@@ -161,11 +161,11 @@ func ApplyPermissionRules(filename string, rules types.Map, defaultPerm string) 
 	if rules.IsNull() || rules.IsUnknown() {
 		return defaultPerm, nil
 	}
-	
+
 	elements := rules.Elements()
 	bestMatch := ""
 	bestPerm := ""
-	
+
 	// Find the most specific pattern match
 	for pattern, permValue := range elements {
 		if strPerm, ok := permValue.(types.String); ok {
@@ -182,11 +182,11 @@ func ApplyPermissionRules(filename string, rules types.Map, defaultPerm string) 
 			}
 		}
 	}
-	
+
 	if bestMatch != "" {
 		return bestPerm, nil
 	}
-	
+
 	return defaultPerm, nil
 }
 
@@ -195,21 +195,21 @@ func ValidatePermissionsModel(permissions *PermissionsModel) error {
 	if permissions == nil {
 		return nil
 	}
-	
+
 	// Validate directory permission
 	if !permissions.Directory.IsNull() {
 		if _, err := parsePermission(permissions.Directory.ValueString()); err != nil {
 			return fmt.Errorf("invalid directory permission: %w", err)
 		}
 	}
-	
+
 	// Validate file permission
 	if !permissions.Files.IsNull() {
 		if _, err := parsePermission(permissions.Files.ValueString()); err != nil {
 			return fmt.Errorf("invalid files permission: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -218,7 +218,7 @@ func ValidatePermissionRules(rules types.Map) error {
 	if rules.IsNull() || rules.IsUnknown() {
 		return nil
 	}
-	
+
 	elements := rules.Elements()
 	for pattern, permValue := range elements {
 		if strPerm, ok := permValue.(types.String); ok {
@@ -229,6 +229,6 @@ func ValidatePermissionRules(rules types.Map) error {
 			return fmt.Errorf("permission rule %s has invalid type", pattern)
 		}
 	}
-	
+
 	return nil
 }

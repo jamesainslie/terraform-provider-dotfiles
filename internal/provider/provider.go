@@ -93,6 +93,10 @@ func (p *DotfilesProvider) Schema(ctx context.Context, req provider.SchemaReques
 				Optional:            true,
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"backup_strategy": GetBackupStrategySchemaBlock(),
+			"recovery":        GetRecoverySchemaBlock(),
+		},
 	}
 }
 

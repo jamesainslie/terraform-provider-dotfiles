@@ -123,10 +123,12 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	}
 	
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages individual dotfiles with comprehensive permission management",
+		MarkdownDescription: "Manages individual dotfiles with comprehensive permission management and enhanced backup",
 		Attributes:          baseAttributes,
 		Blocks: map[string]schema.Block{
-			"permissions": GetPermissionsSchemaBlock(),
+			"permissions":    GetPermissionsSchemaBlock(),
+			"backup_policy":  GetBackupPolicySchemaBlock(),
+			"recovery_test":  GetRecoveryTestSchemaBlock(),
 		},
 	}
 }
@@ -149,7 +151,7 @@ func (r *FileResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data EnhancedFileResourceModel
+	var data EnhancedFileResourceModelWithBackup
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -185,7 +187,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	fileManager := fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 
 	// Build permission configuration
-	permConfig, err := buildFilePermissionConfig(&data)
+	permConfig, err := buildFilePermissionConfig(&data.EnhancedFileResourceModel)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid permission configuration",
@@ -194,10 +196,45 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Check if backup is needed
-	backupEnabled := r.client.Config.BackupEnabled
-	if !data.BackupEnabled.IsNull() {
-		backupEnabled = data.BackupEnabled.ValueBool()
+	// Build enhanced backup configuration
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromFileModel(&data)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid backup configuration",
+			fmt.Sprintf("Failed to build backup config: %s", err.Error()),
+		)
+		return
+	}
+
+	// Handle backup - use enhanced if available, otherwise fall back to legacy
+	if utils.PathExists(expandedTargetPath) {
+		if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
+			// Use enhanced backup
+			enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
+			_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
+			if err != nil {
+				resp.Diagnostics.AddWarning(
+					"Enhanced backup failed",
+					fmt.Sprintf("Could not create enhanced backup of %s: %s", expandedTargetPath, err.Error()),
+				)
+			}
+		} else {
+			// Fall back to legacy backup
+			backupEnabled := r.client.Config.BackupEnabled
+			if !data.BackupEnabled.IsNull() {
+				backupEnabled = data.BackupEnabled.ValueBool()
+			}
+
+			if backupEnabled {
+				_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
+				if err != nil {
+					resp.Diagnostics.AddWarning(
+						"Backup failed",
+						fmt.Sprintf("Could not create backup of %s: %s", expandedTargetPath, err.Error()),
+					)
+				}
+			}
+		}
 	}
 
 	var finalErr error
@@ -220,17 +257,6 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		systemInfo := r.client.GetPlatformInfo()
 		context := template.CreateTemplateContext(systemInfo, templateVars)
 
-		if backupEnabled && utils.PathExists(expandedTargetPath) {
-			// Create backup first
-			_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
-			if err != nil {
-				resp.Diagnostics.AddWarning(
-					"Backup failed",
-					fmt.Sprintf("Could not create backup of %s: %s", expandedTargetPath, err.Error()),
-				)
-			}
-		}
-
 		// Process template with enhanced permissions
 		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, permConfig.FileMode)
 		if finalErr == nil {
@@ -238,12 +264,8 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 			finalErr = fileManager.ApplyPermissions(expandedTargetPath, permConfig)
 		}
 	} else {
-		// Regular file copy with enhanced permissions
-		if backupEnabled {
-			finalErr = fileManager.CopyFileWithBackup(sourcePath, expandedTargetPath, permConfig.FileMode, r.client.Config.BackupDirectory)
-		} else {
-			finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
-		}
+		// Regular file copy with enhanced permissions  
+		finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
 	}
 
 	if finalErr != nil {
@@ -282,7 +304,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data EnhancedFileResourceModel
+	var data EnhancedFileResourceModelWithBackup
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -328,7 +350,7 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data EnhancedFileResourceModel
+	var data EnhancedFileResourceModelWithBackup
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -363,7 +385,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	fileManager := fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 
 	// Build permission configuration
-	permConfig, err := buildFilePermissionConfig(&data)
+	permConfig, err := buildFilePermissionConfig(&data.EnhancedFileResourceModel)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid permission configuration",
@@ -372,10 +394,45 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	// Check if backup is needed
-	backupEnabled := r.client.Config.BackupEnabled
-	if !data.BackupEnabled.IsNull() {
-		backupEnabled = data.BackupEnabled.ValueBool()
+	// Build enhanced backup configuration
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromFileModel(&data)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid backup configuration",
+			fmt.Sprintf("Failed to build backup config: %s", err.Error()),
+		)
+		return
+	}
+
+	// Handle backup before update - use enhanced if available, otherwise fall back to legacy
+	if utils.PathExists(expandedTargetPath) {
+		if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
+			// Use enhanced backup
+			enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
+			_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
+			if err != nil {
+				resp.Diagnostics.AddWarning(
+					"Enhanced backup failed",
+					fmt.Sprintf("Could not create enhanced backup before update: %s", err.Error()),
+				)
+			}
+		} else {
+			// Fall back to legacy backup
+			backupEnabled := r.client.Config.BackupEnabled
+			if !data.BackupEnabled.IsNull() {
+				backupEnabled = data.BackupEnabled.ValueBool()
+			}
+
+			if backupEnabled {
+				_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
+				if err != nil {
+					resp.Diagnostics.AddWarning(
+						"Backup failed",
+						fmt.Sprintf("Could not create backup before update: %s", err.Error()),
+					)
+				}
+			}
+		}
 	}
 
 	var finalErr error
@@ -398,17 +455,6 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		systemInfo := r.client.GetPlatformInfo()
 		context := template.CreateTemplateContext(systemInfo, templateVars)
 
-		if backupEnabled && utils.PathExists(expandedTargetPath) {
-			// Create backup before update
-			_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
-			if err != nil {
-				resp.Diagnostics.AddWarning(
-					"Backup failed",
-					fmt.Sprintf("Could not create backup before update: %s", err.Error()),
-				)
-			}
-		}
-
 		// Process template with enhanced permissions
 		finalErr = fileManager.ProcessTemplate(sourcePath, expandedTargetPath, context, permConfig.FileMode)
 		if finalErr == nil {
@@ -417,11 +463,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	} else {
 		// Regular file copy with enhanced permissions
-		if backupEnabled {
-			finalErr = fileManager.CopyFileWithBackup(sourcePath, expandedTargetPath, permConfig.FileMode, r.client.Config.BackupDirectory)
-		} else {
-			finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
-		}
+		finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
 	}
 
 	if finalErr != nil {
@@ -457,7 +499,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data EnhancedFileResourceModel
+	var data EnhancedFileResourceModelWithBackup
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -548,6 +590,33 @@ func (r *FileResource) updateComputedAttributes(ctx context.Context, data *FileR
 	}
 
 	return nil
+}
+
+// buildEnhancedBackupConfigFromFileModel builds enhanced backup config from file model
+func buildEnhancedBackupConfigFromFileModel(data *EnhancedFileResourceModelWithBackup) (*fileops.EnhancedBackupConfig, error) {
+	if data.BackupPolicy == nil {
+		return nil, nil
+	}
+
+	config := &fileops.EnhancedBackupConfig{
+		Enabled:        data.BackupPolicy.AlwaysBackup.ValueBool() || !data.BackupPolicy.AlwaysBackup.IsNull(),
+		BackupFormat:   data.BackupPolicy.BackupFormat.ValueString(),
+		MaxBackups:     data.BackupPolicy.RetentionCount.ValueInt64(),
+		BackupMetadata: data.BackupPolicy.BackupMetadata.ValueBool(),
+		Compression:    data.BackupPolicy.Compression.ValueBool(),
+		Incremental:    data.BackupPolicy.VersionedBackup.ValueBool(),
+		BackupIndex:    true, // Always enable for file-level policies
+	}
+
+	// Set defaults if not specified
+	if config.BackupFormat == "" {
+		config.BackupFormat = "timestamped"
+	}
+	if config.MaxBackups == 0 {
+		config.MaxBackups = 5
+	}
+
+	return config, fileops.ValidateEnhancedBackupConfig(config)
 }
 
 // buildFilePermissionConfig builds a PermissionConfig from the enhanced model data
