@@ -8,7 +8,7 @@ terraform {
 
 provider "dotfiles" {
   dotfiles_root = "./test-dotfiles"
-  dry_run = true  # Safe for testing
+  dry_run       = true # Safe for testing
 }
 
 # Test the system data source

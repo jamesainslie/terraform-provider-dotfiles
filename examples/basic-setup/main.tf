@@ -19,37 +19,37 @@ data "dotfiles_system" "current" {}
 
 # Example repository
 resource "dotfiles_repository" "main" {
-  name                  = "personal-dotfiles"
-  source_path          = "./test-dotfiles"
-  description          = "Personal development environment dotfiles"
+  name                   = "personal-dotfiles"
+  source_path            = "./test-dotfiles"
+  description            = "Personal development environment dotfiles"
   default_backup_enabled = true
-  default_file_mode    = "0644"
-  default_dir_mode     = "0755"
+  default_file_mode      = "0644"
+  default_dir_mode       = "0755"
 }
 
 # Example file resource
 resource "dotfiles_file" "gitconfig" {
-  repository    = dotfiles_repository.main.id
-  name         = "git-config"
-  source_path  = "git/gitconfig"
-  target_path  = "~/.gitconfig"
-  is_template  = false
-  file_mode    = "0644"
+  repository  = dotfiles_repository.main.id
+  name        = "git-config"
+  source_path = "git/gitconfig"
+  target_path = "~/.gitconfig"
+  is_template = false
+  file_mode   = "0644"
 }
 
 # Example symlink resource
 resource "dotfiles_symlink" "fish_config" {
   repository     = dotfiles_repository.main.id
-  name          = "fish-configuration"
-  source_path   = "fish"
-  target_path   = "~/.config/fish"
-  force_update  = false
+  name           = "fish-configuration"
+  source_path    = "fish"
+  target_path    = "~/.config/fish"
+  force_update   = false
   create_parents = true
 }
 
 # Example directory resource
 resource "dotfiles_directory" "tools_config" {
-  repository            = dotfiles_repository.main.id
+  repository           = dotfiles_repository.main.id
   name                 = "tools-configuration"
   source_path          = "tools"
   target_path          = "~/.config/tools"
