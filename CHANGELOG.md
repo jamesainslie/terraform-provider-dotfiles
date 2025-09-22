@@ -1,3 +1,19 @@
+## 0.1.1 (September 22, 2025)
+
+IMPROVEMENTS:
+
+* **Release Automation**: Fixed release workflow with comprehensive pre-release testing and security scanning
+* **CI/CD Enhancement**: Added macOS testing, vulnerability scanning, and improved artifact generation  
+* **GoReleaser v2**: Upgraded to latest GoReleaser with proper GPG signing and archive handling
+* **Documentation**: Automated provider documentation generation during releases
+
+BUG FIXES:
+
+* Fixed GPG signing configuration in release workflow
+* Resolved GoReleaser deprecated configuration warnings
+* Fixed release asset duplication handling
+
+
 ## 0.1.0 (September 22, 2025)
 
 FEATURES:
