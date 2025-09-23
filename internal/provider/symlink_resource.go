@@ -39,6 +39,13 @@ type SymlinkResourceModel struct {
 	ForceUpdate   types.Bool   `tfsdk:"force_update"`
 	CreateParents types.Bool   `tfsdk:"create_parents"`
 
+	// Enhanced fields
+	Permissions     *PermissionsModel `tfsdk:"permissions"`
+	PermissionRules types.Map         `tfsdk:"permission_rules"`
+	PostCreateCommands types.List `tfsdk:"post_create_commands"`
+	PostUpdateCommands types.List `tfsdk:"post_update_commands"`
+	PreDestroyCommands types.List `tfsdk:"pre_destroy_commands"`
+
 	// Computed attributes
 	LinkExists   types.Bool   `tfsdk:"link_exists"`
 	IsSymlink    types.Bool   `tfsdk:"is_symlink"`
