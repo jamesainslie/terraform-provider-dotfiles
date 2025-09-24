@@ -465,6 +465,8 @@ func (r *RepositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 		}
 	}
 
+	// Set ID and save state
+	data.ID = data.Name
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
