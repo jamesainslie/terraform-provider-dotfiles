@@ -498,6 +498,8 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		)
 	}
 
+	// Set ID and save state
+	data.ID = data.Name
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 
 	tflog.Info(ctx, "File resource updated successfully", map[string]interface{}{

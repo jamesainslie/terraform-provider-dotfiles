@@ -294,11 +294,9 @@ func TestEnhancedBackupEndToEnd(t *testing.T) {
 		t.Run("Provider-level backup strategy configuration", func(t *testing.T) {
 			// Test that provider model can be configured with backup strategy
 			providerModel := &EnhancedProviderModel{
-				DotfilesProviderModel: DotfilesProviderModel{
-					DotfilesRoot:    types.StringValue(sourceDir),
-					BackupEnabled:   types.BoolValue(true),
-					BackupDirectory: types.StringValue(backupDir),
-				},
+				DotfilesRoot:    types.StringValue(sourceDir),
+				BackupEnabled:   types.BoolValue(true),
+				BackupDirectory: types.StringValue(backupDir),
 				BackupStrategy: &BackupStrategyModel{
 					Enabled:         types.BoolValue(true),
 					Directory:       types.StringValue(backupDir),

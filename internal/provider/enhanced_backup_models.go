@@ -47,11 +47,9 @@ type RecoveryTestModel struct {
 }
 
 // EnhancedProviderModel extends DotfilesProviderModel with enhanced backup features.
-type EnhancedProviderModel struct {
-	DotfilesProviderModel
-	BackupStrategy *BackupStrategyModel `tfsdk:"backup_strategy"`
-	Recovery       *RecoveryModel       `tfsdk:"recovery"`
-}
+// Since DotfilesProviderModel now includes backup_strategy and recovery fields,
+// this is now just an alias for backward compatibility.
+type EnhancedProviderModel = DotfilesProviderModel
 
 // EnhancedFileResourceModelWithBackup extends EnhancedFileResourceModel with backup features.
 type EnhancedFileResourceModelWithBackup struct {
