@@ -40,11 +40,11 @@ type SymlinkResourceModel struct {
 	CreateParents types.Bool   `tfsdk:"create_parents"`
 
 	// Enhanced fields
-	Permissions     *PermissionsModel `tfsdk:"permissions"`
-	PermissionRules types.Map         `tfsdk:"permission_rules"`
-	PostCreateCommands types.List `tfsdk:"post_create_commands"`
-	PostUpdateCommands types.List `tfsdk:"post_update_commands"`
-	PreDestroyCommands types.List `tfsdk:"pre_destroy_commands"`
+	Permissions        *PermissionsModel `tfsdk:"permissions"`
+	PermissionRules    types.Map         `tfsdk:"permission_rules"`
+	PostCreateCommands types.List        `tfsdk:"post_create_commands"`
+	PostUpdateCommands types.List        `tfsdk:"post_update_commands"`
+	PreDestroyCommands types.List        `tfsdk:"pre_destroy_commands"`
 
 	// Computed attributes
 	LinkExists   types.Bool   `tfsdk:"link_exists"`
@@ -268,6 +268,9 @@ func (r *SymlinkResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Set ID and save state
+	data.ID = data.Name
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
