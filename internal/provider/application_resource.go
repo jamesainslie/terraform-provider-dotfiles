@@ -46,9 +46,9 @@ type ApplicationResourceModel struct {
 	ConditionalOperation types.Bool   `tfsdk:"conditional"`
 	ConfigStrategy       types.String `tfsdk:"config_strategy"`
 
-	// Detection configuration blocks  
-	DetectionMethods []DetectionMethodModel  `tfsdk:"detection_methods"`
-	ConfigMappings   *ConfigMappingModel     `tfsdk:"config_mappings"`
+	// Detection configuration blocks
+	DetectionMethods []DetectionMethodModel `tfsdk:"detection_methods"`
+	ConfigMappings   *ConfigMappingModel    `tfsdk:"config_mappings"`
 
 	// Computed attributes
 	Installed        types.Bool   `tfsdk:"installed"`
