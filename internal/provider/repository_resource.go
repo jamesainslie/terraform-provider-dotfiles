@@ -207,28 +207,28 @@ func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequ
 
 		// Check if local repository is a Git repository and get commit info
 		localPath := data.SourcePath.ValueString()
-		
+
 		tflog.Debug(ctx, "Checking if repository is a Git repository", map[string]interface{}{
 			"local_path": localPath,
 		})
-		
+
 		isGitRepo := r.isGitRepository(localPath)
 		tflog.Debug(ctx, "Git repository detection result", map[string]interface{}{
 			"local_path": localPath,
 			"is_git":     isGitRepo,
 		})
-		
+
 		if isGitRepo {
 			tflog.Debug(ctx, "Creating Git manager for local repository", map[string]interface{}{
 				"local_path": localPath,
 			})
-			
+
 			gitManager, err := git.NewGitManager(nil) // No auth needed for local repos
 			if err == nil {
 				tflog.Debug(ctx, "Git manager created successfully, retrieving repository info", map[string]interface{}{
 					"local_path": localPath,
 				})
-				
+
 				info, err := gitManager.GetRepositoryInfo(localPath)
 				if err == nil {
 					data.LastCommit = types.StringValue(info.LastCommit)
@@ -260,10 +260,10 @@ func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequ
 		}
 
 		tflog.Info(ctx, "Local repository setup successfully", map[string]interface{}{
-			"source_path":  sourcePath,
-			"local_path":   data.LocalPath.ValueString(),
-			"last_commit":  data.LastCommit.ValueString(),
-			"last_update":  data.LastUpdate.ValueString(),
+			"source_path": sourcePath,
+			"local_path":  data.LocalPath.ValueString(),
+			"last_commit": data.LastCommit.ValueString(),
+			"last_update": data.LastUpdate.ValueString(),
 		})
 	}
 
@@ -654,13 +654,13 @@ func (r *RepositoryResource) buildAuthConfig(data *RepositoryResourceModel) *git
 // isGitRepository checks if a local path contains a Git repository.
 func (r *RepositoryResource) isGitRepository(localPath string) bool {
 	gitDir := filepath.Join(localPath, ".git")
-	
+
 	stat, err := os.Stat(gitDir)
 	if err != nil {
 		// .git directory/file doesn't exist
 		return false
 	}
-	
+
 	// .git exists, check if it's a directory (normal repo) or file (worktree/submodule)
 	isGitRepo := stat.IsDir() || stat.Mode().IsRegular()
 	return isGitRepo

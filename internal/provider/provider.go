@@ -31,16 +31,16 @@ type DotfilesProvider struct {
 
 // DotfilesProviderModel describes the provider data model.
 type DotfilesProviderModel struct {
-	DotfilesRoot       types.String `tfsdk:"dotfiles_root"`
-	BackupEnabled      types.Bool   `tfsdk:"backup_enabled"`
-	BackupDirectory    types.String `tfsdk:"backup_directory"`
-	Strategy           types.String `tfsdk:"strategy"`
-	ConflictResolution types.String `tfsdk:"conflict_resolution"`
-	DryRun             types.Bool   `tfsdk:"dry_run"`
-	AutoDetectPlatform types.Bool   `tfsdk:"auto_detect_platform"`
-	TargetPlatform     types.String `tfsdk:"target_platform"`
-	TemplateEngine     types.String `tfsdk:"template_engine"`
-	LogLevel           types.String `tfsdk:"log_level"`
+	DotfilesRoot       types.String         `tfsdk:"dotfiles_root"`
+	BackupEnabled      types.Bool           `tfsdk:"backup_enabled"`
+	BackupDirectory    types.String         `tfsdk:"backup_directory"`
+	Strategy           types.String         `tfsdk:"strategy"`
+	ConflictResolution types.String         `tfsdk:"conflict_resolution"`
+	DryRun             types.Bool           `tfsdk:"dry_run"`
+	AutoDetectPlatform types.Bool           `tfsdk:"auto_detect_platform"`
+	TargetPlatform     types.String         `tfsdk:"target_platform"`
+	TemplateEngine     types.String         `tfsdk:"template_engine"`
+	LogLevel           types.String         `tfsdk:"log_level"`
 	BackupStrategy     *BackupStrategyModel `tfsdk:"backup_strategy"`
 	Recovery           *RecoveryModel       `tfsdk:"recovery"`
 }
