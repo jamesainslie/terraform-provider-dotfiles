@@ -1,19 +1,60 @@
-# Terraform Dotfiles Provider
+# Terraform Provider for Dotfiles
 
-A Terraform provider for managing dotfiles in a declarative, cross-platform manner. This provider enables Infrastructure as Code principles for personal development environment configuration.
+[![License: MPL-2.0](https://img.shields.io/badge/License-MPL--2.0-yellow.svg)](https://opensource.org/licenses/MPL-2.0)
+[![Go Version](https://img.shields.io/badge/Go-1.25.1-blue.svg)](https://golang.org/)
+[![Terraform](https://img.shields.io/badge/Terraform-Provider-orange.svg)](https://terraform.io/)
+
+A comprehensive Terraform provider for managing dotfiles in a declarative, cross-platform manner. This provider enables you to version control, deploy, and manage your development environment configuration files using Infrastructure as Code principles.
 
 ## Features
 
-- **GitHub Repository Support**: Clone and manage dotfiles from GitHub repositories with secure authentication
-- **Cross-Platform**: Works on macOS, Linux, and Windows
-- **Secure Authentication**: Supports GitHub Personal Access Tokens and SSH keys
-- **Multiple Strategies**: File copying, symbolic linking, and template processing
-- **Backup System**: Automatic backup of existing files before modification
-- **Platform Detection**: Automatic detection of operating system and application paths
+### 🚀 Core Capabilities
+- **Cross-platform support**: Works on macOS, Linux, and Windows
+- **Multiple deployment strategies**: Symlink, copy, or template-based deployment
+- **Automatic backups**: Built-in backup system with configurable retention policies
+- **Template engine**: Support for Go templates and Handlebars
+- **Git integration**: Clone and manage dotfiles from Git repositories
+- **Application detection**: Smart detection of installed applications
+- **Permission management**: Fine-grained file and directory permissions
+- **Dry-run mode**: Preview changes before applying them
+
+### 📦 Resources
+- **`dotfiles_repository`**: Manage dotfiles repositories (local or Git-based)
+- **`dotfiles_file`**: Deploy individual configuration files
+- **`dotfiles_symlink`**: Create symbolic links to configuration directories
+- **`dotfiles_directory`**: Manage directory structures and their contents
+- **`dotfiles_application`**: Application-specific configuration management
+
+### 📊 Data Sources
+- **`dotfiles_system`**: Get system information (platform, architecture, paths)
+- **`dotfiles_file_info`**: Inspect file properties and metadata
+
+## Installation
+
+### Using Terraform Registry (Recommended)
+
+Add the provider to your Terraform configuration:
+
+```hcl
+terraform {
+  required_providers {
+    dotfiles = {
+      source  = "jamesainslie/dotfiles"
+      version = "~> 1.0"
+    }
+  }
+}
+```
+
+### Manual Installation
+
+1. Download the latest release from the [releases page](https://github.com/jamesainslie/terraform-provider-dotfiles/releases)
+2. Place the binary in your Terraform plugins directory
+3. Configure the provider in your Terraform files
 
 ## Quick Start
 
-### Installation
+### Basic Configuration
 
 ```hcl
 terraform {
@@ -23,149 +64,289 @@ terraform {
     }
   }
 }
+
+provider "dotfiles" {
+  dotfiles_root    = "~/dotfiles"
+  backup_enabled   = true
+  backup_directory = "~/.dotfiles-backups"
+  strategy         = "symlink"
+  dry_run          = false
+}
+
+# Get system information
+data "dotfiles_system" "current" {}
+
+# Create a repository
+resource "dotfiles_repository" "main" {
+  name                   = "personal-dotfiles"
+  source_path            = "~/dotfiles"
+  description            = "Personal development environment dotfiles"
+  default_backup_enabled = true
+  default_file_mode      = "0644"
+  default_dir_mode       = "0755"
+}
+
+# Deploy a configuration file
+resource "dotfiles_file" "gitconfig" {
+  repository  = dotfiles_repository.main.id
+  name        = "git-config"
+  source_path = "git/gitconfig"
+  target_path = "~/.gitconfig"
+  is_template = false
+  file_mode   = "0644"
+}
+
+# Create a symbolic link
+resource "dotfiles_symlink" "fish_config" {
+  repository     = dotfiles_repository.main.id
+  name           = "fish-configuration"
+  source_path    = "fish"
+  target_path    = "~/.config/fish"
+  force_update   = false
+  create_parents = true
+}
 ```
 
-### Basic Usage
+### Template-based Configuration
+
+```hcl
+# Process a template file with variables
+resource "dotfiles_file" "gitconfig_template" {
+  repository  = dotfiles_repository.main.id
+  name        = "git-configuration"
+  source_path = "templates/gitconfig.template"
+  target_path = "~/.gitconfig"
+  is_template = true
+  file_mode   = "0644"
+
+  template_vars = {
+    user_name  = "John Doe"
+    user_email = "john@example.com"
+    editor     = "vim"
+    gpg_key    = "ABC123DEF456"
+  }
+}
+```
+
+### Git Repository Integration
+
+```hcl
+resource "dotfiles_repository" "remote" {
+  name        = "remote-dotfiles"
+  source_path = "https://github.com/username/dotfiles.git"
+  description = "Remote dotfiles repository"
+  
+  git_branch              = "main"
+  git_personal_access_token = var.github_token
+  git_update_interval     = "24h"
+}
+```
+
+## Provider Configuration
+
+### Required Configuration
 
 ```hcl
 provider "dotfiles" {
-  dotfiles_root = "~/dotfiles"
-  backup_enabled = true
-  strategy = "symlink"
-}
-
-# Local repository
-resource "dotfiles_repository" "local" {
-  name        = "local-dotfiles"
-  source_path = "~/dotfiles"
-}
-
-# GitHub repository  
-resource "dotfiles_repository" "github" {
-  name        = "github-dotfiles"
-  source_path = "https://github.com/username/dotfiles.git"
-  git_personal_access_token = var.github_token
-}
-
-# File management
-resource "dotfiles_file" "gitconfig" {
-  repository  = dotfiles_repository.github.id
-  source_path = "git/gitconfig"
-  target_path = "~/.gitconfig"
-}
-
-# Symlink management
-resource "dotfiles_symlink" "fish_config" {
-  repository  = dotfiles_repository.github.id
-  source_path = "fish"
-  target_path = "~/.config/fish"
+  # Basic configuration
+  dotfiles_root    = "~/dotfiles"           # Root directory for dotfiles
+  backup_enabled   = true                   # Enable automatic backups
+  backup_directory = "~/.dotfiles-backups"  # Backup storage location
+  strategy         = "symlink"              # Default deployment strategy
 }
 ```
 
-## Resources
-
-- **dotfiles_repository**: Manages dotfiles repositories (local or Git)
-- **dotfiles_file**: Manages individual files with templating support
-- **dotfiles_symlink**: Creates and manages symbolic links
-- **dotfiles_directory**: Manages directory structures
-
-## Data Sources
-
-- **dotfiles_system**: Provides system information (platform, paths, etc.)
-- **dotfiles_file_info**: Provides information about existing files
-
-## Authentication
-
-### GitHub Personal Access Token
+### Advanced Configuration
 
 ```hcl
-resource "dotfiles_repository" "private" {
-  source_path = "https://github.com/user/private-repo.git"
-  git_personal_access_token = var.github_token
+provider "dotfiles" {
+  # Basic settings
+  dotfiles_root    = "~/dotfiles"
+  backup_enabled   = true
+  backup_directory = "~/.dotfiles-backups"
+  strategy         = "symlink"
+  
+  # Advanced settings
+  conflict_resolution = "backup"      # How to handle conflicts
+  dry_run            = false          # Preview mode
+  auto_detect_platform = true         # Auto-detect target platform
+  target_platform    = "auto"         # Target platform override
+  template_engine    = "go"           # Template engine
+  log_level          = "info"         # Logging level
+  
+  # Enhanced backup strategy
+  backup_strategy {
+    enabled         = true
+    directory       = "~/.dotfiles-backups"
+    compression     = true
+    incremental     = true
+    max_backups     = 10
+    retention_policy = "30d"
+  }
+  
+  # Recovery configuration
+  recovery {
+    create_restore_scripts = true
+    validate_backups      = true
+    backup_index         = true
+    test_recovery        = false
+  }
 }
 ```
 
-### SSH Authentication
+## Deployment Strategies
+
+### 1. Symlink (Default)
+Creates symbolic links from your dotfiles repository to the target locations.
 
 ```hcl
-resource "dotfiles_repository" "ssh" {
-  source_path = "git@github.com:user/repo.git"
-  git_ssh_private_key_path = "~/.ssh/id_ed25519"
+resource "dotfiles_symlink" "config" {
+  repository     = dotfiles_repository.main.id
+  name           = "app-config"
+  source_path    = "apps/myapp"
+  target_path    = "~/.config/myapp"
+  create_parents = true
 }
 ```
 
-### Environment Variables
+### 2. Copy
+Copies files from the repository to target locations.
 
-The provider automatically detects these environment variables:
-- `GITHUB_TOKEN`
-- `GH_TOKEN`
+```hcl
+resource "dotfiles_file" "config" {
+  repository  = dotfiles_repository.main.id
+  name        = "app-config"
+  source_path = "apps/myapp/config.json"
+  target_path = "~/.config/myapp/config.json"
+  file_mode   = "0644"
+}
+```
 
-## Platform Support
+### 3. Template
+Processes template files with variables before deployment.
 
-- **macOS**: Full support with Application Support directories
-- **Linux**: XDG Base Directory specification compliance
-- **Windows**: AppData directory support with symlink fallbacks
+```hcl
+resource "dotfiles_file" "config_template" {
+  repository  = dotfiles_repository.main.id
+  name        = "app-config-template"
+  source_path = "templates/myapp.conf.template"
+  target_path = "~/.config/myapp/myapp.conf"
+  is_template = true
+  
+  template_vars = {
+    username = "john"
+    theme    = "dark"
+  }
+}
+```
 
-## Documentation
+## Application Detection
 
-See the [examples](./examples/) directory for complete usage examples:
-- [Basic Setup](./examples/basic-setup/): Local dotfiles management
-- [GitHub Repository](./examples/github-repository/): GitHub integration with authentication
+The provider can automatically detect installed applications and conditionally deploy configurations:
+
+```hcl
+resource "dotfiles_application" "vscode" {
+  repository           = dotfiles_repository.main.id
+  application          = "vscode"
+  source_path          = "vscode"
+  detect_installation  = true
+  skip_if_not_installed = true
+  warn_if_not_installed = true
+  
+  detection_methods {
+    method = "command"
+    command = "code --version"
+  }
+  
+  detection_methods {
+    method = "path"
+    path   = "/Applications/Visual Studio Code.app"
+  }
+}
+```
+
+## Examples
+
+Check out the [examples directory](./examples/) for comprehensive usage examples:
+
+- **[Basic Setup](./examples/basic-setup/)**: Simple dotfiles management
+- **[Complete Environment](./examples/complete-environment/)**: Full development environment setup
+- **[GitHub Repository](./examples/github-repository/)**: Remote repository integration
 
 ## Development
 
-### Requirements
+### Prerequisites
 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.23
+- Go 1.25.1 or later
+- Terraform 1.0 or later
+- Git
 
-### Building
+### Building from Source
 
 ```bash
-git clone https://github.com/jamesainslie/terraform-provider-dotfiles
+# Clone the repository
+git clone https://github.com/jamesainslie/terraform-provider-dotfiles.git
 cd terraform-provider-dotfiles
-go build -v .
+
+# Build the provider
+make build
+
+# Run tests
+make test
+
+# Generate documentation
+make docs
 ```
 
 ### Testing
 
 ```bash
-# Run all tests
+# Run unit tests
 go test ./...
 
-# Run with coverage
-go test ./... -cover
+# Run integration tests
+make test-integration
 
 # Run acceptance tests
-TF_ACC=1 go test -v ./internal/provider/
+make test-acceptance
 ```
 
-### Contributing
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Workflow
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes with tests
-4. Ensure all tests pass: `go test ./...`
-5. Run documentation generation: `make generate`
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
 6. Submit a pull request
 
 ## License
 
-This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Mozilla Public License 2.0. See the [LICENSE](LICENSE) file for details.
 
-## Status
+## Support
 
-This provider is currently in development. The foundation is complete with GitHub repository support, cross-platform compatibility, and comprehensive testing (40% coverage, 269 tests).
+- **Documentation**: [Provider Documentation](https://registry.terraform.io/providers/jamesainslie/dotfiles/latest/docs)
+- **Issues**: [GitHub Issues](https://github.com/jamesainslie/terraform-provider-dotfiles/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jamesainslie/terraform-provider-dotfiles/discussions)
 
-### Current Status
-- ✅ Provider framework and configuration
-- ✅ GitHub repository support with authentication
-- ✅ Cross-platform abstraction layer
-- ✅ Resource and data source schemas
-- ✅ Comprehensive testing infrastructure
+## Roadmap
 
-### Planned Features
-- 🔄 Template processing engine
-- 🔄 Backup and conflict resolution system
-- 🔄 Advanced application management
-- 🔄 Security features and validation
+- [ ] Enhanced template engine support (Handlebars, Jinja2)
+- [ ] Cloud storage integration (S3, GCS, Azure Blob)
+- [ ] Configuration validation and linting
+- [ ] Multi-environment support
+- [ ] Plugin system for custom strategies
+- [ ] Web UI for configuration management
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes and version history.
+
+---
+
+**Made with ❤️ for the developer community**
