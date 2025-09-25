@@ -663,7 +663,13 @@ func buildEnhancedTemplateConfig(data *EnhancedFileResourceModelWithTemplate) (*
 		elements := data.TemplateVars.Elements()
 		for key, value := range elements {
 			if strValue, ok := value.(types.String); ok {
+				// Validate template variable name
+				if key == "" {
+					return nil, fmt.Errorf("template variable name cannot be empty")
+				}
 				config.UserVars[key] = strValue.ValueString()
+			} else {
+				return nil, fmt.Errorf("template variable '%s' must be a string", key)
 			}
 		}
 	}

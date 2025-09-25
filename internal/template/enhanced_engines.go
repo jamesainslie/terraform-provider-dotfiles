@@ -186,22 +186,63 @@ func (e *MustacheTemplateEngine) ValidateTemplate(templateContent string) error 
 
 // convertHandlebarsToGo converts Handlebars syntax to Go template syntax.
 func convertHandlebarsToGo(content string) string {
-	// Simple conversion for basic compatibility
-	// This is a simplified implementation - a full implementation would need a proper parser
+	// More robust conversion for Handlebars compatibility
 	result := content
 
-	// Convert {{var}} to {{.var}} if not already prefixed with dot
-	// This is a basic regex-like replacement for demo purposes
+	// Convert {{#if var}} to {{if .var}}
+	result = strings.ReplaceAll(result, "{{#if ", "{{if .")
+	result = strings.ReplaceAll(result, "{{/if}}", "{{end}}")
+	
+	// Convert {{#unless var}} to {{if not .var}}
+	result = strings.ReplaceAll(result, "{{#unless ", "{{if not .")
+	result = strings.ReplaceAll(result, "{{/unless}}", "{{end}}")
+	
+	// Convert {{#each items}} to {{range .items}}
+	result = strings.ReplaceAll(result, "{{#each ", "{{range .")
+	result = strings.ReplaceAll(result, "{{/each}}", "{{end}}")
+	
+	// Convert {{#with obj}} to {{with .obj}}
+	result = strings.ReplaceAll(result, "{{#with ", "{{with .")
+	result = strings.ReplaceAll(result, "{{/with}}", "{{end}}")
+
+	// Convert simple variables: {{var}} to {{.var}} (but not if already has dot or contains spaces/operators)
 	lines := strings.Split(result, "\n")
 	for i, line := range lines {
-		// Simple heuristic: if we see {{word}} without a dot, add the dot
-		if strings.Contains(line, "{{") && strings.Contains(line, "}}") {
-			// Basic variable substitution
-			line = strings.ReplaceAll(line, "{{user_name}}", "{{.user_name}}")
-			line = strings.ReplaceAll(line, "{{user_email}}", "{{.user_email}}")
-			line = strings.ReplaceAll(line, "{{editor}}", "{{.editor}}")
-			line = strings.ReplaceAll(line, "{{credential_helper}}", "{{.credential_helper}}")
-			line = strings.ReplaceAll(line, "{{diff_tool}}", "{{.diff_tool}}")
+		// Find all {{...}} patterns
+		start := 0
+		for {
+			openIdx := strings.Index(line[start:], "{{")
+			if openIdx == -1 {
+				break
+			}
+			openIdx += start
+			
+			closeIdx := strings.Index(line[openIdx:], "}}")
+			if closeIdx == -1 {
+				break
+			}
+			closeIdx += openIdx + 2
+			
+			// Extract the content between {{ and }}
+			content := line[openIdx+2 : closeIdx-2]
+			content = strings.TrimSpace(content)
+			
+			// Skip if it's a control structure, already has dot, or contains operators
+			if !strings.HasPrefix(content, ".") && 
+			   !strings.Contains(content, " ") && 
+			   !strings.Contains(content, "if") &&
+			   !strings.Contains(content, "range") &&
+			   !strings.Contains(content, "with") &&
+			   !strings.Contains(content, "end") &&
+			   !strings.Contains(content, "not") &&
+			   content != "" {
+				// Replace {{var}} with {{.var}}
+				newContent := "{{." + content + "}}"
+				line = line[:openIdx] + newContent + line[closeIdx:]
+				start = openIdx + len(newContent)
+			} else {
+				start = closeIdx
+			}
 		}
 		lines[i] = line
 	}
@@ -211,18 +252,71 @@ func convertHandlebarsToGo(content string) string {
 
 // convertMustacheToGo converts Mustache syntax to Go template syntax.
 func convertMustacheToGo(content string) string {
-	// Simple conversion for basic compatibility
-	// Convert {{var}} to {{.var}} and handle basic logic
+	// More robust conversion for Mustache compatibility
 	result := content
 
-	// Similar to Handlebars but with Mustache-specific logic
+	// Convert {{#section}} to {{with .section}} (for object context)
+	// Convert {{#items}} to {{range .items}} (for array iteration)
+	// This is a simplified approach - real Mustache would need context analysis
+	
+	// Handle sections that look like arrays (plural names often indicate arrays)
+	result = strings.ReplaceAll(result, "{{#items}}", "{{range .items}}")
+	result = strings.ReplaceAll(result, "{{#users}}", "{{range .users}}")
+	result = strings.ReplaceAll(result, "{{#files}}", "{{range .files}}")
+	result = strings.ReplaceAll(result, "{{#configs}}", "{{range .configs}}")
+	
+	// Handle sections that look like objects
+	result = strings.ReplaceAll(result, "{{#user}}", "{{with .user}}")
+	result = strings.ReplaceAll(result, "{{#config}}", "{{with .config}}")
+	result = strings.ReplaceAll(result, "{{#settings}}", "{{with .settings}}")
+	
+	// Convert closing tags
+	result = strings.ReplaceAll(result, "{{/items}}", "{{end}}")
+	result = strings.ReplaceAll(result, "{{/users}}", "{{end}}")
+	result = strings.ReplaceAll(result, "{{/files}}", "{{end}}")
+	result = strings.ReplaceAll(result, "{{/configs}}", "{{end}}")
+	result = strings.ReplaceAll(result, "{{/user}}", "{{end}}")
+	result = strings.ReplaceAll(result, "{{/config}}", "{{end}}")
+	result = strings.ReplaceAll(result, "{{/settings}}", "{{end}}")
+
+	// Convert simple variables: {{var}} to {{.var}} (similar to Handlebars)
 	lines := strings.Split(result, "\n")
 	for i, line := range lines {
-		// Basic variable substitution (same as Handlebars for simple vars)
-		if strings.Contains(line, "{{") && strings.Contains(line, "}}") {
-			line = strings.ReplaceAll(line, "{{user_name}}", "{{.user_name}}")
-			line = strings.ReplaceAll(line, "{{user_email}}", "{{.user_email}}")
-			line = strings.ReplaceAll(line, "{{editor}}", "{{.editor}}")
+		// Find all {{...}} patterns
+		start := 0
+		for {
+			openIdx := strings.Index(line[start:], "{{")
+			if openIdx == -1 {
+				break
+			}
+			openIdx += start
+			
+			closeIdx := strings.Index(line[openIdx:], "}}")
+			if closeIdx == -1 {
+				break
+			}
+			closeIdx += openIdx + 2
+			
+			// Extract the content between {{ and }}
+			content := line[openIdx+2 : closeIdx-2]
+			content = strings.TrimSpace(content)
+			
+			// Skip if it's a control structure, already has dot, or contains operators
+			if !strings.HasPrefix(content, ".") && 
+			   !strings.Contains(content, " ") && 
+			   !strings.Contains(content, "range") &&
+			   !strings.Contains(content, "with") &&
+			   !strings.Contains(content, "end") &&
+			   !strings.HasPrefix(content, "#") &&
+			   !strings.HasPrefix(content, "/") &&
+			   content != "" {
+				// Replace {{var}} with {{.var}}
+				newContent := "{{." + content + "}}"
+				line = line[:openIdx] + newContent + line[closeIdx:]
+				start = openIdx + len(newContent)
+			} else {
+				start = closeIdx
+			}
 		}
 		lines[i] = line
 	}
@@ -250,11 +344,25 @@ func CreateTemplateEngineWithFunctions(engineType string, customFunctions map[st
 	case "", "go":
 		return NewGoTemplateEngineWithFunctions(customFunctions)
 	case "handlebars":
-		// For now, handlebars uses default functions - could be enhanced to support custom functions
-		return NewHandlebarsTemplateEngine()
+		engine, err := NewHandlebarsTemplateEngine()
+		if err != nil {
+			return nil, err
+		}
+		// Add custom functions to the Handlebars engine
+		for name, fn := range customFunctions {
+			engine.functions[name] = fn
+		}
+		return engine, nil
 	case "mustache":
-		// For now, mustache uses default functions - could be enhanced to support custom functions
-		return NewMustacheTemplateEngine()
+		engine, err := NewMustacheTemplateEngine()
+		if err != nil {
+			return nil, err
+		}
+		// Add custom functions to the Mustache engine
+		for name, fn := range customFunctions {
+			engine.functions[name] = fn
+		}
+		return engine, nil
 	default:
 		return nil, fmt.Errorf("unsupported template engine: %s", engineType)
 	}

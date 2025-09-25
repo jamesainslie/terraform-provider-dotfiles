@@ -25,11 +25,27 @@ type DotfilesConfig struct {
 	LogLevel           string
 }
 
-// Validate validates and sets defaults for the provider configuration.
-func (c *DotfilesConfig) Validate() error {
-	var errs []string
+// SetDefaults sets default values for the provider configuration.
+func (c *DotfilesConfig) SetDefaults() error {
+	// Set default dotfiles root
+	if c.DotfilesRoot == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("unable to get user home directory for dotfiles_root: %w", err)
+		}
+		c.DotfilesRoot = filepath.Join(homeDir, "dotfiles")
+	}
 
-	// Set defaults for empty values
+	// Set default backup directory
+	if c.BackupDirectory == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("unable to get user home directory for backup_directory: %w", err)
+		}
+		c.BackupDirectory = filepath.Join(homeDir, ".dotfiles-backups")
+	}
+
+	// Set other defaults
 	if c.Strategy == "" {
 		c.Strategy = "symlink"
 	}
@@ -45,6 +61,14 @@ func (c *DotfilesConfig) Validate() error {
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
 	}
+
+	return nil
+}
+
+// Validate validates the provider configuration and expands paths.
+// Call SetDefaults() before calling this method.
+func (c *DotfilesConfig) Validate() error {
+	var errs []string
 
 	// Validate dotfiles root
 	if c.DotfilesRoot == "" {

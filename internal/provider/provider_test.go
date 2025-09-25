@@ -132,7 +132,10 @@ func TestProviderConfigure(t *testing.T) {
 			// Leave other values empty to test defaults
 		}
 
-		// Validate should set defaults
+		// Set defaults first, then validate
+		if err := config.SetDefaults(); err != nil {
+			t.Errorf("Setting defaults failed: %v", err)
+		}
 		if err := config.Validate(); err != nil {
 			t.Errorf("Configuration validation failed: %v", err)
 		}
