@@ -192,15 +192,15 @@ func convertHandlebarsToGo(content string) string {
 	// Convert {{#if var}} to {{if .var}}
 	result = strings.ReplaceAll(result, "{{#if ", "{{if .")
 	result = strings.ReplaceAll(result, "{{/if}}", "{{end}}")
-	
+
 	// Convert {{#unless var}} to {{if not .var}}
 	result = strings.ReplaceAll(result, "{{#unless ", "{{if not .")
 	result = strings.ReplaceAll(result, "{{/unless}}", "{{end}}")
-	
+
 	// Convert {{#each items}} to {{range .items}}
 	result = strings.ReplaceAll(result, "{{#each ", "{{range .")
 	result = strings.ReplaceAll(result, "{{/each}}", "{{end}}")
-	
+
 	// Convert {{#with obj}} to {{with .obj}}
 	result = strings.ReplaceAll(result, "{{#with ", "{{with .")
 	result = strings.ReplaceAll(result, "{{/with}}", "{{end}}")
@@ -216,26 +216,26 @@ func convertHandlebarsToGo(content string) string {
 				break
 			}
 			openIdx += start
-			
+
 			closeIdx := strings.Index(line[openIdx:], "}}")
 			if closeIdx == -1 {
 				break
 			}
 			closeIdx += openIdx + 2
-			
+
 			// Extract the content between {{ and }}
 			content := line[openIdx+2 : closeIdx-2]
 			content = strings.TrimSpace(content)
-			
+
 			// Skip if it's a control structure, already has dot, or contains operators
-			if !strings.HasPrefix(content, ".") && 
-			   !strings.Contains(content, " ") && 
-			   !strings.Contains(content, "if") &&
-			   !strings.Contains(content, "range") &&
-			   !strings.Contains(content, "with") &&
-			   !strings.Contains(content, "end") &&
-			   !strings.Contains(content, "not") &&
-			   content != "" {
+			if !strings.HasPrefix(content, ".") &&
+				!strings.Contains(content, " ") &&
+				!strings.Contains(content, "if") &&
+				!strings.Contains(content, "range") &&
+				!strings.Contains(content, "with") &&
+				!strings.Contains(content, "end") &&
+				!strings.Contains(content, "not") &&
+				content != "" {
 				// Replace {{var}} with {{.var}}
 				newContent := "{{." + content + "}}"
 				line = line[:openIdx] + newContent + line[closeIdx:]
@@ -258,18 +258,18 @@ func convertMustacheToGo(content string) string {
 	// Convert {{#section}} to {{with .section}} (for object context)
 	// Convert {{#items}} to {{range .items}} (for array iteration)
 	// This is a simplified approach - real Mustache would need context analysis
-	
+
 	// Handle sections that look like arrays (plural names often indicate arrays)
 	result = strings.ReplaceAll(result, "{{#items}}", "{{range .items}}")
 	result = strings.ReplaceAll(result, "{{#users}}", "{{range .users}}")
 	result = strings.ReplaceAll(result, "{{#files}}", "{{range .files}}")
 	result = strings.ReplaceAll(result, "{{#configs}}", "{{range .configs}}")
-	
+
 	// Handle sections that look like objects
 	result = strings.ReplaceAll(result, "{{#user}}", "{{with .user}}")
 	result = strings.ReplaceAll(result, "{{#config}}", "{{with .config}}")
 	result = strings.ReplaceAll(result, "{{#settings}}", "{{with .settings}}")
-	
+
 	// Convert closing tags
 	result = strings.ReplaceAll(result, "{{/items}}", "{{end}}")
 	result = strings.ReplaceAll(result, "{{/users}}", "{{end}}")
@@ -290,26 +290,26 @@ func convertMustacheToGo(content string) string {
 				break
 			}
 			openIdx += start
-			
+
 			closeIdx := strings.Index(line[openIdx:], "}}")
 			if closeIdx == -1 {
 				break
 			}
 			closeIdx += openIdx + 2
-			
+
 			// Extract the content between {{ and }}
 			content := line[openIdx+2 : closeIdx-2]
 			content = strings.TrimSpace(content)
-			
+
 			// Skip if it's a control structure, already has dot, or contains operators
-			if !strings.HasPrefix(content, ".") && 
-			   !strings.Contains(content, " ") && 
-			   !strings.Contains(content, "range") &&
-			   !strings.Contains(content, "with") &&
-			   !strings.Contains(content, "end") &&
-			   !strings.HasPrefix(content, "#") &&
-			   !strings.HasPrefix(content, "/") &&
-			   content != "" {
+			if !strings.HasPrefix(content, ".") &&
+				!strings.Contains(content, " ") &&
+				!strings.Contains(content, "range") &&
+				!strings.Contains(content, "with") &&
+				!strings.Contains(content, "end") &&
+				!strings.HasPrefix(content, "#") &&
+				!strings.HasPrefix(content, "/") &&
+				content != "" {
 				// Replace {{var}} with {{.var}}
 				newContent := "{{." + content + "}}"
 				line = line[:openIdx] + newContent + line[closeIdx:]

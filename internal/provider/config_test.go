@@ -118,7 +118,11 @@ func TestDotfilesConfigComprehensive(t *testing.T) {
 			// Leave all other values empty to test default setting
 		}
 
-		err := config.Validate()
+		err := config.SetDefaults()
+		if err != nil {
+			t.Errorf("Setting defaults failed: %v", err)
+		}
+		err = config.Validate()
 		if err != nil {
 			t.Errorf("Validation failed: %v", err)
 		}

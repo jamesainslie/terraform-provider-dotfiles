@@ -204,7 +204,11 @@ func TestDotfilesConfigEdgeCases(t *testing.T) {
 		}
 
 		// Should convert to absolute path
-		err := config.Validate()
+		err := config.SetDefaults()
+		if err != nil {
+			t.Errorf("Setting defaults should not fail: %v", err)
+		}
+		err = config.Validate()
 		if err != nil {
 			t.Errorf("Validation should handle relative paths: %v", err)
 		}
@@ -257,7 +261,11 @@ func TestDotfilesConfigEdgeCases(t *testing.T) {
 		}
 
 		// Should validate successfully even with invalid backup directory when backup is disabled
-		err := config.Validate()
+		err := config.SetDefaults()
+		if err != nil {
+			t.Errorf("Setting defaults should not fail: %v", err)
+		}
+		err = config.Validate()
 		if err != nil {
 			t.Errorf("Validation should succeed when backup is disabled: %v", err)
 		}
