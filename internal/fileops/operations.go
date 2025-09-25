@@ -105,15 +105,20 @@ func (fm *FileManager) CreateSymlinkWithParents(sourcePath, targetPath string) e
 	return fm.platform.CreateSymlink(sourcePath, targetPath)
 }
 
-// CreateBackup creates a backup of an existing file.
+// CreateBackup creates a backup of an existing file or directory.
 func (fm *FileManager) CreateBackup(filePath, backupDir string) (string, error) {
+	fmt.Printf("[DEBUG] CreateBackup: Starting backup operation for %s\n", filePath)
+
 	if fm.dryRun {
+		fmt.Printf("[DEBUG] CreateBackup: Dry run mode, skipping actual backup\n")
 		return fmt.Sprintf("%s/backup-dry-run", backupDir), nil
 	}
 
 	// Create backup directory
+	fmt.Printf("[DEBUG] CreateBackup: Creating backup directory %s\n", backupDir)
 	err := os.MkdirAll(backupDir, 0755)
 	if err != nil {
+		fmt.Printf("[ERROR] CreateBackup: Failed to create backup directory: %v\n", err)
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -122,14 +127,99 @@ func (fm *FileManager) CreateBackup(filePath, backupDir string) (string, error) 
 	timestamp := time.Now().Format("2006-01-02-150405")
 	backupFileName := fmt.Sprintf("%s.backup.%s", fileName, timestamp)
 	backupPath := filepath.Join(backupDir, backupFileName)
+	fmt.Printf("[DEBUG] CreateBackup: Generated backup path %s\n", backupPath)
 
-	// Copy file to backup location
-	err = fm.platform.CopyFile(filePath, backupPath)
+	// Check if source is a directory
+	fmt.Printf("[DEBUG] CreateBackup: Checking if source is directory\n")
+	info, err := os.Stat(filePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to copy file to backup: %w", err)
+		fmt.Printf("[ERROR] CreateBackup: Failed to stat source: %v\n", err)
+		return "", fmt.Errorf("failed to stat source: %w", err)
 	}
 
+	isDir := info.IsDir()
+	fmt.Printf("[DEBUG] CreateBackup: Source is directory: %v, mode: %s, size: %d\n", isDir, info.Mode().String(), info.Size())
+
+	if isDir {
+		fmt.Printf("[DEBUG] CreateBackup: Copying directory recursively\n")
+		// Copy directory recursively
+		err = fm.copyDirectoryRecursive(filePath, backupPath)
+		if err != nil {
+			fmt.Printf("[ERROR] CreateBackup: Failed to copy directory recursively: %v\n", err)
+			return "", fmt.Errorf("failed to copy directory to backup: %w", err)
+		}
+		fmt.Printf("[DEBUG] CreateBackup: Directory copied successfully\n")
+	} else {
+		fmt.Printf("[DEBUG] CreateBackup: Copying file using platform provider\n")
+		// Copy file to backup location
+		err = fm.platform.CopyFile(filePath, backupPath)
+		if err != nil {
+			fmt.Printf("[ERROR] CreateBackup: Failed to copy file: %v\n", err)
+			return "", fmt.Errorf("failed to copy file to backup: %w", err)
+		}
+		fmt.Printf("[DEBUG] CreateBackup: File copied successfully\n")
+	}
+
+	fmt.Printf("[DEBUG] CreateBackup: Backup completed successfully at %s\n", backupPath)
 	return backupPath, nil
+}
+
+// copyDirectoryRecursive copies a directory and all its contents recursively.
+func (fm *FileManager) copyDirectoryRecursive(src, dst string) error {
+	fmt.Printf("[DEBUG] copyDirectoryRecursive: Starting recursive copy from %s to %s\n", src, dst)
+
+	// Get source directory info
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		fmt.Printf("[ERROR] copyDirectoryRecursive: Failed to stat source directory: %v\n", err)
+		return fmt.Errorf("failed to stat source directory: %w", err)
+	}
+	fmt.Printf("[DEBUG] copyDirectoryRecursive: Source dir mode: %s\n", srcInfo.Mode().String())
+
+	// Create destination directory with same permissions
+	fmt.Printf("[DEBUG] copyDirectoryRecursive: Creating destination directory with mode %s\n", srcInfo.Mode().String())
+	err = os.MkdirAll(dst, srcInfo.Mode())
+	if err != nil {
+		fmt.Printf("[ERROR] copyDirectoryRecursive: Failed to create destination directory: %v\n", err)
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// Read source directory entries
+	fmt.Printf("[DEBUG] copyDirectoryRecursive: Reading source directory entries\n")
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		fmt.Printf("[ERROR] copyDirectoryRecursive: Failed to read source directory: %v\n", err)
+		return fmt.Errorf("failed to read source directory: %w", err)
+	}
+	fmt.Printf("[DEBUG] copyDirectoryRecursive: Found %d entries to copy\n", len(entries))
+
+	// Copy each entry
+	for i, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+		fmt.Printf("[DEBUG] copyDirectoryRecursive: Processing entry %d/%d: %s (isDir: %v)\n", i+1, len(entries), entry.Name(), entry.IsDir())
+
+		if entry.IsDir() {
+			// Recursively copy subdirectory
+			fmt.Printf("[DEBUG] copyDirectoryRecursive: Recursively copying subdirectory %s\n", entry.Name())
+			err = fm.copyDirectoryRecursive(srcPath, dstPath)
+			if err != nil {
+				fmt.Printf("[ERROR] copyDirectoryRecursive: Failed to copy subdirectory %s: %v\n", entry.Name(), err)
+				return fmt.Errorf("failed to copy subdirectory %s: %w", entry.Name(), err)
+			}
+		} else {
+			// Copy file using platform provider
+			fmt.Printf("[DEBUG] copyDirectoryRecursive: Copying file %s\n", entry.Name())
+			err = fm.platform.CopyFile(srcPath, dstPath)
+			if err != nil {
+				fmt.Printf("[ERROR] copyDirectoryRecursive: Failed to copy file %s: %v\n", entry.Name(), err)
+				return fmt.Errorf("failed to copy file %s: %w", entry.Name(), err)
+			}
+		}
+	}
+
+	fmt.Printf("[DEBUG] copyDirectoryRecursive: Completed recursive copy successfully\n")
+	return nil
 }
 
 // ResolveConflict resolves conflicts based on the specified strategy.

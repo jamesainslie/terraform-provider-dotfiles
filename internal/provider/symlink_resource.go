@@ -141,59 +141,120 @@ func (r *SymlinkResource) Configure(ctx context.Context, req resource.ConfigureR
 
 func (r *SymlinkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data SymlinkResourceModel
+
+	tflog.Debug(ctx, "=== SYMLINK CREATE START ===")
+	tflog.Debug(ctx, "Getting plan data from request")
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		tflog.Error(ctx, "Failed to get plan data", map[string]interface{}{
+			"diagnostics_count": len(resp.Diagnostics),
+		})
 		return
 	}
 
 	tflog.Debug(ctx, "Creating symlink resource", map[string]interface{}{
-		"name":        data.Name.ValueString(),
-		"source_path": data.SourcePath.ValueString(),
-		"target_path": data.TargetPath.ValueString(),
+		"name":           data.Name.ValueString(),
+		"repository":     data.Repository.ValueString(),
+		"source_path":    data.SourcePath.ValueString(),
+		"target_path":    data.TargetPath.ValueString(),
+		"force_update":   data.ForceUpdate.ValueBool(),
+		"create_parents": data.CreateParents.ValueBool(),
 	})
 
 	// Get repository local path
-	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
+	repositoryID := data.Repository.ValueString()
+	repositoryLocalPath := r.getRepositoryLocalPath(repositoryID)
+	tflog.Debug(ctx, "Retrieved repository local path", map[string]interface{}{
+		"repository_id":   repositoryID,
+		"repository_path": repositoryLocalPath,
+	})
 
 	// Build source path
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
 	targetPath := data.TargetPath.ValueString()
+	tflog.Debug(ctx, "Built file paths", map[string]interface{}{
+		"raw_source_path":  data.SourcePath.ValueString(),
+		"full_source_path": sourcePath,
+		"raw_target_path":  targetPath,
+	})
 
 	// Expand target path
 	platformProvider := platform.DetectPlatform()
+	tflog.Debug(ctx, "Detected platform", map[string]interface{}{
+		"platform_type": fmt.Sprintf("%T", platformProvider),
+	})
+
 	expandedTargetPath, err := platformProvider.ExpandPath(targetPath)
 	if err != nil {
+		tflog.Error(ctx, "Failed to expand target path", map[string]interface{}{
+			"error":       err.Error(),
+			"target_path": targetPath,
+		})
 		resp.Diagnostics.AddError(
 			"Invalid target path",
 			fmt.Sprintf("Could not expand target path %s: %s", targetPath, err.Error()),
 		)
 		return
 	}
+	tflog.Debug(ctx, "Expanded target path", map[string]interface{}{
+		"original_target": targetPath,
+		"expanded_target": expandedTargetPath,
+	})
 
 	// Expand source path
 	expandedSourcePath, err := platformProvider.ExpandPath(sourcePath)
 	if err != nil {
+		tflog.Error(ctx, "Failed to expand source path", map[string]interface{}{
+			"error":       err.Error(),
+			"source_path": sourcePath,
+		})
 		resp.Diagnostics.AddError(
 			"Invalid source path",
 			fmt.Sprintf("Could not expand source path %s: %s", sourcePath, err.Error()),
 		)
 		return
 	}
+	tflog.Debug(ctx, "Expanded source path", map[string]interface{}{
+		"original_source": sourcePath,
+		"expanded_source": expandedSourcePath,
+	})
 
 	// Verify source exists
-	if !utils.PathExists(expandedSourcePath) {
+	tflog.Debug(ctx, "Checking if source exists", map[string]interface{}{
+		"expanded_source": expandedSourcePath,
+	})
+	sourceExists := utils.PathExists(expandedSourcePath)
+	if !sourceExists {
+		tflog.Error(ctx, "Source path does not exist", map[string]interface{}{
+			"expanded_source": expandedSourcePath,
+		})
 		resp.Diagnostics.AddError(
 			"Source not found",
 			fmt.Sprintf("Source path does not exist: %s", expandedSourcePath),
 		)
 		return
 	}
+	tflog.Debug(ctx, "Source path verified", map[string]interface{}{
+		"expanded_source": expandedSourcePath,
+	})
 
 	// Create file manager
-	fileManager := fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
+	dryRun := r.client.Config.DryRun
+	tflog.Debug(ctx, "Creating file manager", map[string]interface{}{
+		"dry_run": dryRun,
+	})
+	fileManager := fileops.NewFileManager(platformProvider, dryRun)
 
 	// Handle existing target
-	if utils.PathExists(expandedTargetPath) {
+	tflog.Debug(ctx, "Checking if target exists", map[string]interface{}{
+		"expanded_target": expandedTargetPath,
+	})
+	targetExists := utils.PathExists(expandedTargetPath)
+	tflog.Debug(ctx, "Target existence check result", map[string]interface{}{
+		"target_exists": targetExists,
+	})
+
+	if targetExists {
 		if !data.ForceUpdate.ValueBool() {
 			// Create backup if enabled
 			if r.client.Config.BackupEnabled {
@@ -207,35 +268,100 @@ func (r *SymlinkResource) Create(ctx context.Context, req resource.CreateRequest
 			}
 		}
 
-		// Remove existing target
-		err := os.Remove(expandedTargetPath)
+		// Remove existing target (handle both files and directories)
+		tflog.Debug(ctx, "Statting existing target for removal", map[string]interface{}{
+			"expanded_target": expandedTargetPath,
+		})
+		info, err := os.Stat(expandedTargetPath)
 		if err != nil {
+			tflog.Error(ctx, "Failed to stat existing target", map[string]interface{}{
+				"error":           err.Error(),
+				"expanded_target": expandedTargetPath,
+			})
 			resp.Diagnostics.AddError(
-				"Could not remove existing target",
-				fmt.Sprintf("Could not remove existing file at %s: %s", expandedTargetPath, err.Error()),
+				"Could not stat existing target",
+				fmt.Sprintf("Could not stat existing target at %s: %s", expandedTargetPath, err.Error()),
 			)
 			return
 		}
+
+		isDir := info.IsDir()
+		tflog.Debug(ctx, "Target stat results", map[string]interface{}{
+			"is_directory": isDir,
+			"mode":         info.Mode().String(),
+			"size":         info.Size(),
+		})
+
+		if isDir {
+			tflog.Debug(ctx, "Removing existing directory with RemoveAll")
+			// Use RemoveAll for directories
+			err = os.RemoveAll(expandedTargetPath)
+		} else {
+			tflog.Debug(ctx, "Removing existing file with Remove")
+			// Use Remove for files
+			err = os.Remove(expandedTargetPath)
+		}
+
+		if err != nil {
+			tflog.Error(ctx, "Failed to remove existing target", map[string]interface{}{
+				"error":           err.Error(),
+				"expanded_target": expandedTargetPath,
+				"was_directory":   isDir,
+			})
+			resp.Diagnostics.AddError(
+				"Could not remove existing target",
+				fmt.Sprintf("Could not remove existing target at %s: %s", expandedTargetPath, err.Error()),
+			)
+			return
+		}
+		tflog.Debug(ctx, "Successfully removed existing target", map[string]interface{}{
+			"expanded_target": expandedTargetPath,
+			"was_directory":   isDir,
+		})
 	}
 
 	// Create symlink
+	tflog.Debug(ctx, "Creating symlink", map[string]interface{}{
+		"source_path":    expandedSourcePath,
+		"target_path":    expandedTargetPath,
+		"create_parents": data.CreateParents.ValueBool(),
+	})
+
 	var finalErr error
 	if data.CreateParents.ValueBool() {
+		tflog.Debug(ctx, "Using CreateSymlinkWithParents")
 		finalErr = fileManager.CreateSymlinkWithParents(expandedSourcePath, expandedTargetPath)
 	} else {
+		tflog.Debug(ctx, "Using CreateSymlink")
 		finalErr = fileManager.CreateSymlink(expandedSourcePath, expandedTargetPath)
 	}
 
 	if finalErr != nil {
+		tflog.Error(ctx, "Symlink creation failed", map[string]interface{}{
+			"error":       finalErr.Error(),
+			"source_path": expandedSourcePath,
+			"target_path": expandedTargetPath,
+		})
 		resp.Diagnostics.AddError(
 			"Symlink creation failed",
 			fmt.Sprintf("Could not create symlink %s -> %s: %s", expandedTargetPath, expandedSourcePath, finalErr.Error()),
 		)
 		return
 	}
+	tflog.Debug(ctx, "Symlink created successfully")
 
 	// Update computed attributes
+	tflog.Debug(ctx, "Updating computed attributes")
 	if err := r.updateComputedAttributes(ctx, &data, expandedTargetPath); err != nil {
+		tflog.Warn(ctx, "Failed to update computed attributes, setting defaults", map[string]interface{}{
+			"error": err.Error(),
+		})
+		// Set default values for computed attributes if update fails
+		data.LinkExists = types.BoolValue(utils.PathExists(expandedTargetPath))
+		data.IsSymlink = types.BoolValue(false)
+		data.LinkTarget = types.StringNull()
+		data.LastModified = types.StringValue(time.Now().Format(time.RFC3339))
+
 		resp.Diagnostics.AddWarning(
 			"Could not update symlink metadata",
 			fmt.Sprintf("Symlink created successfully but could not update metadata: %s", err.Error()),
@@ -243,6 +369,9 @@ func (r *SymlinkResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Set ID and save state
+	tflog.Debug(ctx, "Setting resource ID and saving state", map[string]interface{}{
+		"id": data.Name.ValueString(),
+	})
 	data.ID = data.Name
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 
@@ -250,7 +379,10 @@ func (r *SymlinkResource) Create(ctx context.Context, req resource.CreateRequest
 		"name":        data.Name.ValueString(),
 		"target_path": expandedTargetPath,
 		"source_path": expandedSourcePath,
+		"link_exists": data.LinkExists.ValueBool(),
+		"is_symlink":  data.IsSymlink.ValueBool(),
 	})
+	tflog.Debug(ctx, "=== SYMLINK CREATE END ===")
 }
 
 func (r *SymlinkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -259,6 +391,64 @@ func (r *SymlinkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	tflog.Debug(ctx, "Reading symlink resource", map[string]interface{}{
+		"name":        data.Name.ValueString(),
+		"target_path": data.TargetPath.ValueString(),
+	})
+
+	// Expand target path to check current state
+	platformProvider := platform.DetectPlatform()
+	expandedTargetPath, err := platformProvider.ExpandPath(data.TargetPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to expand target path",
+			fmt.Sprintf("Error expanding target path for symlink %s: %v", data.Name.ValueString(), err),
+		)
+		return
+	}
+
+	// Update computed attributes with current state
+	err = r.updateComputedAttributes(ctx, &data, expandedTargetPath)
+	if err != nil {
+		resp.Diagnostics.AddWarning(
+			"Failed to update computed attributes",
+			fmt.Sprintf("Error updating attributes for symlink %s: %v", data.Name.ValueString(), err),
+		)
+		// Set default values if update fails
+		data.LinkExists = types.BoolValue(utils.PathExists(expandedTargetPath))
+		data.IsSymlink = types.BoolValue(utils.IsSymlink(expandedTargetPath))
+		data.LinkTarget = types.StringNull()
+		data.LastModified = types.StringValue(time.Now().Format(time.RFC3339))
+	}
+
+	// Verify symlink integrity if it exists
+	if data.LinkExists.ValueBool() && data.IsSymlink.ValueBool() {
+		// Check if the symlink target matches our expected source
+		actualTarget, err := os.Readlink(expandedTargetPath)
+		if err != nil {
+			tflog.Warn(ctx, "Could not read symlink target", map[string]interface{}{
+				"target_path": expandedTargetPath,
+				"error":       err.Error(),
+			})
+		} else {
+			// Expand the source path to compare
+			expandedSourcePath, err := platformProvider.ExpandPath(data.SourcePath.ValueString())
+			if err == nil {
+				// Make paths absolute for comparison
+				expectedTarget, _ := filepath.Abs(expandedSourcePath)
+				actualTargetAbs, _ := filepath.Abs(actualTarget)
+
+				if expectedTarget != actualTargetAbs {
+					tflog.Info(ctx, "Symlink target drift detected", map[string]interface{}{
+						"expected": expectedTarget,
+						"actual":   actualTargetAbs,
+					})
+				}
+			}
+		}
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -326,23 +516,41 @@ func (r *SymlinkResource) getRepositoryLocalPath(repositoryID string) string {
 
 // updateComputedAttributes updates computed attributes for state tracking.
 func (r *SymlinkResource) updateComputedAttributes(ctx context.Context, data *SymlinkResourceModel, targetPath string) error {
-	_ = ctx // Context reserved for future logging
+	tflog.Debug(ctx, "Updating computed attributes for symlink", map[string]interface{}{
+		"target_path": targetPath,
+	})
+
 	// Check if link exists
 	exists := utils.PathExists(targetPath)
 	data.LinkExists = types.BoolValue(exists)
+	tflog.Debug(ctx, "Link exists check", map[string]interface{}{
+		"exists": exists,
+	})
 
 	if exists {
 		// Check if it's actually a symlink
 		isSymlink := utils.IsSymlink(targetPath)
 		data.IsSymlink = types.BoolValue(isSymlink)
+		tflog.Debug(ctx, "Symlink check", map[string]interface{}{
+			"is_symlink": isSymlink,
+		})
 
 		if isSymlink {
 			// Get symlink target
 			linkTarget, err := os.Readlink(targetPath)
 			if err != nil {
+				tflog.Warn(ctx, "Failed to read symlink target", map[string]interface{}{
+					"error": err.Error(),
+				})
+				data.LinkTarget = types.StringNull()
+				// Return error for critical symlink read failures
 				return fmt.Errorf("failed to read symlink target: %w", err)
+			} else {
+				data.LinkTarget = types.StringValue(linkTarget)
+				tflog.Debug(ctx, "Symlink target read", map[string]interface{}{
+					"target": linkTarget,
+				})
 			}
-			data.LinkTarget = types.StringValue(linkTarget)
 		} else {
 			data.LinkTarget = types.StringNull()
 		}
@@ -350,14 +558,24 @@ func (r *SymlinkResource) updateComputedAttributes(ctx context.Context, data *Sy
 		// Get modification time
 		info, err := os.Lstat(targetPath) // Use Lstat to get symlink info, not target info
 		if err != nil {
-			return fmt.Errorf("failed to stat symlink: %w", err)
+			tflog.Warn(ctx, "Failed to stat symlink, using current time", map[string]interface{}{
+				"error": err.Error(),
+			})
+			data.LastModified = types.StringValue(time.Now().Format(time.RFC3339))
+			// Don't return error for stat failures - they're not critical
+		} else {
+			data.LastModified = types.StringValue(info.ModTime().Format(time.RFC3339))
+			tflog.Debug(ctx, "Modification time set", map[string]interface{}{
+				"mod_time": info.ModTime().Format(time.RFC3339),
+			})
 		}
-		data.LastModified = types.StringValue(info.ModTime().Format(time.RFC3339))
 	} else {
 		data.IsSymlink = types.BoolValue(false)
 		data.LinkTarget = types.StringNull()
 		data.LastModified = types.StringNull()
+		tflog.Debug(ctx, "Link does not exist, set default values")
 	}
 
+	tflog.Debug(ctx, "Computed attributes updated successfully")
 	return nil
 }

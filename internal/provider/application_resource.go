@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -207,8 +208,17 @@ func (r *ApplicationResource) Create(ctx context.Context, req resource.CreateReq
 		)
 	}
 
-	// TODO: Implement application configuration management here
-	// This would handle the config_mappings and copy/symlink configuration files
+	// Deploy configuration files if config_mappings is specified
+	if data.ConfigMappings != nil {
+		err := r.deployApplicationConfig(ctx, &data)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Failed to deploy application configuration",
+				fmt.Sprintf("Error deploying config for %s: %v", data.Application.ValueString(), err),
+			)
+			return
+		}
+	}
 
 	// Set ID and save state
 	data.ID = data.Application
@@ -285,8 +295,17 @@ func (r *ApplicationResource) Update(ctx context.Context, req resource.UpdateReq
 		)
 	}
 
-	// TODO: Implement application configuration management here
-	// This would handle the config_mappings and copy/symlink configuration files
+	// Deploy configuration files if config_mappings is specified
+	if data.ConfigMappings != nil {
+		err := r.deployApplicationConfig(ctx, &data)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Failed to deploy application configuration",
+				fmt.Sprintf("Error deploying config for %s: %v", data.Application.ValueString(), err),
+			)
+			return
+		}
+	}
 
 	// Set ID and save state
 	data.ID = data.Application
@@ -523,4 +542,190 @@ func capitalizeFirst(s string) string {
 		return s
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// deployApplicationConfig deploys configuration files based on config_mappings.
+func (r *ApplicationResource) deployApplicationConfig(ctx context.Context, data *ApplicationResourceModel) error {
+	if data.ConfigMappings == nil {
+		return nil
+	}
+
+	tflog.Debug(ctx, "Deploying application configuration", map[string]interface{}{
+		"application": data.Application.ValueString(),
+		"source_path": data.SourcePath.ValueString(),
+	})
+
+	// Get the repository local path
+	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
+	sourcePath := data.SourcePath.ValueString()
+
+	// Resolve full source path
+	var fullSourcePath string
+	if strings.HasPrefix(sourcePath, "/") {
+		fullSourcePath = sourcePath
+	} else {
+		fullSourcePath = fmt.Sprintf("%s/%s", repositoryLocalPath, sourcePath)
+	}
+
+	// Check if source path exists
+	if _, err := os.Stat(fullSourcePath); os.IsNotExist(err) {
+		return fmt.Errorf("source path does not exist: %s", fullSourcePath)
+	}
+
+	// Deploy based on target path configuration
+	var targetPath string
+	if !data.ConfigMappings.TargetPath.IsNull() {
+		targetPath = data.ConfigMappings.TargetPath.ValueString()
+	} else if !data.ConfigMappings.TargetPathTemplate.IsNull() {
+		// Expand target path template
+		template := data.ConfigMappings.TargetPathTemplate.ValueString()
+		expandedPath, err := r.expandTargetPathTemplate(template, data)
+		if err != nil {
+			return fmt.Errorf("failed to expand target path template: %w", err)
+		}
+		targetPath = expandedPath
+	} else {
+		return fmt.Errorf("either target_path or target_path_template must be specified")
+	}
+
+	// Expand tilde in target path
+	if strings.HasPrefix(targetPath, "~") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("unable to get home directory: %w", err)
+		}
+		targetPath = strings.Replace(targetPath, "~", homeDir, 1)
+	}
+
+	// Create target directory if it doesn't exist
+	targetDir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("failed to create target directory %s: %w", targetDir, err)
+	}
+
+	// Deploy using the configured strategy
+	strategy := data.ConfigStrategy.ValueString()
+	if strategy == "" {
+		strategy = r.client.Config.Strategy // Use provider default
+	}
+
+	tflog.Debug(ctx, "Deploying config file", map[string]interface{}{
+		"source":   fullSourcePath,
+		"target":   targetPath,
+		"strategy": strategy,
+	})
+
+	switch strategy {
+	case "symlink":
+		return r.createSymlinkForConfig(fullSourcePath, targetPath)
+	case "copy":
+		return r.copyConfigFile(fullSourcePath, targetPath)
+	default:
+		return fmt.Errorf("unsupported config strategy: %s", strategy)
+	}
+}
+
+// expandTargetPathTemplate expands a target path template with application variables.
+func (r *ApplicationResource) expandTargetPathTemplate(template string, data *ApplicationResourceModel) (string, error) {
+	// Get platform provider for directory paths
+	platformProvider := platform.DetectPlatform()
+
+	// Replace common template variables
+	result := template
+
+	// Replace {{.home_dir}}
+	if strings.Contains(result, "{{.home_dir}}") {
+		homeDir, err := platformProvider.GetHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get home directory: %w", err)
+		}
+		result = strings.ReplaceAll(result, "{{.home_dir}}", homeDir)
+	}
+
+	// Replace {{.config_dir}}
+	if strings.Contains(result, "{{.config_dir}}") {
+		configDir, err := platformProvider.GetConfigDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get config directory: %w", err)
+		}
+		result = strings.ReplaceAll(result, "{{.config_dir}}", configDir)
+	}
+
+	// Replace {{.app_support_dir}}
+	if strings.Contains(result, "{{.app_support_dir}}") {
+		appSupportDir, err := platformProvider.GetAppSupportDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get app support directory: %w", err)
+		}
+		result = strings.ReplaceAll(result, "{{.app_support_dir}}", appSupportDir)
+	}
+
+	// Replace {{.application}}
+	result = strings.ReplaceAll(result, "{{.application}}", data.Application.ValueString())
+
+	return result, nil
+}
+
+// createSymlinkForConfig creates a symlink from source to target.
+func (r *ApplicationResource) createSymlinkForConfig(source, target string) error {
+	// Remove existing file/symlink if it exists
+	if _, err := os.Lstat(target); err == nil {
+		if err := os.Remove(target); err != nil {
+			return fmt.Errorf("failed to remove existing target %s: %w", target, err)
+		}
+	}
+
+	// Create symlink
+	if err := os.Symlink(source, target); err != nil {
+		return fmt.Errorf("failed to create symlink from %s to %s: %w", source, target, err)
+	}
+
+	return nil
+}
+
+// copyConfigFile copies a file from source to target.
+func (r *ApplicationResource) copyConfigFile(source, target string) error {
+	sourceFile, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("failed to open source file %s: %w", source, err)
+	}
+	defer sourceFile.Close()
+
+	// Remove existing file if it exists
+	if _, err := os.Stat(target); err == nil {
+		if err := os.Remove(target); err != nil {
+			return fmt.Errorf("failed to remove existing target %s: %w", target, err)
+		}
+	}
+
+	targetFile, err := os.Create(target)
+	if err != nil {
+		return fmt.Errorf("failed to create target file %s: %w", target, err)
+	}
+	defer targetFile.Close()
+
+	// Copy content
+	if _, err := targetFile.ReadFrom(sourceFile); err != nil {
+		return fmt.Errorf("failed to copy content from %s to %s: %w", source, target, err)
+	}
+
+	// Copy permissions
+	sourceInfo, err := sourceFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get source file info: %w", err)
+	}
+
+	if err := targetFile.Chmod(sourceInfo.Mode()); err != nil {
+		return fmt.Errorf("failed to set target file permissions: %w", err)
+	}
+
+	return nil
+}
+
+// getRepositoryLocalPath returns the local path for a repository.
+func (r *ApplicationResource) getRepositoryLocalPath(repositoryID string) string {
+	// For now, assume repository ID maps to the dotfiles root
+	// TODO: Implement proper repository lookup when repository state management is added
+	_ = repositoryID // TODO: Use repositoryID when repository lookup is implemented
+	return r.client.Config.DotfilesRoot
 }
