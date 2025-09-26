@@ -47,19 +47,19 @@ func (c *DotfilesConfig) SetDefaults() error {
 
 	// Set other defaults
 	if c.Strategy == "" {
-		c.Strategy = "symlink"
+		c.Strategy = DefaultStrategy
 	}
 	if c.ConflictResolution == "" {
-		c.ConflictResolution = "backup"
+		c.ConflictResolution = DefaultConflictResolution
 	}
 	if c.TargetPlatform == "" {
-		c.TargetPlatform = "auto"
+		c.TargetPlatform = DefaultTargetPlatform
 	}
 	if c.TemplateEngine == "" {
-		c.TemplateEngine = "go"
+		c.TemplateEngine = DefaultTemplateEngine
 	}
 	if c.LogLevel == "" {
-		c.LogLevel = "info"
+		c.LogLevel = DefaultLogLevel
 	}
 
 	return nil
@@ -123,33 +123,28 @@ func (c *DotfilesConfig) Validate() error {
 	}
 
 	// Validate strategy
-	validStrategies := []string{"symlink", "copy", "template"}
-	if !contains(validStrategies, c.Strategy) {
-		errs = append(errs, fmt.Sprintf("invalid strategy '%s', must be one of: %v", c.Strategy, validStrategies))
+	if !contains(ValidStrategies, c.Strategy) {
+		errs = append(errs, fmt.Sprintf("invalid strategy '%s', must be one of: %v", c.Strategy, ValidStrategies))
 	}
 
 	// Validate conflict resolution
-	validConflictResolutions := []string{"backup", "overwrite", "skip", "prompt"}
-	if !contains(validConflictResolutions, c.ConflictResolution) {
-		errs = append(errs, fmt.Sprintf("invalid conflict_resolution '%s', must be one of: %v", c.ConflictResolution, validConflictResolutions))
+	if !contains(ValidConflictResolutions, c.ConflictResolution) {
+		errs = append(errs, fmt.Sprintf("invalid conflict_resolution '%s', must be one of: %v", c.ConflictResolution, ValidConflictResolutions))
 	}
 
 	// Validate target platform
-	validPlatforms := []string{"auto", "macos", "linux", "windows"}
-	if !contains(validPlatforms, c.TargetPlatform) {
-		errs = append(errs, fmt.Sprintf("invalid target_platform '%s', must be one of: %v", c.TargetPlatform, validPlatforms))
+	if !contains(ValidPlatforms, c.TargetPlatform) {
+		errs = append(errs, fmt.Sprintf("invalid target_platform '%s', must be one of: %v", c.TargetPlatform, ValidPlatforms))
 	}
 
 	// Validate template engine
-	validEngines := []string{"go", "handlebars", "none"}
-	if !contains(validEngines, c.TemplateEngine) {
-		errs = append(errs, fmt.Sprintf("invalid template_engine '%s', must be one of: %v", c.TemplateEngine, validEngines))
+	if !contains(ValidTemplateEngines, c.TemplateEngine) {
+		errs = append(errs, fmt.Sprintf("invalid template_engine '%s', must be one of: %v", c.TemplateEngine, ValidTemplateEngines))
 	}
 
 	// Validate log level
-	validLogLevels := []string{"debug", "info", "warn", "error"}
-	if !contains(validLogLevels, c.LogLevel) {
-		errs = append(errs, fmt.Sprintf("invalid log_level '%s', must be one of: %v", c.LogLevel, validLogLevels))
+	if !contains(ValidLogLevels, c.LogLevel) {
+		errs = append(errs, fmt.Sprintf("invalid log_level '%s', must be one of: %v", c.LogLevel, ValidLogLevels))
 	}
 
 	if len(errs) > 0 {

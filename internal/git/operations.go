@@ -15,15 +15,18 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/storage/memory"
 )
 
 // GitManager handles Git operations for dotfiles repositories.
 type GitManager struct {
-	auth transport.AuthMethod
+	auth   transport.AuthMethod
+	config *AuthConfig
 }
 
 // RepositoryInfo contains information about a Git repository.
@@ -45,11 +48,19 @@ type AuthConfig struct {
 	SSHPrivateKeyPath string
 	// SSH Private Key passphrase
 	SSHPassphrase string
+	// SSH Known Hosts file path
+	SSHKnownHostsPath string
+	// Skip SSH host key verification (insecure)
+	SSHSkipHostKeyVerification bool
+	// Authentication method preference
+	AuthMethod string
 }
 
 // NewGitManager creates a new Git manager with authentication.
 func NewGitManager(authConfig *AuthConfig) (*GitManager, error) {
-	manager := &GitManager{}
+	manager := &GitManager{
+		config: authConfig,
+	}
 
 	if authConfig != nil {
 		auth, err := buildAuthMethod(authConfig)
@@ -314,4 +325,288 @@ func GetLocalCachePath(cacheRoot, repoURL string) (string, error) {
 	safePath = strings.ReplaceAll(safePath, "*", "_")
 
 	return filepath.Join(cacheRoot, safePath), nil
+}
+
+// CloneOptions contains options for cloning repositories.
+type CloneOptions struct {
+	// URL is the repository URL to clone
+	URL string
+	// LocalPath is where to clone the repository
+	LocalPath string
+	// Branch is the specific branch to clone (optional)
+	Branch string
+	// Depth limits the clone depth (0 for full clone)
+	Depth int
+	// RecurseSubmodules indicates whether to clone submodules
+	RecurseSubmodules bool
+	// SingleBranch indicates whether to clone only the specified branch
+	SingleBranch bool
+	// Progress callback for clone progress
+	Progress func(message string)
+}
+
+// CloneRepositoryWithOptions clones a repository with enhanced options.
+func (gm *GitManager) CloneRepositoryWithOptions(ctx context.Context, options CloneOptions) (*RepositoryInfo, error) {
+	cloneOptions := &git.CloneOptions{
+		URL:      options.URL,
+		Auth:     gm.auth,
+		Progress: nil, // We'll handle progress separately
+	}
+
+	// Set branch if specified
+	if options.Branch != "" {
+		cloneOptions.ReferenceName = plumbing.ReferenceName("refs/heads/" + options.Branch)
+		cloneOptions.SingleBranch = options.SingleBranch
+	}
+
+	// Set depth if specified
+	if options.Depth > 0 {
+		cloneOptions.Depth = options.Depth
+	}
+
+	// Set submodule recursion
+	if options.RecurseSubmodules {
+		cloneOptions.RecurseSubmodules = git.DefaultSubmoduleRecursionDepth
+	}
+
+	// Clone the repository
+	repo, err := git.PlainCloneContext(ctx, options.LocalPath, false, cloneOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clone repository: %w", err)
+	}
+
+	// Get repository information
+	return gm.getRepositoryInfoFromRepo(repo, options.URL, options.LocalPath)
+}
+
+// UpdateSubmodules updates all submodules in a repository.
+func (gm *GitManager) UpdateSubmodules(ctx context.Context, localPath string) error {
+	repo, err := git.PlainOpen(localPath)
+	if err != nil {
+		return fmt.Errorf("failed to open repository: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Get submodules and update them individually
+	submodules, err := worktree.Submodules()
+	if err != nil {
+		return fmt.Errorf("failed to get submodules: %w", err)
+	}
+
+	// Update each submodule
+	for _, submodule := range submodules {
+		err = submodule.Update(&git.SubmoduleUpdateOptions{
+			Init: true,
+			Auth: gm.auth,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update submodule %s: %w", submodule.Config().Name, err)
+		}
+	}
+
+	return nil
+}
+
+// ListSubmodules lists all submodules in a repository.
+func (gm *GitManager) ListSubmodules(localPath string) ([]*SubmoduleInfo, error) {
+	repo, err := git.PlainOpen(localPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open repository: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	submodules, err := worktree.Submodules()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get submodules: %w", err)
+	}
+
+	var submoduleInfos []*SubmoduleInfo
+	for _, submodule := range submodules {
+		config := submodule.Config()
+		status, err := submodule.Status()
+		if err != nil {
+			// Continue with other submodules if one fails
+			continue
+		}
+
+		info := &SubmoduleInfo{
+			Name:   config.Name,
+			Path:   config.Path,
+			URL:    config.URL,
+			Branch: config.Branch,
+			Status: status.Current.String(),
+		}
+		submoduleInfos = append(submoduleInfos, info)
+	}
+
+	return submoduleInfos, nil
+}
+
+// SubmoduleInfo contains information about a Git submodule.
+type SubmoduleInfo struct {
+	Name   string
+	Path   string
+	URL    string
+	Branch string
+	Status string
+}
+
+// ValidateRepositoryDetailed validates that a repository is properly configured and returns detailed results.
+func (gm *GitManager) ValidateRepositoryDetailed(localPath string) (*ValidationResult, error) {
+	result := &ValidationResult{
+		Valid:    true,
+		Warnings: []string{},
+		Errors:   []string{},
+	}
+
+	// Check if directory exists
+	if _, err := os.Stat(localPath); os.IsNotExist(err) {
+		result.Valid = false
+		result.Errors = append(result.Errors, "Repository directory does not exist")
+		return result, nil
+	}
+
+	// Check if it's a Git repository
+	repo, err := git.PlainOpen(localPath)
+	if err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, "Not a valid Git repository: "+err.Error())
+		return result, err
+	}
+
+	// Check for uncommitted changes
+	worktree, err := repo.Worktree()
+	if err != nil {
+		result.Warnings = append(result.Warnings, "Could not check worktree status: "+err.Error())
+		return result, err
+	} else {
+		status, err := worktree.Status()
+		if err != nil {
+			result.Warnings = append(result.Warnings, "Could not get repository status: "+err.Error())
+		} else if !status.IsClean() {
+			result.Warnings = append(result.Warnings, "Repository has uncommitted changes")
+		}
+	}
+
+	// Check for submodules and their status
+	if worktree != nil {
+		submodules, err := worktree.Submodules()
+		if err == nil && len(submodules) > 0 {
+			for _, submodule := range submodules {
+				status, err := submodule.Status()
+				if err != nil {
+					result.Warnings = append(result.Warnings,
+						fmt.Sprintf("Could not check submodule %s status: %s",
+							submodule.Config().Name, err.Error()))
+				} else if !status.IsClean() {
+					result.Warnings = append(result.Warnings,
+						fmt.Sprintf("Submodule %s has uncommitted changes",
+							submodule.Config().Name))
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// ValidationResult contains the result of repository validation.
+type ValidationResult struct {
+	Valid    bool
+	Warnings []string
+	Errors   []string
+}
+
+// GetRemoteInfo gets information about the remote repository.
+func (gm *GitManager) GetRemoteInfo(ctx context.Context, repoURL string) (*RemoteInfo, error) {
+	// Create a memory storage for remote operations
+	storage := memory.NewStorage()
+
+	// Create remote
+	remote := git.NewRemote(storage, &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{repoURL},
+	})
+
+	// List references
+	refs, err := remote.List(&git.ListOptions{
+		Auth: gm.auth,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list remote references: %w", err)
+	}
+
+	info := &RemoteInfo{
+		URL:      repoURL,
+		Branches: []string{},
+		Tags:     []string{},
+	}
+
+	// Parse references
+	for _, ref := range refs {
+		name := ref.Name()
+		if name.IsBranch() {
+			branchName := name.Short()
+			info.Branches = append(info.Branches, branchName)
+			if branchName == "main" || branchName == "master" {
+				info.DefaultBranch = branchName
+			}
+		} else if name.IsTag() {
+			info.Tags = append(info.Tags, name.Short())
+		}
+	}
+
+	// Set default branch if not found
+	if info.DefaultBranch == "" && len(info.Branches) > 0 {
+		info.DefaultBranch = info.Branches[0]
+	}
+
+	return info, nil
+}
+
+// RemoteInfo contains information about a remote repository.
+type RemoteInfo struct {
+	URL           string
+	DefaultBranch string
+	Branches      []string
+	Tags          []string
+}
+
+// Helper method to get repository info from a git.Repository.
+func (gm *GitManager) getRepositoryInfoFromRepo(repo *git.Repository, url, localPath string) (*RepositoryInfo, error) {
+	// Get HEAD reference
+	head, err := repo.Head()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get HEAD: %w", err)
+	}
+
+	// Get branch name
+	var branchName string
+	if head.Name().IsBranch() {
+		branchName = head.Name().Short()
+	} else {
+		branchName = "detached"
+	}
+
+	// Get last commit
+	commit, err := repo.CommitObject(head.Hash())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get commit: %w", err)
+	}
+
+	return &RepositoryInfo{
+		URL:        url,
+		LocalPath:  localPath,
+		Branch:     branchName,
+		LastCommit: commit.Hash.String(),
+		LastUpdate: time.Now(),
+	}, nil
 }
