@@ -398,7 +398,7 @@ func (r *DirectoryResource) syncDirectoryRecursive(ctx context.Context, sourcePa
 			}
 		} else {
 			// Copy file
-			if err := r.copyFile(path, targetFile, data); err != nil {
+			if err := r.copyFile(ctx, path, targetFile, data); err != nil {
 				return fmt.Errorf("failed to copy file %s: %w", path, err)
 			}
 		}
@@ -431,7 +431,7 @@ func (r *DirectoryResource) syncDirectoryShallow(ctx context.Context, sourcePath
 			}
 		} else {
 			// Copy file
-			if err := r.copyFile(sourceFile, targetFile, data); err != nil {
+			if err := r.copyFile(ctx, sourceFile, targetFile, data); err != nil {
 				return fmt.Errorf("failed to copy file %s: %w", sourceFile, err)
 			}
 		}
@@ -441,12 +441,18 @@ func (r *DirectoryResource) syncDirectoryShallow(ctx context.Context, sourcePath
 }
 
 // copyFile copies a single file with optional permission preservation.
-func (r *DirectoryResource) copyFile(sourcePath, targetPath string, data *DirectoryResourceModel) error {
+func (r *DirectoryResource) copyFile(ctx context.Context, sourcePath, targetPath string, data *DirectoryResourceModel) error {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
+			tflog.Warn(ctx, "Failed to close source file", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	}()
 
 	// Create target directory if needed
 	targetDir := filepath.Dir(targetPath)
@@ -458,7 +464,13 @@ func (r *DirectoryResource) copyFile(sourcePath, targetPath string, data *Direct
 	if err != nil {
 		return fmt.Errorf("failed to create target file: %w", err)
 	}
-	defer targetFile.Close()
+	defer func() {
+		if err := targetFile.Close(); err != nil {
+			tflog.Warn(ctx, "Failed to close target file", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	}()
 
 	// Copy content
 	if _, err := targetFile.ReadFrom(sourceFile); err != nil {

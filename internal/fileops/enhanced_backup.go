@@ -255,6 +255,7 @@ func (fm *FileManager) createBackupMetadata(originalPath, backupPath string, con
 	defer func() {
 		if err := metadataFile.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close metadata file: %v\n", err)
 		}
 	}()
 
@@ -408,6 +409,7 @@ func (fm *FileManager) calculateFileChecksum(filePath string) (string, error) {
 	defer func() {
 		if err := file.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close file: %v\n", err)
 		}
 	}()
 
@@ -428,6 +430,7 @@ func (fm *FileManager) saveBackupIndex(index *BackupIndex, indexPath string) err
 	defer func() {
 		if err := indexFile.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close index file: %v\n", err)
 		}
 	}()
 

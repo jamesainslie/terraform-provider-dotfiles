@@ -118,7 +118,7 @@ func TestCacheTTLExpiration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Should be expired now
-	value, found = cache.Get(ctx, "expire-key")
+	_, found = cache.Get(ctx, "expire-key")
 	if found {
 		t.Error("Expected value to be expired")
 	}
@@ -147,7 +147,7 @@ func TestCacheDelete(t *testing.T) {
 		t.Fatalf("Delete failed: %v", err)
 	}
 
-	value, found = cache.Get(ctx, "delete-key")
+	_, found = cache.Get(ctx, "delete-key")
 	if found {
 		t.Error("Expected value to be deleted")
 	}
@@ -256,8 +256,8 @@ func TestCacheStats(t *testing.T) {
 	}
 
 	// Add some data and access patterns
-	cache.Set(ctx, "key1", "value1", 0)
-	cache.Set(ctx, "key2", "value2", 0)
+	_ = cache.Set(ctx, "key1", "value1", 0)
+	_ = cache.Set(ctx, "key2", "value2", 0)
 
 	// Hit
 	cache.Get(ctx, "key1")
@@ -294,7 +294,7 @@ func TestCacheCleanup(t *testing.T) {
 	ctx := context.Background()
 
 	// Add items with short TTL
-	cache.Set(ctx, "expire1", "value1", 30*time.Millisecond)
+	_ = cache.Set(ctx, "expire1", "value1", 30*time.Millisecond)
 	cache.Set(ctx, "expire2", "value2", 30*time.Millisecond)
 	cache.Set(ctx, "keep", "value3", 1*time.Minute) // Long TTL
 

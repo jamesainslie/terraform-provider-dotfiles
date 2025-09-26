@@ -985,7 +985,11 @@ func (r *FileResource) validateSourceFileExists(sourcePath string) error {
 	if err != nil {
 		return fmt.Errorf("source file '%s' is not readable: %w", sourcePath, err)
 	}
-	file.Close()
+	if err := file.Close(); err != nil {
+		tflog.Warn(ctx, "Failed to close file", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
 
 	return nil
 }

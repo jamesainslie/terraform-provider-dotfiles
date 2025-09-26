@@ -501,7 +501,7 @@ func TestFuzzConcurrentOperations(t *testing.T) {
 				}
 
 				// Remove file
-				os.Remove(filePath)
+				_ = os.Remove(filePath) // Cleanup - ignore errors
 			}
 		}(i)
 	}
@@ -563,7 +563,7 @@ func TestFuzzLargeFileHandling(t *testing.T) {
 			}
 
 			// Clean up
-			os.Remove(filePath)
+			_ = os.Remove(filePath) // Cleanup - ignore errors
 		})
 	}
 }
