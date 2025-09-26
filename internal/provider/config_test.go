@@ -113,8 +113,11 @@ func TestDotfilesConfigComprehensive(t *testing.T) {
 	})
 
 	t.Run("Default value setting", func(t *testing.T) {
+		// Create a temporary directory for testing
+		tmpDir := t.TempDir()
+
 		config := &DotfilesConfig{
-			DotfilesRoot: "/tmp/test",
+			DotfilesRoot: tmpDir,
 			// Leave all other values empty to test default setting
 		}
 

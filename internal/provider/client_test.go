@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -199,12 +200,23 @@ func TestPlatformDetection(t *testing.T) {
 
 func TestDotfilesConfigEdgeCases(t *testing.T) {
 	t.Run("Relative path handling", func(t *testing.T) {
+		// Create a temporary directory for testing
+		tmpDir := t.TempDir()
+		relativeTestDir := filepath.Join(tmpDir, "relative", "path")
+		err := os.MkdirAll(relativeTestDir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create test directory: %v", err)
+		}
+
+		// Change to the tmp directory so relative path works
+		t.Chdir(tmpDir)
+
 		config := &DotfilesConfig{
 			DotfilesRoot: "./relative/path",
 		}
 
 		// Should convert to absolute path
-		err := config.SetDefaults()
+		err = config.SetDefaults()
 		if err != nil {
 			t.Errorf("Setting defaults should not fail: %v", err)
 		}
@@ -254,8 +266,11 @@ func TestDotfilesConfigEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Backup directory validation when backup disabled", func(t *testing.T) {
+		// Create a temporary directory for testing
+		tmpDir := t.TempDir()
+
 		config := &DotfilesConfig{
-			DotfilesRoot:    "/tmp/test",
+			DotfilesRoot:    tmpDir,
 			BackupEnabled:   false,
 			BackupDirectory: "~/invalid/backup/path/that/does/not/exist",
 		}

@@ -5,6 +5,8 @@ package provider
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -63,11 +65,22 @@ func TestProviderSchema(t *testing.T) {
 
 func TestProviderConfigure(t *testing.T) {
 	t.Run("DotfilesClient creation and validation", func(t *testing.T) {
+		// Create temporary directories for testing
+		tmpDir := t.TempDir()
+		dotfilesDir := filepath.Join(tmpDir, "dotfiles")
+		backupDir := filepath.Join(tmpDir, "backups")
+		if err := os.MkdirAll(dotfilesDir, 0755); err != nil {
+			t.Fatalf("Failed to create dotfiles directory: %v", err)
+		}
+		if err := os.MkdirAll(backupDir, 0755); err != nil {
+			t.Fatalf("Failed to create backup directory: %v", err)
+		}
+
 		// Test DotfilesClient creation directly
 		config := &DotfilesConfig{
-			DotfilesRoot:       "/tmp/test-dotfiles",
+			DotfilesRoot:       dotfilesDir,
 			BackupEnabled:      true,
-			BackupDirectory:    "/tmp/test-backups",
+			BackupDirectory:    backupDir,
 			Strategy:           "symlink",
 			ConflictResolution: "backup",
 			DryRun:             false,
@@ -126,9 +139,12 @@ func TestProviderConfigure(t *testing.T) {
 	})
 
 	t.Run("DotfilesClient with default values", func(t *testing.T) {
+		// Create temporary directory for testing
+		tmpDir := t.TempDir()
+
 		// Test client creation with minimal config (to test defaults)
 		config := &DotfilesConfig{
-			DotfilesRoot: "/tmp/test-dotfiles",
+			DotfilesRoot: tmpDir,
 			// Leave other values empty to test defaults
 		}
 
@@ -170,6 +186,9 @@ func TestProviderConfigure(t *testing.T) {
 	})
 
 	t.Run("Configuration validation tests", func(t *testing.T) {
+		// Create temporary directory for testing
+		tmpDir := t.TempDir()
+
 		tests := []struct {
 			name      string
 			config    *DotfilesConfig
@@ -178,7 +197,7 @@ func TestProviderConfigure(t *testing.T) {
 			{
 				name: "Valid configuration",
 				config: &DotfilesConfig{
-					DotfilesRoot:       "/tmp/test",
+					DotfilesRoot:       tmpDir,
 					Strategy:           "symlink",
 					ConflictResolution: "backup",
 					TargetPlatform:     "auto",
@@ -193,7 +212,7 @@ func TestProviderConfigure(t *testing.T) {
 			{
 				name: "Invalid strategy",
 				config: &DotfilesConfig{
-					DotfilesRoot: "/tmp/test",
+					DotfilesRoot: tmpDir,
 					Strategy:     "invalid",
 				},
 				expectErr: true,
@@ -201,7 +220,7 @@ func TestProviderConfigure(t *testing.T) {
 			{
 				name: "Invalid conflict resolution",
 				config: &DotfilesConfig{
-					DotfilesRoot:       "/tmp/test",
+					DotfilesRoot:       tmpDir,
 					ConflictResolution: "invalid",
 				},
 				expectErr: true,
@@ -209,7 +228,7 @@ func TestProviderConfigure(t *testing.T) {
 			{
 				name: "Invalid target platform",
 				config: &DotfilesConfig{
-					DotfilesRoot:   "/tmp/test",
+					DotfilesRoot:   tmpDir,
 					TargetPlatform: "invalid",
 				},
 				expectErr: true,
@@ -217,7 +236,7 @@ func TestProviderConfigure(t *testing.T) {
 			{
 				name: "Invalid template engine",
 				config: &DotfilesConfig{
-					DotfilesRoot:   "/tmp/test",
+					DotfilesRoot:   tmpDir,
 					TemplateEngine: "invalid",
 				},
 				expectErr: true,
@@ -225,7 +244,7 @@ func TestProviderConfigure(t *testing.T) {
 			{
 				name: "Invalid log level",
 				config: &DotfilesConfig{
-					DotfilesRoot: "/tmp/test",
+					DotfilesRoot: tmpDir,
 					LogLevel:     "invalid",
 				},
 				expectErr: true,
@@ -288,9 +307,12 @@ func TestProviderDataSources(t *testing.T) {
 }
 
 func TestDotfilesConfig(t *testing.T) {
+	// Create temporary directory for testing
+	tmpDir := t.TempDir()
+
 	// Test default configuration
 	config := &DotfilesConfig{
-		DotfilesRoot:       "/tmp/test-dotfiles",
+		DotfilesRoot:       tmpDir,
 		Strategy:           "symlink",
 		ConflictResolution: "backup",
 		TargetPlatform:     "auto",
