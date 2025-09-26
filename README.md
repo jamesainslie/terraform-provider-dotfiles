@@ -6,7 +6,41 @@
 [![Tests](https://img.shields.io/badge/Tests-100%2B-green.svg)]()
 [![Coverage](https://img.shields.io/badge/Coverage-85%25-brightgreen.svg)]()
 
-A comprehensive, production-ready Terraform provider for managing dotfiles in a declarative, cross-platform manner. This provider enables you to version control, deploy, and manage your development environment configuration files using Infrastructure as Code principles.
+A focused, production-ready Terraform provider for managing configuration files (dotfiles) in a declarative, cross-platform manner. This provider enables you to version control, deploy, and manage your development environment configuration files using Infrastructure as Code principles.
+
+**🔗 Companion Provider**: For application installation and package management, use [terraform-provider-package](https://github.com/jamesainslie/terraform-provider-package). This separation follows best practices for single-responsibility providers.
+
+## 🏗️ Provider Separation of Concerns
+
+This provider is designed to work alongside `terraform-provider-package` with clear separation of responsibilities:
+
+| Provider | Responsibility | Resources |
+|----------|----------------|-----------|
+| `terraform-provider-dotfiles` | **Configuration Management** | File operations, Git repositories, templating, backups |
+| `terraform-provider-package` | **Application Lifecycle** | Package installation, service management, dependency resolution |
+
+### Example: Complete Setup
+```hcl
+# Install application using package provider
+resource "pkg_package" "vscode" {
+  name = "visual-studio-code"
+  type = "cask"
+}
+
+# Configure application using dotfiles provider
+resource "dotfiles_application" "vscode" {
+  application_name = "vscode"
+  
+  config_mappings = {
+    "settings.json" = {
+      target_path = "~/Library/Application Support/Code/User/settings.json"
+      strategy   = "symlink"
+    }
+  }
+  
+  depends_on = [pkg_package.vscode]
+}
+```
 
 ## ✨ Key Features
 
@@ -16,7 +50,7 @@ A comprehensive, production-ready Terraform provider for managing dotfiles in a 
 - **Enterprise-grade backup system**: Automatic backups with compression, retention policies, and validation
 - **Multi-engine template processing**: Support for Go templates, Handlebars, and Mustache
 - **Advanced Git integration**: Clone, authenticate, and manage repositories with submodule support
-- **Intelligent application detection**: Smart detection of installed applications with version checking
+- **Configuration file focus**: Dedicated to file operations without application installation concerns
 - **Granular permission management**: Fine-grained file and directory permissions with validation
 - **Comprehensive dry-run mode**: Preview all changes before applying them
 - **Built-in caching**: In-memory caching with TTL and LRU eviction for performance
@@ -118,21 +152,20 @@ resource "dotfiles_symlink" "config" {
   create_parents = true
 }
 
-# Application-specific configuration
+# Application-specific configuration management
 resource "dotfiles_application" "vscode" {
-  application = "vscode"
+  application_name = "vscode"
   
-  detection_methods {
-    command = ["code", "--version"]
-    file    = ["~/Applications/Visual Studio Code.app"]
+  config_mappings = {
+    "vscode/settings.json" = {
+      target_path = "~/Library/Application Support/Code/User/settings.json"
+      strategy   = "symlink"
+    }
+    "vscode/keybindings.json" = {
+      target_path = "~/Library/Application Support/Code/User/keybindings.json"
+      strategy   = "copy"
+    }
   }
-  
-  config_mappings {
-    "vscode/settings.json" = "~/Library/Application Support/Code/User/settings.json"
-    "vscode/keybindings.json" = "~/Library/Application Support/Code/User/keybindings.json"
-  }
-  
-  skip_if_not_installed = true
 }
 ```
 
@@ -326,25 +359,13 @@ resource "dotfiles_file" "advanced_config" {
 }
 ```
 
-#### Application Detection and Configuration
+#### Application Configuration Management
+
+**Note**: Application installation should be handled by [terraform-provider-package](https://github.com/jamesainslie/terraform-provider-package). This resource focuses on configuration file management.
 
 ```hcl
 resource "dotfiles_application" "development_tools" {
-  application = "neovim"
-  
-  detection_methods {
-    command = ["nvim", "--version"]
-    file    = ["/usr/local/bin/nvim", "/usr/bin/nvim"]
-    package_manager = {
-      homebrew = "neovim"
-      apt      = "neovim"
-    }
-  }
-  
-  version_constraints = {
-    min_version = "0.8.0"
-    max_version = "1.0.0"
-  }
+  application_name = "neovim"
   
   config_mappings {
     "nvim/init.lua"    = "~/.config/nvim/init.lua"

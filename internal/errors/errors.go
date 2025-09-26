@@ -258,7 +258,7 @@ func Retry(ctx context.Context, config RetryConfig, operation RetryableOperation
 		} else {
 			// Standard errors (non-ProviderError) are not retryable
 			tflog.Debug(ctx, "Standard error is not retryable, stopping", map[string]interface{}{
-				"error": err.Error(),
+				"error":   err.Error(),
 				"attempt": attempt,
 			})
 			return err
