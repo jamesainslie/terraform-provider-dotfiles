@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -415,10 +415,10 @@ func (r *ApplicationResource) copyConfigFile(ctx context.Context, sourcePath, ta
 // verifyConfigurationFiles verifies that configuration files are still properly configured.
 func (r *ApplicationResource) verifyConfigurationFiles(ctx context.Context, data *ApplicationResourceModel) error {
 	configuredFiles := data.ConfiguredFiles.Elements()
-	
+
 	for _, fileValue := range configuredFiles {
 		filePath := fileValue.(types.String).ValueString()
-		
+
 		// Check if file still exists
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			return fmt.Errorf("configuration file %s no longer exists", filePath)
@@ -431,15 +431,15 @@ func (r *ApplicationResource) verifyConfigurationFiles(ctx context.Context, data
 // removeApplicationConfig removes all configured files for the application.
 func (r *ApplicationResource) removeApplicationConfig(ctx context.Context, data *ApplicationResourceModel) error {
 	configuredFiles := data.ConfiguredFiles.Elements()
-	
+
 	for _, fileValue := range configuredFiles {
 		filePath := fileValue.(types.String).ValueString()
-		
+
 		// Check if file exists before trying to remove
 		if _, err := os.Lstat(filePath); os.IsNotExist(err) {
 			continue // File doesn't exist, skip
 		}
-		
+
 		// Remove file/symlink
 		if err := os.Remove(filePath); err != nil {
 			tflog.Warn(ctx, "Failed to remove configuration file", map[string]interface{}{

@@ -915,24 +915,7 @@ func (r *FileResource) fileManager() *fileops.FileManager {
 // Use terraform-provider-package for application installation management
 // and dependency checking.
 
-// isVersionCompatible checks if a version is within specified bounds.
-func isVersionCompatible(detected, minVersion, maxVersion string) bool {
-	// Simplified version comparison for now
-	// A real implementation would use proper semantic versioning
-	if minVersion == "" && maxVersion == "" {
-		return true
-	}
-
-	// Basic string comparison (would need proper semver library in production)
-	if minVersion != "" && detected < minVersion {
-		return false
-	}
-	if maxVersion != "" && detected > maxVersion {
-		return false
-	}
-
-	return true
-}
+// Version compatibility checking has been removed as it's now handled by terraform-provider-package
 
 // executeShellCommand executes a shell command safely.
 func executeShellCommand(ctx context.Context, cmdStr string) error {
