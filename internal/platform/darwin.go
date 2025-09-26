@@ -138,6 +138,7 @@ func (p *DarwinProvider) CopyFile(source, target string) error {
 	defer func() {
 		if err := sourceFile.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close source file: %v\n", err)
 		}
 	}()
 
@@ -161,6 +162,7 @@ func (p *DarwinProvider) CopyFile(source, target string) error {
 	defer func() {
 		if err := targetFile.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close target file: %v\n", err)
 		}
 	}()
 

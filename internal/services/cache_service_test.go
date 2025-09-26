@@ -295,8 +295,8 @@ func TestCacheCleanup(t *testing.T) {
 
 	// Add items with short TTL
 	_ = cache.Set(ctx, "expire1", "value1", 30*time.Millisecond)
-	cache.Set(ctx, "expire2", "value2", 30*time.Millisecond)
-	cache.Set(ctx, "keep", "value3", 1*time.Minute) // Long TTL
+	_ = cache.Set(ctx, "expire2", "value2", 30*time.Millisecond)
+	_ = cache.Set(ctx, "keep", "value3", 1*time.Minute) // Long TTL
 
 	// Wait for expiration
 	time.Sleep(100 * time.Millisecond)
@@ -366,7 +366,7 @@ func TestCacheConcurrency(t *testing.T) {
 	wg.Wait()
 
 	// Cache should still be functional
-	cache.Set(ctx, "test-after-concurrent", "test-value", 0)
+	_ = cache.Set(ctx, "test-after-concurrent", "test-value", 0)
 	value, found := cache.Get(ctx, "test-after-concurrent")
 	if !found || value != "test-value" {
 		t.Error("Cache not functional after concurrent operations")

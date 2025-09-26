@@ -148,6 +148,7 @@ func (p *LinuxProvider) CopyFile(source, target string) error {
 	defer func() {
 		if err := sourceFile.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close source file: %v\n", err)
 		}
 	}()
 

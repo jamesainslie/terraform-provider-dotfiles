@@ -189,20 +189,20 @@ func TestBackupCompression(t *testing.T) {
 			t.Fatalf("Failed to open backup file: %v", err)
 		}
 		defer func() {
-		if err := backupFile.Close(); err != nil {
-			t.Logf("Failed to close backup file: %v", err)
-		}
-	}()
+			if err := backupFile.Close(); err != nil {
+				t.Logf("Failed to close backup file: %v", err)
+			}
+		}()
 
 		gzReader, err := gzip.NewReader(backupFile)
 		if err != nil {
 			t.Fatalf("Failed to create gzip reader: %v", err)
 		}
 		defer func() {
-		if err := gzReader.Close(); err != nil {
-			t.Logf("Failed to close gzip reader: %v", err)
-		}
-	}()
+			if err := gzReader.Close(); err != nil {
+				t.Logf("Failed to close gzip reader: %v", err)
+			}
+		}()
 
 		decompressed, err := io.ReadAll(gzReader)
 		if err != nil {
