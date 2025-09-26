@@ -251,9 +251,11 @@ func (v writableDirectoryValidator) ValidateString(ctx context.Context, request 
 		} else {
 			if err := file.Close(); err != nil {
 				// Log error but continue
+				fmt.Printf("Warning: failed to close temp file: %v\n", err)
 			}
 			if err := os.Remove(tempFile); err != nil {
 				// Log error but continue - this is just cleanup
+				fmt.Printf("Warning: failed to remove temp file: %v\n", err)
 			}
 		}
 	} else if os.IsNotExist(err) {
@@ -287,9 +289,11 @@ func (v writableDirectoryValidator) ValidateString(ctx context.Context, request 
 		} else {
 			if err := file.Close(); err != nil {
 				// Log error but continue
+				fmt.Printf("Warning: failed to close temp file: %v\n", err)
 			}
 			if err := os.Remove(tempFile); err != nil {
 				// Log error but continue - this is just cleanup
+				fmt.Printf("Warning: failed to remove temp file: %v\n", err)
 			}
 		}
 	} else {
