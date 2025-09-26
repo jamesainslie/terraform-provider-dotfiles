@@ -5,244 +5,219 @@ package provider
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// TestApplicationResource tests the new dotfiles_application resource.
-func TestApplicationResource(t *testing.T) {
-	t.Run("NewApplicationResource", func(t *testing.T) {
-		r := NewApplicationResource()
-		if r == nil {
-			t.Fatal("NewApplicationResource() returned nil")
+func TestApplicationResourceUnit(t *testing.T) {
+	// Unit tests for the application resource methods
+	ctx := context.Background()
+
+	// Create a temporary directory for testing
+	tempDir := t.TempDir()
+
+	// Create mock client
+	client := &DotfilesClient{
+		Config: &DotfilesConfig{
+			DotfilesRoot: tempDir,
+		},
+	}
+
+	// Create test resource
+	appResource := &ApplicationResource{
+		client: client,
+	}
+
+	t.Run("expandTargetPathTemplate", func(t *testing.T) {
+		testCases := []struct {
+			name         string
+			targetPath   string
+			appName      string
+			expectError  bool
+			expectPrefix string
+		}{
+			{
+				name:         "simple path",
+				targetPath:   "/simple/path",
+				appName:      "testapp",
+				expectError:  false,
+				expectPrefix: "/simple/path",
+			},
+			{
+				name:         "home directory template",
+				targetPath:   "{{.home_dir}}/config",
+				appName:      "testapp",
+				expectError:  false,
+				expectPrefix: "", // We'll check it contains the home dir
+			},
+			{
+				name:         "application template",
+				targetPath:   "/config/{{.application}}/settings.json",
+				appName:      "testapp",
+				expectError:  false,
+				expectPrefix: "/config/testapp/settings.json",
+			},
+			{
+				name:         "tilde expansion",
+				targetPath:   "~/config/app",
+				appName:      "testapp",
+				expectError:  false,
+				expectPrefix: "", // We'll check it contains the home dir
+			},
 		}
 
-		// ApplicationResource should implement the Resource interface
-		if r == nil {
-			t.Error("ApplicationResource should not be nil")
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				result, err := appResource.expandTargetPathTemplate(tc.targetPath, tc.appName)
+
+				if tc.expectError && err == nil {
+					t.Error("Expected error but got none")
+				}
+				if !tc.expectError && err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+
+				if !tc.expectError && tc.expectPrefix != "" && result != tc.expectPrefix {
+					t.Errorf("Expected result to be %s, got %s", tc.expectPrefix, result)
+				}
+
+				// Special cases for paths that should contain home directory
+				if !tc.expectError && (tc.targetPath == "{{.home_dir}}/config" || tc.targetPath == "~/config/app") {
+					homeDir, _ := os.UserHomeDir()
+					if !filepath.IsAbs(result) || !strings.HasPrefix(result, homeDir) {
+						t.Errorf("Expected result to be absolute path under home directory, got %s", result)
+					}
+				}
+			})
 		}
 	})
 
-	t.Run("Metadata", func(t *testing.T) {
-		r := NewApplicationResource()
-		ctx := context.Background()
-
-		req := resource.MetadataRequest{
-			ProviderTypeName: "dotfiles",
+	t.Run("createSymlinkForConfig", func(t *testing.T) {
+		// Create source file
+		sourceFile := filepath.Join(tempDir, "source.txt")
+		err := os.WriteFile(sourceFile, []byte("test content"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create source file: %v", err)
 		}
-		resp := &resource.MetadataResponse{}
 
-		r.Metadata(ctx, req, resp)
+		// Test symlink creation
+		targetFile := filepath.Join(tempDir, "subdir", "target.txt")
+		err = appResource.createSymlinkForConfig(ctx, sourceFile, targetFile)
+		if err != nil {
+			t.Errorf("Failed to create symlink: %v", err)
+		}
 
-		expectedTypeName := "dotfiles_application"
-		if resp.TypeName != expectedTypeName {
-			t.Errorf("Expected TypeName %s, got %s", expectedTypeName, resp.TypeName)
+		// Verify symlink exists and points to source
+		linkTarget, err := os.Readlink(targetFile)
+		if err != nil {
+			t.Errorf("Failed to read symlink: %v", err)
+		}
+		if linkTarget != sourceFile {
+			t.Errorf("Expected symlink to point to %s, got %s", sourceFile, linkTarget)
 		}
 	})
 
-	t.Run("Schema", func(t *testing.T) {
-		r := NewApplicationResource()
-		ctx := context.Background()
-
-		req := resource.SchemaRequest{}
-		resp := &resource.SchemaResponse{}
-
-		r.Schema(ctx, req, resp)
-
-		if resp.Diagnostics.HasError() {
-			t.Errorf("Schema validation failed: %v", resp.Diagnostics)
+	t.Run("copyConfigFile", func(t *testing.T) {
+		// Create source file
+		sourceContent := "test configuration content"
+		sourceFile := filepath.Join(tempDir, "source_copy.txt")
+		err := os.WriteFile(sourceFile, []byte(sourceContent), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create source file: %v", err)
 		}
 
-		schema := resp.Schema
-
-		// Check required attributes
-		requiredAttrs := []string{"repository", "application", "source_path"}
-		for _, attr := range requiredAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Required attribute %s not found in schema", attr)
-			}
+		// Test file copying
+		targetFile := filepath.Join(tempDir, "copy_subdir", "target_copy.txt")
+		err = appResource.copyConfigFile(ctx, sourceFile, targetFile)
+		if err != nil {
+			t.Errorf("Failed to copy file: %v", err)
 		}
 
-		// Check application detection attributes
-		detectionAttrs := []string{"detect_installation", "skip_if_not_installed", "warn_if_not_installed"}
-		for _, attr := range detectionAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Detection attribute %s not found in schema", attr)
-			}
+		// Verify copied file exists and has correct content
+		copiedContent, err := os.ReadFile(targetFile)
+		if err != nil {
+			t.Errorf("Failed to read copied file: %v", err)
 		}
-
-		// Check version compatibility attributes
-		versionAttrs := []string{"min_version", "max_version"}
-		for _, attr := range versionAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Version attribute %s not found in schema", attr)
-			}
-		}
-
-		// Check for detection_methods block
-		if _, exists := schema.Blocks["detection_methods"]; !exists {
-			t.Error("detection_methods block should be defined in application resource schema")
-		}
-
-		// Check for config_mappings block
-		if _, exists := schema.Blocks["config_mappings"]; !exists {
-			t.Error("config_mappings block should be defined in application resource schema")
-		}
-
-		// Check computed attributes
-		computedAttrs := []string{"id", "installed", "version", "installation_path"}
-		for _, attr := range computedAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Computed attribute %s not found in schema", attr)
-			}
+		if string(copiedContent) != sourceContent {
+			t.Errorf("Expected copied content to be %s, got %s", sourceContent, string(copiedContent))
 		}
 	})
 }
 
-// TestApplicationResourceModel tests the application resource data model.
-func TestApplicationResourceModel(t *testing.T) {
-	// Test the application resource model with comprehensive configuration
-	model := ApplicationResourceModel{
-		ID:                 types.StringValue("cursor-app"),
-		Repository:         types.StringValue("test-repo"),
-		Application:        types.StringValue("cursor"),
-		SourcePath:         types.StringValue("tools/cursor"),
-		DetectInstallation: types.BoolValue(true),
-		SkipIfNotInstalled: types.BoolValue(true),
-		WarnIfNotInstalled: types.BoolValue(false),
-		MinVersion:         types.StringValue("0.17.0"),
-		MaxVersion:         types.StringValue("1.0.0"),
+func TestApplicationResourceSchema(t *testing.T) {
+	ctx := context.Background()
 
-		// Computed attributes
-		Installed:        types.BoolValue(true),
-		Version:          types.StringValue("0.19.3"),
-		InstallationPath: types.StringValue("/Applications/Cursor.app"),
+	// Create resource
+	appResource := NewApplicationResource()
+
+	// Test schema
+	schemaReq := resource.SchemaRequest{}
+	schemaResp := &resource.SchemaResponse{}
+
+	appResource.Schema(ctx, schemaReq, schemaResp)
+
+	if schemaResp.Diagnostics.HasError() {
+		t.Errorf("Schema validation failed: %v", schemaResp.Diagnostics)
 	}
 
-	// Verify all fields can be accessed
-	if model.ID.ValueString() != "cursor-app" {
-		t.Error("ID field not working correctly")
+	// Verify required attributes exist
+	schema := schemaResp.Schema
+	if _, ok := schema.Attributes["application_name"]; !ok {
+		t.Error("Expected application_name attribute in schema")
 	}
-	if model.Application.ValueString() != "cursor" {
-		t.Error("Application field not working correctly")
+	if _, ok := schema.Attributes["config_mappings"]; !ok {
+		t.Error("Expected config_mappings attribute in schema")
 	}
-	if !model.DetectInstallation.ValueBool() {
-		t.Error("DetectInstallation field not working correctly")
+	if _, ok := schema.Attributes["configured_files"]; !ok {
+		t.Error("Expected configured_files computed attribute in schema")
 	}
-	if !model.SkipIfNotInstalled.ValueBool() {
-		t.Error("SkipIfNotInstalled field not working correctly")
-	}
-	if model.MinVersion.ValueString() != "0.17.0" {
-		t.Error("MinVersion field not working correctly")
-	}
-	if !model.Installed.ValueBool() {
-		t.Error("Installed computed field not working correctly")
-	}
-	if model.Version.ValueString() != "0.19.3" {
-		t.Error("Version computed field not working correctly")
+	if _, ok := schema.Attributes["last_updated"]; !ok {
+		t.Error("Expected last_updated computed attribute in schema")
 	}
 }
 
-// TestDetectionMethodsModel tests the detection methods configuration.
-func TestDetectionMethodsModel(t *testing.T) {
-	// Test detection methods configuration
-	methods := []DetectionMethodModel{
-		{
-			Type: types.StringValue("command"),
-			Test: types.StringValue("command -v cursor"),
-		},
-		{
-			Type: types.StringValue("file"),
-			Path: types.StringValue("/Applications/Cursor.app"),
-		},
-		{
-			Type: types.StringValue("brew_cask"),
-			Name: types.StringValue("cursor"),
-		},
-		{
-			Type:    types.StringValue("package_manager"),
-			Name:    types.StringValue("cursor"),
-			Manager: types.StringValue("brew"),
+func TestApplicationResourceConfigure(t *testing.T) {
+	ctx := context.Background()
+
+	// Create resource
+	appResource := NewApplicationResource()
+
+	// Test configuration with valid client
+	client := &DotfilesClient{
+		Config: &DotfilesConfig{
+			DotfilesRoot: "/test",
 		},
 	}
 
-	// Verify detection methods
-	if len(methods) != 4 {
-		t.Errorf("Expected 4 detection methods, got %d", len(methods))
+	configReq := resource.ConfigureRequest{
+		ProviderData: client,
+	}
+	configResp := &resource.ConfigureResponse{}
+
+	appResource.(*ApplicationResource).Configure(ctx, configReq, configResp)
+
+	if configResp.Diagnostics.HasError() {
+		t.Errorf("Configure failed: %v", configResp.Diagnostics)
 	}
 
-	// Test command detection
-	if methods[0].Type.ValueString() != "command" {
-		t.Error("First method should be command type")
-	}
-	if methods[0].Test.ValueString() != "command -v cursor" {
-		t.Error("Command test should be set correctly")
+	if appResource.(*ApplicationResource).client != client {
+		t.Error("Expected client to be set correctly")
 	}
 
-	// Test file detection
-	if methods[1].Type.ValueString() != "file" {
-		t.Error("Second method should be file type")
+	// Test configuration with invalid client type
+	appResource2 := NewApplicationResource()
+	configReq2 := resource.ConfigureRequest{
+		ProviderData: "invalid",
 	}
-	if methods[1].Path.ValueString() != "/Applications/Cursor.app" {
-		t.Error("File path should be set correctly")
-	}
+	configResp2 := &resource.ConfigureResponse{}
 
-	// Test brew cask detection
-	if methods[2].Type.ValueString() != "brew_cask" {
-		t.Error("Third method should be brew_cask type")
-	}
-	if methods[2].Name.ValueString() != "cursor" {
-		t.Error("Brew cask name should be set correctly")
-	}
+	appResource2.(*ApplicationResource).Configure(ctx, configReq2, configResp2)
 
-	// Test package manager detection
-	if methods[3].Type.ValueString() != "package_manager" {
-		t.Error("Fourth method should be package_manager type")
-	}
-	if methods[3].Manager.ValueString() != "brew" {
-		t.Error("Package manager should be set correctly")
-	}
-}
-
-// TestConfigMappingsModel tests the configuration mappings model.
-func TestConfigMappingsModel(t *testing.T) {
-	// Test config mappings
-	mappings := map[string]ConfigMappingModel{
-		"cli-config.json": {
-			TargetPath:    types.StringValue("~/.cursor/cli-config.json"),
-			Required:      types.BoolValue(false),
-			MergeStrategy: types.StringValue("replace"),
-		},
-		"user/*.json": {
-			TargetPathTemplate: types.StringValue("{{.app_support_dir}}/Cursor/User/{filename}"),
-			MergeStrategy:      types.StringValue("deep_merge"),
-			Required:           types.BoolValue(true),
-		},
-	}
-
-	// Verify mappings
-	if len(mappings) != 2 {
-		t.Errorf("Expected 2 config mappings, got %d", len(mappings))
-	}
-
-	// Test simple mapping
-	cliMapping := mappings["cli-config.json"]
-	if cliMapping.TargetPath.ValueString() != "~/.cursor/cli-config.json" {
-		t.Error("CLI config target path should be set correctly")
-	}
-	if cliMapping.Required.ValueBool() {
-		t.Error("CLI config should not be required")
-	}
-
-	// Test template mapping
-	userMapping := mappings["user/*.json"]
-	if !strings.Contains(userMapping.TargetPathTemplate.ValueString(), "{{.app_support_dir}}") {
-		t.Error("User config should use target path template")
-	}
-	if userMapping.MergeStrategy.ValueString() != "deep_merge" {
-		t.Error("User config should use deep merge strategy")
+	if !configResp2.Diagnostics.HasError() {
+		t.Error("Expected error with invalid provider data type")
 	}
 }

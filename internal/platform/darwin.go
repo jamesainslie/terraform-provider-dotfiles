@@ -135,7 +135,12 @@ func (p *DarwinProvider) CopyFile(source, target string) error {
 	if err != nil {
 		return fmt.Errorf("unable to open source file: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
+			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close source file: %v\n", err)
+		}
+	}()
 
 	// Get source file info
 	sourceInfo, err := sourceFile.Stat()
@@ -154,7 +159,12 @@ func (p *DarwinProvider) CopyFile(source, target string) error {
 	if err != nil {
 		return fmt.Errorf("unable to create target file: %w", err)
 	}
-	defer targetFile.Close()
+	defer func() {
+		if err := targetFile.Close(); err != nil {
+			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close target file: %v\n", err)
+		}
+	}()
 
 	// Copy file contents
 	if _, err := io.Copy(targetFile, sourceFile); err != nil {

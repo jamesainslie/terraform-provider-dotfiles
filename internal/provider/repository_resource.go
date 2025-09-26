@@ -156,23 +156,48 @@ func (r *RepositoryResource) Configure(ctx context.Context, req resource.Configu
 func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data RepositoryResourceModel
 
+	tflog.Debug(ctx, "=== REPOSITORY CREATE START ===")
+	tflog.Debug(ctx, "Getting plan data from request")
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		tflog.Error(ctx, "Failed to get plan data", map[string]interface{}{
+			"diagnostics_count": len(resp.Diagnostics),
+		})
 		return
 	}
 
 	tflog.Debug(ctx, "Creating repository resource", map[string]interface{}{
-		"name":        data.Name.ValueString(),
-		"source_path": data.SourcePath.ValueString(),
+		"name":                   data.Name.ValueString(),
+		"source_path":            data.SourcePath.ValueString(),
+		"description":            data.Description.ValueString(),
+		"default_backup_enabled": data.DefaultBackupEnabled.ValueBool(),
+		"default_file_mode":      data.DefaultFileMode.ValueString(),
+		"default_dir_mode":       data.DefaultDirMode.ValueString(),
+		"git_branch":             data.GitBranch.ValueString(),
+		"git_update_interval":    data.GitUpdateInterval.ValueString(),
 	})
 
 	sourcePath := data.SourcePath.ValueString()
+	tflog.Debug(ctx, "Processing source path", map[string]interface{}{
+		"raw_source_path": sourcePath,
+	})
 
 	// Check if source is a Git URL
-	if git.IsGitURL(sourcePath) {
+	isGitURL := git.IsGitURL(sourcePath)
+	tflog.Debug(ctx, "Checking source type", map[string]interface{}{
+		"is_git_url":  isGitURL,
+		"source_path": sourcePath,
+	})
+
+	if isGitURL {
+		tflog.Debug(ctx, "Processing as Git repository")
 		// Handle Git repository
 		info, err := r.setupGitRepository(ctx, &data)
 		if err != nil {
+			tflog.Error(ctx, "Git repository setup failed", map[string]interface{}{
+				"error":       err.Error(),
+				"source_path": sourcePath,
+			})
 			resp.Diagnostics.AddError(
 				"Failed to setup Git repository",
 				fmt.Sprintf("Could not clone or setup Git repository: %s", err.Error()),
@@ -192,9 +217,14 @@ func (r *RepositoryResource) Create(ctx context.Context, req resource.CreateRequ
 			"last_update": data.LastUpdate.ValueString(),
 		})
 	} else {
+		tflog.Debug(ctx, "Processing as local repository")
 		// Handle local repository
 		err := r.setupLocalRepository(ctx, &data)
 		if err != nil {
+			tflog.Error(ctx, "Local repository setup failed", map[string]interface{}{
+				"error":       err.Error(),
+				"source_path": sourcePath,
+			})
 			resp.Diagnostics.AddError(
 				"Failed to setup local repository",
 				fmt.Sprintf("Could not setup local repository: %s", err.Error()),
@@ -580,42 +610,112 @@ func (r *RepositoryResource) setupGitRepository(ctx context.Context, data *Repos
 
 // setupLocalRepository handles validation of a local repository.
 func (r *RepositoryResource) setupLocalRepository(ctx context.Context, data *RepositoryResourceModel) error {
+	tflog.Debug(ctx, "=== SETUP LOCAL REPOSITORY START ===")
+
 	sourcePath := data.SourcePath.ValueString()
+	tflog.Debug(ctx, "Initial source path", map[string]interface{}{
+		"source_path": sourcePath,
+		"home_dir":    r.client.HomeDir,
+	})
 
 	// Expand the path
+	originalPath := sourcePath
 	if sourcePath[0] == '~' {
 		sourcePath = filepath.Join(r.client.HomeDir, sourcePath[1:])
+		tflog.Debug(ctx, "Expanded tilde path", map[string]interface{}{
+			"original_path": originalPath,
+			"expanded_path": sourcePath,
+		})
 	}
 
 	// Convert to absolute path
 	absPath, err := filepath.Abs(sourcePath)
 	if err != nil {
+		tflog.Error(ctx, "Failed to get absolute path", map[string]interface{}{
+			"error":       err.Error(),
+			"source_path": sourcePath,
+		})
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
-
-	// Check if path exists
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		return fmt.Errorf("source path does not exist: %s", absPath)
-	}
-
-	// Check if it's a directory
-	info, err := os.Stat(absPath)
-	if err != nil {
-		return fmt.Errorf("failed to stat path: %w", err)
-	}
-
-	if !info.IsDir() {
-		return fmt.Errorf("source path is not a directory: %s", absPath)
-	}
-
-	tflog.Debug(ctx, "Local repository validated", map[string]interface{}{
+	tflog.Debug(ctx, "Converted to absolute path", map[string]interface{}{
 		"source_path": sourcePath,
 		"abs_path":    absPath,
 	})
 
+	// Check if path exists
+	tflog.Debug(ctx, "Checking if path exists", map[string]interface{}{
+		"abs_path": absPath,
+	})
+	stat, err := os.Stat(absPath)
+	if os.IsNotExist(err) {
+		tflog.Info(ctx, "Local repository directory does not exist, creating it", map[string]interface{}{
+			"abs_path":    absPath,
+			"permissions": "0755",
+		})
+		if err := os.MkdirAll(absPath, 0755); err != nil {
+			tflog.Error(ctx, "Failed to create directory", map[string]interface{}{
+				"error":    err.Error(),
+				"abs_path": absPath,
+			})
+			return fmt.Errorf("failed to create local repository directory: %w", err)
+		}
+		tflog.Debug(ctx, "Local repository directory created successfully", map[string]interface{}{
+			"abs_path": absPath,
+		})
+
+		// Re-stat the newly created directory
+		stat, err = os.Stat(absPath)
+		if err != nil {
+			tflog.Error(ctx, "Failed to stat newly created directory", map[string]interface{}{
+				"error":    err.Error(),
+				"abs_path": absPath,
+			})
+			return fmt.Errorf("failed to stat newly created path: %w", err)
+		}
+		tflog.Debug(ctx, "Successfully re-statted created directory", map[string]interface{}{
+			"abs_path": absPath,
+			"is_dir":   stat.IsDir(),
+			"mode":     stat.Mode().String(),
+			"size":     stat.Size(),
+		})
+	} else if err != nil {
+		tflog.Error(ctx, "Failed to stat existing path", map[string]interface{}{
+			"error":    err.Error(),
+			"abs_path": absPath,
+		})
+		return fmt.Errorf("failed to stat path: %w", err)
+	} else {
+		tflog.Debug(ctx, "Path already exists", map[string]interface{}{
+			"abs_path": absPath,
+			"is_dir":   stat.IsDir(),
+			"mode":     stat.Mode().String(),
+			"size":     stat.Size(),
+		})
+	}
+
+	// Ensure it's a directory
+	if !stat.IsDir() {
+		tflog.Error(ctx, "Source path is not a directory", map[string]interface{}{
+			"abs_path": absPath,
+			"mode":     stat.Mode().String(),
+			"is_dir":   stat.IsDir(),
+		})
+		return fmt.Errorf("source path is not a directory: %s", absPath)
+	}
+
+	tflog.Debug(ctx, "Local repository validated successfully", map[string]interface{}{
+		"original_source_path": originalPath,
+		"final_abs_path":       absPath,
+		"is_directory":         true,
+	})
+
 	// Update source path to absolute path
 	data.SourcePath = types.StringValue(absPath)
+	tflog.Debug(ctx, "Updated source path in data model", map[string]interface{}{
+		"new_source_path": absPath,
+	})
 
+	tflog.Debug(ctx, "=== SETUP LOCAL REPOSITORY END ===")
 	return nil
 }
 

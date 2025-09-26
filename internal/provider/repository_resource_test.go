@@ -306,8 +306,22 @@ func TestRepositoryResourceLocalOperations(t *testing.T) {
 		}
 
 		err := r.setupLocalRepository(ctx, data)
-		if err == nil {
-			t.Error("setupLocalRepository should fail for non-existent path")
+		if err != nil {
+			t.Errorf("setupLocalRepository should succeed and create non-existent path: %v", err)
+		}
+
+		// Verify the directory was created
+		if !utils.PathExists(nonExistentPath) {
+			t.Error("setupLocalRepository should have created the non-existent directory")
+		}
+
+		// Verify it's a directory
+		info, err := os.Stat(nonExistentPath)
+		if err != nil {
+			t.Errorf("Failed to stat created directory: %v", err)
+		}
+		if !info.IsDir() {
+			t.Error("Created path should be a directory")
 		}
 	})
 

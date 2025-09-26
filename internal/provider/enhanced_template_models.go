@@ -7,7 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
 )
 
 // EnhancedFileResourceModelWithTemplate extends EnhancedFileResourceModelWithBackup with template features.
@@ -51,6 +54,9 @@ func GetEnhancedTemplateAttributes() map[string]schema.Attribute {
 			Computed:            true,
 			Default:             stringdefault.StaticString("go"),
 			MarkdownDescription: "Template engine to use: go (default), handlebars, or mustache",
+			Validators: []validator.String{
+				validators.ValidTemplateEngine(),
+			},
 		},
 		"platform_template_vars": schema.MapAttribute{
 			Optional: true,

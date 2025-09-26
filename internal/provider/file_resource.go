@@ -14,16 +14,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/errors"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/fileops"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -80,10 +82,18 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		"source_path": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Path to source file in repository",
+			Validators: []validator.String{
+				validators.ValidPath(),
+				validators.EnvironmentVariableExpansion(),
+			},
 		},
 		"target_path": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Target path where file should be placed",
+			Validators: []validator.String{
+				validators.ValidPath(),
+				validators.EnvironmentVariableExpansion(),
+			},
 		},
 		"is_template": schema.BoolAttribute{
 			Optional:            true,
@@ -92,6 +102,9 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		"file_mode": schema.StringAttribute{
 			Optional:            true,
 			MarkdownDescription: "File permissions (e.g., '0644') - deprecated, use permissions block",
+			Validators: []validator.String{
+				validators.ValidFileMode(),
+			},
 		},
 		"backup_enabled": schema.BoolAttribute{
 			Optional:            true,
@@ -129,11 +142,8 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		baseAttributes[key] = attr
 	}
 
-	// Add application detection attributes
-	appDetectionAttrs := GetApplicationDetectionAttributes()
-	for key, attr := range appDetectionAttrs {
-		baseAttributes[key] = attr
-	}
+	// Application detection is now handled by terraform-provider-package
+	// This resource focuses solely on file management
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection",
@@ -164,7 +174,7 @@ func (r *FileResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data EnhancedFileResourceModelWithApplicationDetection
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -178,22 +188,8 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"is_template": data.IsTemplate.ValueBool(),
 	})
 
-	// Check application requirements before proceeding
-	if !data.RequireApplication.IsNull() {
-		appDetectionConfig := buildApplicationDetectionConfig(&data)
-
-		shouldSkip := r.checkApplicationRequirements(ctx, appDetectionConfig, &resp.Diagnostics)
-
-		if shouldSkip {
-			tflog.Info(ctx, "Skipping file resource - required application not available", map[string]interface{}{
-				"required_app": appDetectionConfig.RequiredApplication,
-			})
-			// Set ID and save state without creating file
-			data.ID = data.Name
-			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-			return
-		}
-	}
+	// Application requirements are now handled by terraform-provider-package
+	// This resource focuses on file management only
 
 	// Get repository information (for local path if it's a Git repository)
 	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
@@ -202,14 +198,24 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
 	targetPath := data.TargetPath.ValueString()
 
+	// Pre-apply validation: check if source file exists
+	if err := r.validateSourceFileExists(ctx, sourcePath); err != nil {
+		sourceErr := errors.ValidationError("validate_source_file", "file", "Source file validation failed", err).
+			WithPath(sourcePath).
+			WithContext("file_name", data.Name.ValueString()).
+			WithContext("repository", data.Repository.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, sourceErr, "Source file not found")
+		return
+	}
+
 	// Expand target path
 	platformProvider := platform.DetectPlatform()
 	expandedTargetPath, err := platformProvider.ExpandPath(targetPath)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid target path",
-			fmt.Sprintf("Could not expand target path %s: %s", targetPath, err.Error()),
-		)
+		pathErr := errors.ValidationError("expand_target_path", "file", "Could not expand target path", err).
+			WithPath(targetPath).
+			WithContext("file_name", data.Name.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, pathErr, "Invalid target path")
 		return
 	}
 
@@ -219,34 +225,46 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Build permission configuration
 	permConfig, err := buildFilePermissionConfig(&data.EnhancedFileResourceModel)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid permission configuration",
-			fmt.Sprintf("Failed to build permission config: %s", err.Error()),
-		)
+		configErr := errors.ConfigurationError("build_permission_config", "file", "Failed to build permission configuration", err).
+			WithPath(expandedTargetPath).
+			WithContext("file_name", data.Name.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, configErr, "Invalid permission configuration")
 		return
 	}
 
 	// Build enhanced backup configuration
 	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(&data)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid backup configuration",
-			fmt.Sprintf("Failed to build backup config: %s", err.Error()),
-		)
+		backupErr := errors.ConfigurationError("build_backup_config", "file", "Failed to build backup configuration", err).
+			WithPath(expandedTargetPath).
+			WithContext("file_name", data.Name.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, backupErr, "Invalid backup configuration")
 		return
 	}
 
 	// Handle backup - use enhanced if available, otherwise fall back to legacy
 	if utils.PathExists(expandedTargetPath) {
 		if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
-			// Use enhanced backup
+			// Use enhanced backup with retry
 			enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
-			_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
-			if err != nil {
-				resp.Diagnostics.AddWarning(
-					"Enhanced backup failed",
-					fmt.Sprintf("Could not create enhanced backup of %s: %s", expandedTargetPath, err.Error()),
-				)
+
+			if !r.client.Config.DryRun {
+				backupErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+					_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
+					return err
+				})
+
+				if backupErr != nil {
+					backupWarnErr := errors.IOError("create_enhanced_backup", "file", "Could not create enhanced backup", backupErr).
+						WithPath(expandedTargetPath).
+						WithContext("backup_directory", r.client.Config.BackupDirectory)
+					errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Enhanced backup failed", backupWarnErr.Error())
+				}
+			} else {
+				tflog.Info(ctx, "DRY RUN: Skipping enhanced backup operation", map[string]interface{}{
+					"target_path":      expandedTargetPath,
+					"backup_directory": r.client.Config.BackupDirectory,
+				})
 			}
 		} else {
 			// Fall back to legacy backup
@@ -256,12 +274,23 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 			}
 
 			if backupEnabled {
-				_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
-				if err != nil {
-					resp.Diagnostics.AddWarning(
-						"Backup failed",
-						fmt.Sprintf("Could not create backup of %s: %s", expandedTargetPath, err.Error()),
-					)
+				if !r.client.Config.DryRun {
+					backupErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+						_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
+						return err
+					})
+
+					if backupErr != nil {
+						backupWarnErr := errors.IOError("create_backup", "file", "Could not create backup", backupErr).
+							WithPath(expandedTargetPath).
+							WithContext("backup_directory", r.client.Config.BackupDirectory)
+						errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Backup failed", backupWarnErr.Error())
+					}
+				} else {
+					tflog.Info(ctx, "DRY RUN: Skipping backup operation", map[string]interface{}{
+						"target_path":      expandedTargetPath,
+						"backup_directory": r.client.Config.BackupDirectory,
+					})
 				}
 			}
 		}
@@ -273,42 +302,76 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		// Build enhanced template configuration
 		templateConfig, err := buildEnhancedTemplateConfigFromAppModel(&data)
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid template configuration",
-				fmt.Sprintf("Failed to build template config: %s", err.Error()),
-			)
+			templateErr := errors.ConfigurationError("build_template_config", "file", "Failed to build template configuration", err).
+				WithPath(expandedTargetPath).
+				WithContext("file_name", data.Name.ValueString()).
+				WithContext("source_path", sourcePath)
+			errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, templateErr, "Invalid template configuration")
 			return
 		}
 
-		// Process template with enhanced features
-		finalErr = r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
-	} else {
-		// Regular file copy with enhanced permissions
-		finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
-	}
+		// Process template with enhanced features and retry
+		if !r.client.Config.DryRun {
+			finalErr = errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+				return r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
+			})
 
-	if finalErr != nil {
-		resp.Diagnostics.AddError(
-			"File operation failed",
-			fmt.Sprintf("Could not create file %s: %s", expandedTargetPath, finalErr.Error()),
-		)
-		return
+			if finalErr != nil {
+				templateErr := errors.TemplateError("process_template", "file", "Template processing failed", finalErr).
+					WithPath(expandedTargetPath).
+					WithContext("file_name", data.Name.ValueString()).
+					WithContext("source_path", sourcePath).
+					WithContext("template_engine", templateConfig.Engine)
+				errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, templateErr, "Template processing failed")
+				return
+			}
+		} else {
+			tflog.Info(ctx, "DRY RUN: Skipping template processing", map[string]interface{}{
+				"source_path":     sourcePath,
+				"target_path":     expandedTargetPath,
+				"template_engine": templateConfig.Engine,
+			})
+		}
+	} else {
+		// Regular file copy with enhanced permissions and retry
+		if !r.client.Config.DryRun {
+			finalErr = errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+				return fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
+			})
+
+			if finalErr != nil {
+				copyErr := errors.IOError("copy_file", "file", "File copy operation failed", finalErr).
+					WithPath(expandedTargetPath).
+					WithContext("file_name", data.Name.ValueString()).
+					WithContext("source_path", sourcePath)
+				errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, copyErr, "File operation failed")
+				return
+			}
+		} else {
+			tflog.Info(ctx, "DRY RUN: Skipping file copy operation", map[string]interface{}{
+				"source_path": sourcePath,
+				"target_path": expandedTargetPath,
+			})
+		}
 	}
 
 	// Execute post-create commands
 	if err := executePostCommands(ctx, data.PostCreateCommands, "post-create"); err != nil {
-		resp.Diagnostics.AddWarning(
-			"Post-create commands failed",
-			fmt.Sprintf("File created successfully but post-create commands failed: %s", err.Error()),
-		)
+		postCmdErr := errors.IOError("execute_post_commands", "file", "Post-create commands failed", err).
+			WithPath(expandedTargetPath).
+			WithContext("file_name", data.Name.ValueString()).
+			WithContext("command_type", "post-create")
+		errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Post-create commands failed",
+			"File created successfully but post-create commands failed: "+postCmdErr.Error())
 	}
 
 	// Update computed attributes
 	if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
-		resp.Diagnostics.AddWarning(
-			"Could not update file metadata",
-			fmt.Sprintf("File created successfully but could not update metadata: %s", err.Error()),
-		)
+		metadataErr := errors.IOError("update_metadata", "file", "Could not update file metadata", err).
+			WithPath(expandedTargetPath).
+			WithContext("file_name", data.Name.ValueString())
+		errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Could not update file metadata",
+			"File created successfully but could not update metadata: "+metadataErr.Error())
 	}
 
 	// Set ID and save state
@@ -323,7 +386,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data EnhancedFileResourceModelWithApplicationDetection
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -341,27 +404,27 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		platformProvider := platform.DetectPlatform()
 		expandedTargetPath, err := platformProvider.ExpandPath(targetPath)
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid target path",
-				fmt.Sprintf("Could not expand target path %s: %s", targetPath, err.Error()),
-			)
+			pathErr := errors.ValidationError("expand_target_path", "file", "Could not expand target path", err).
+				WithPath(targetPath).
+				WithContext("file_name", data.Name.ValueString())
+			errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, pathErr, "Invalid target path")
 			return
 		}
 
 		// Update computed attributes with current file state
 		if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
-			resp.Diagnostics.AddWarning(
-				"Could not read file metadata",
-				fmt.Sprintf("Could not update file metadata: %s", err.Error()),
-			)
+			metadataErr := errors.IOError("read_metadata", "file", "Could not read file metadata", err).
+				WithPath(expandedTargetPath).
+				WithContext("file_name", data.Name.ValueString())
+			errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Could not read file metadata", metadataErr.Error())
 		}
 
 		// Check for drift if file doesn't exist
 		if !data.FileExists.ValueBool() {
-			resp.Diagnostics.AddWarning(
-				"Managed file not found",
-				fmt.Sprintf("The managed file %s no longer exists", expandedTargetPath),
-			)
+			driftErr := errors.IOError("check_file_existence", "file", "Managed file no longer exists", nil).
+				WithPath(expandedTargetPath).
+				WithContext("file_name", data.Name.ValueString())
+			errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Managed file not found", driftErr.Error())
 		}
 	}
 
@@ -369,7 +432,7 @@ func (r *FileResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data EnhancedFileResourceModelWithApplicationDetection
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -388,6 +451,16 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// Build paths
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
 	targetPath := data.TargetPath.ValueString()
+
+	// Pre-apply validation: check if source file exists
+	if err := r.validateSourceFileExists(ctx, sourcePath); err != nil {
+		sourceErr := errors.ValidationError("validate_source_file", "file", "Source file validation failed", err).
+			WithPath(sourcePath).
+			WithContext("file_name", data.Name.ValueString()).
+			WithContext("repository", data.Repository.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, sourceErr, "Source file not found")
+		return
+	}
 
 	// Expand target path
 	platformProvider := platform.DetectPlatform()
@@ -509,7 +582,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data EnhancedFileResourceModelWithApplicationDetection
+	var data EnhancedFileResourceModelWithTemplate
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -634,14 +707,14 @@ func buildEnhancedBackupConfigFromTemplateModel(data *EnhancedFileResourceModelW
 	return buildEnhancedBackupConfigFromFileModel(&data.EnhancedFileResourceModelWithBackup)
 }
 
-// buildEnhancedTemplateConfigFromAppModel builds template config from application detection model.
-func buildEnhancedTemplateConfigFromAppModel(data *EnhancedFileResourceModelWithApplicationDetection) (*EnhancedTemplateConfig, error) {
-	return buildEnhancedTemplateConfig(&data.EnhancedFileResourceModelWithTemplate)
+// buildEnhancedTemplateConfigFromAppModel builds template config from template model.
+func buildEnhancedTemplateConfigFromAppModel(data *EnhancedFileResourceModelWithTemplate) (*EnhancedTemplateConfig, error) {
+	return buildEnhancedTemplateConfig(data)
 }
 
-// buildEnhancedBackupConfigFromAppModel builds backup config from application detection model.
-func buildEnhancedBackupConfigFromAppModel(data *EnhancedFileResourceModelWithApplicationDetection) (*fileops.EnhancedBackupConfig, error) {
-	return buildEnhancedBackupConfigFromTemplateModel(&data.EnhancedFileResourceModelWithTemplate)
+// buildEnhancedBackupConfigFromAppModel builds backup config from template model.
+func buildEnhancedBackupConfigFromAppModel(data *EnhancedFileResourceModelWithTemplate) (*fileops.EnhancedBackupConfig, error) {
+	return buildEnhancedBackupConfigFromTemplateModel(data)
 }
 
 // buildEnhancedTemplateConfig builds template configuration from template model.
@@ -663,7 +736,13 @@ func buildEnhancedTemplateConfig(data *EnhancedFileResourceModelWithTemplate) (*
 		elements := data.TemplateVars.Elements()
 		for key, value := range elements {
 			if strValue, ok := value.(types.String); ok {
+				// Validate template variable name
+				if key == "" {
+					return nil, fmt.Errorf("template variable name cannot be empty")
+				}
 				config.UserVars[key] = strValue.ValueString()
+			} else {
+				return nil, fmt.Errorf("template variable '%s' must be a string", key)
 			}
 		}
 	}
@@ -832,98 +911,11 @@ func (r *FileResource) fileManager() *fileops.FileManager {
 	return fileops.NewFileManager(platformProvider, r.client.Config.DryRun)
 }
 
-// checkApplicationRequirements checks if required applications are available.
-func (r *FileResource) checkApplicationRequirements(ctx context.Context, config *ApplicationDetectionConfig, diagnostics *diag.Diagnostics) bool {
-	if config.RequiredApplication == "" {
-		return false // No application required
-	}
+// Application detection functionality has been removed from the file resource.
+// Use terraform-provider-package for application installation management
+// and dependency checking.
 
-	// Create a temporary ApplicationResource for detection
-	appResource := &ApplicationResource{client: r.client}
-
-	// Create model for detection
-	detectionModel := ApplicationResourceModel{
-		Application:        types.StringValue(config.RequiredApplication),
-		DetectInstallation: types.BoolValue(true),
-		// Detection methods will use defaults since blocks are handled separately
-	}
-
-	// Perform detection
-	result := appResource.performApplicationDetection(ctx, &detectionModel)
-
-	// Check if application is installed
-	if !result.Installed {
-		if config.SkipIfMissing {
-			return true // Skip this resource
-		}
-		// Add warning if configured to warn
-		diagnostics.AddWarning(
-			"Required application not found",
-			fmt.Sprintf("Required application %s is not installed", config.RequiredApplication),
-		)
-	}
-
-	// Check version compatibility if version info is available
-	if result.Version != "" && result.Version != "unknown" {
-		if !isVersionCompatible(result.Version, config.MinVersion, config.MaxVersion) {
-			message := fmt.Sprintf("Application %s version %s is not compatible", config.RequiredApplication, result.Version)
-			if config.MinVersion != "" {
-				message += fmt.Sprintf(" (min: %s)", config.MinVersion)
-			}
-			if config.MaxVersion != "" {
-				message += fmt.Sprintf(" (max: %s)", config.MaxVersion)
-			}
-
-			if config.SkipIfMissing {
-				diagnostics.AddWarning("Application version incompatible", message+" - skipping configuration")
-				return true // Skip this resource
-			} else {
-				diagnostics.AddWarning("Application version incompatible", message+" - proceeding anyway")
-			}
-		}
-	}
-
-	return false // Don't skip
-}
-
-// buildApplicationDetectionConfig builds application detection config from model.
-func buildApplicationDetectionConfig(data *EnhancedFileResourceModelWithApplicationDetection) *ApplicationDetectionConfig {
-	config := &ApplicationDetectionConfig{}
-
-	if !data.RequireApplication.IsNull() {
-		config.RequiredApplication = data.RequireApplication.ValueString()
-	}
-	if !data.ApplicationVersionMin.IsNull() {
-		config.MinVersion = data.ApplicationVersionMin.ValueString()
-	}
-	if !data.ApplicationVersionMax.IsNull() {
-		config.MaxVersion = data.ApplicationVersionMax.ValueString()
-	}
-	if !data.SkipIfAppMissing.IsNull() {
-		config.SkipIfMissing = data.SkipIfAppMissing.ValueBool()
-	}
-
-	return config
-}
-
-// isVersionCompatible checks if a version is within specified bounds.
-func isVersionCompatible(detected, minVersion, maxVersion string) bool {
-	// Simplified version comparison for now
-	// A real implementation would use proper semantic versioning
-	if minVersion == "" && maxVersion == "" {
-		return true
-	}
-
-	// Basic string comparison (would need proper semver library in production)
-	if minVersion != "" && detected < minVersion {
-		return false
-	}
-	if maxVersion != "" && detected > maxVersion {
-		return false
-	}
-
-	return true
-}
+// Version compatibility checking has been removed as it's now handled by terraform-provider-package
 
 // executeShellCommand executes a shell command safely.
 func executeShellCommand(ctx context.Context, cmdStr string) error {
@@ -968,6 +960,36 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 	tflog.Info(ctx, fmt.Sprintf("Command executed successfully: %s", cmdStr), map[string]interface{}{
 		"output": string(output),
 	})
+
+	return nil
+}
+
+// validateSourceFileExists checks if the source file exists and is readable.
+func (r *FileResource) validateSourceFileExists(ctx context.Context, sourcePath string) error {
+	// Check if source file exists
+	info, err := os.Stat(sourcePath)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("source file '%s' does not exist", sourcePath)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot access source file '%s': %w", sourcePath, err)
+	}
+
+	// Check if it's a regular file (not a directory or special file)
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("source path '%s' is not a regular file (mode: %s)", sourcePath, info.Mode().String())
+	}
+
+	// Check if file is readable by attempting to open it
+	file, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("source file '%s' is not readable: %w", sourcePath, err)
+	}
+	if err := file.Close(); err != nil {
+		tflog.Warn(ctx, "Failed to close file", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
 
 	return nil
 }

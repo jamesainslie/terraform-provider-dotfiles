@@ -30,7 +30,11 @@ func TestDotfilesConfigComprehensive(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create test dotfiles dir: %v", err)
 		}
-		defer os.RemoveAll(testDotfilesDir)
+		defer func() {
+			if err := os.RemoveAll(testDotfilesDir); err != nil {
+				t.Logf("Failed to clean up test dotfiles dir: %v", err)
+			}
+		}()
 
 		config.BackupEnabled = true
 		config.Strategy = "symlink"
@@ -113,12 +117,19 @@ func TestDotfilesConfigComprehensive(t *testing.T) {
 	})
 
 	t.Run("Default value setting", func(t *testing.T) {
+		// Create a temporary directory for testing
+		tmpDir := t.TempDir()
+
 		config := &DotfilesConfig{
-			DotfilesRoot: "/tmp/test",
+			DotfilesRoot: tmpDir,
 			// Leave all other values empty to test default setting
 		}
 
-		err := config.Validate()
+		err := config.SetDefaults()
+		if err != nil {
+			t.Errorf("Setting defaults failed: %v", err)
+		}
+		err = config.Validate()
 		if err != nil {
 			t.Errorf("Validation failed: %v", err)
 		}

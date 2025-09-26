@@ -1,0 +1,250 @@
+# Example terraform.tfvars for Complete Development Environment
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Dotfiles Configuration
+dotfiles_path = "~/dotfiles"
+
+# Optional: Git Repository (if using remote dotfiles)
+git_repository_url = "https://github.com/yourusername/dotfiles.git"
+git_branch        = "main"
+# github_token    = "ghp_xxxxxxxxxxxxxxxxxxxx"  # Set via TF_VAR_github_token
+
+# Override default packages (add/remove as needed)
+development_packages = {
+  # Terminal and Shell
+  "fish" = {
+    package_name = "fish"
+    package_type = "formula"
+  }
+  "starship" = {
+    package_name = "starship"
+    package_type = "formula"
+  }
+  "alacritty" = {
+    package_name = "alacritty"
+    package_type = "cask"
+  }
+  
+  # Editors
+  "neovim" = {
+    package_name = "neovim"
+    package_type = "formula"
+  }
+  "vscode" = {
+    package_name = "visual-studio-code"
+    package_type = "cask"
+  }
+  "cursor" = {
+    package_name = "cursor"
+    package_type = "cask"
+  }
+  
+  # Development Tools
+  "git" = {
+    package_name = "git"
+    package_type = "formula"
+  }
+  "gh" = {
+    package_name = "gh"
+    package_type = "formula"
+  }
+  "terraform" = {
+    package_name = "terraform"
+    package_type = "formula"
+  }
+  "docker" = {
+    package_name = "docker"
+    package_type = "cask"
+  }
+  
+  # Languages and Runtimes
+  "go" = {
+    package_name = "go"
+    package_type = "formula"
+  }
+  "node" = {
+    package_name = "node"
+    package_type = "formula"
+  }
+  "python" = {
+    package_name = "python@3.12"
+    package_type = "formula"
+  }
+  "rust" = {
+    package_name = "rust"
+    package_type = "formula"
+  }
+  
+  # Utilities
+  "jq" = {
+    package_name = "jq"
+    package_type = "formula"
+  }
+  "yq" = {
+    package_name = "yq"
+    package_type = "formula"
+  }
+  "ripgrep" = {
+    package_name = "ripgrep"
+    package_type = "formula"
+  }
+  "fd" = {
+    package_name = "fd"
+    package_type = "formula"
+  }
+  "bat" = {
+    package_name = "bat"
+    package_type = "formula"
+  }
+  "exa" = {
+    package_name = "exa"
+    package_type = "formula"
+  }
+}
+
+# Customize application configurations
+application_configs = {
+  "vscode" = {
+    config_mappings = {
+      "vscode/settings.json" = {
+        target_path = "~/Library/Application Support/Code/User/settings.json"
+        strategy   = "symlink"
+      }
+      "vscode/keybindings.json" = {
+        target_path = "~/Library/Application Support/Code/User/keybindings.json"
+        strategy   = "copy"
+      }
+      "vscode/snippets/" = {
+        target_path = "{{.app_support_dir}}/Code/User/snippets/"
+        strategy   = "symlink"
+      }
+    }
+  }
+  
+  "cursor" = {
+    config_mappings = {
+      "cursor/settings.json" = {
+        target_path = "~/Library/Application Support/Cursor/User/settings.json"
+        strategy   = "symlink"
+      }
+      "cursor/keybindings.json" = {
+        target_path = "~/Library/Application Support/Cursor/User/keybindings.json"
+        strategy   = "copy"
+      }
+    }
+  }
+  
+  "neovim" = {
+    config_mappings = {
+      "nvim/init.lua" = {
+        target_path = "~/.config/nvim/init.lua"
+        strategy   = "symlink"
+      }
+      "nvim/lua/" = {
+        target_path = "~/.config/nvim/lua/"
+        strategy   = "symlink"
+      }
+      "nvim/after/" = {
+        target_path = "~/.config/nvim/after/"
+        strategy   = "symlink"
+      }
+    }
+  }
+  
+  "git" = {
+    config_mappings = {
+      "git/gitconfig" = {
+        target_path = "~/.gitconfig"
+        strategy   = "symlink"
+      }
+      "git/gitignore_global" = {
+        target_path = "~/.gitignore_global"
+        strategy   = "symlink"
+      }
+    }
+  }
+  
+  "alacritty" = {
+    config_mappings = {
+      "alacritty/alacritty.yml" = {
+        target_path = "~/.config/alacritty/alacritty.yml"
+        strategy   = "symlink"
+      }
+    }
+  }
+  
+  "gh" = {
+    config_mappings = {
+      "gh/config.yml" = {
+        target_path = "~/.config/gh/config.yml"
+        strategy   = "symlink"
+      }
+    }
+  }
+}
+
+# Shell configuration files
+shell_configs = {
+  "fish_config" = {
+    source_path = "fish/config.fish"
+    target_path = "~/.config/fish/config.fish"
+    is_template = false
+  }
+  
+  "starship_config" = {
+    source_path = "starship/starship.toml"
+    target_path = "~/.config/starship.toml"
+    is_template = false
+  }
+  
+  # Example with templating for SSH config
+  "ssh_config" = {
+    source_path     = "ssh/config.template"
+    target_path     = "~/.ssh/config"
+    is_template     = true
+    template_engine = "go"
+    template_vars = {
+      hostname = "my-server.example.com"
+      username = "myuser"
+      port     = "22"
+    }
+    file_mode = "0600"
+  }
+  
+  # GPG configuration
+  "gpg_conf" = {
+    source_path = "gpg/gpg.conf"
+    target_path = "~/.gnupg/gpg.conf"
+    file_mode  = "0600"
+  }
+}
+
+# Directory synchronization
+config_directories = {
+  "fish_functions" = {
+    source_path = "fish/functions"
+    target_path = "~/.config/fish/functions"
+    recursive   = true
+  }
+  
+  "fish_completions" = {
+    source_path = "fish/completions"
+    target_path = "~/.config/fish/completions"
+    recursive   = true
+  }
+  
+  "bin_scripts" = {
+    source_path = "bin"
+    target_path = "~/.local/bin/dotfiles"
+    recursive   = true
+  }
+}
+
+# Global template variables
+template_variables = {
+  editor       = "nvim"
+  browser      = "firefox"
+  terminal     = "alacritty"
+  git_editor   = "nvim"
+  default_shell = "fish"
+}

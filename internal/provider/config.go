@@ -25,26 +25,50 @@ type DotfilesConfig struct {
 	LogLevel           string
 }
 
-// Validate validates and sets defaults for the provider configuration.
-func (c *DotfilesConfig) Validate() error {
-	var errs []string
+// SetDefaults sets default values for the provider configuration.
+func (c *DotfilesConfig) SetDefaults() error {
+	// Set default dotfiles root
+	if c.DotfilesRoot == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("unable to get user home directory for dotfiles_root: %w", err)
+		}
+		c.DotfilesRoot = filepath.Join(homeDir, "dotfiles")
+	}
 
-	// Set defaults for empty values
+	// Set default backup directory
+	if c.BackupDirectory == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("unable to get user home directory for backup_directory: %w", err)
+		}
+		c.BackupDirectory = filepath.Join(homeDir, ".dotfiles-backups")
+	}
+
+	// Set other defaults
 	if c.Strategy == "" {
-		c.Strategy = "symlink"
+		c.Strategy = DefaultStrategy
 	}
 	if c.ConflictResolution == "" {
-		c.ConflictResolution = "backup"
+		c.ConflictResolution = DefaultConflictResolution
 	}
 	if c.TargetPlatform == "" {
-		c.TargetPlatform = "auto"
+		c.TargetPlatform = DefaultTargetPlatform
 	}
 	if c.TemplateEngine == "" {
-		c.TemplateEngine = "go"
+		c.TemplateEngine = DefaultTemplateEngine
 	}
 	if c.LogLevel == "" {
-		c.LogLevel = "info"
+		c.LogLevel = DefaultLogLevel
 	}
+
+	return nil
+}
+
+// Validate validates the provider configuration and expands paths.
+// Call SetDefaults() before calling this method.
+func (c *DotfilesConfig) Validate() error {
+	var errs []string
 
 	// Validate dotfiles root
 	if c.DotfilesRoot == "" {
@@ -66,6 +90,11 @@ func (c *DotfilesConfig) Validate() error {
 			errs = append(errs, fmt.Sprintf("invalid dotfiles_root path: %v", err))
 		} else {
 			c.DotfilesRoot = absPath
+
+			// Validate that DotfilesRoot is writable
+			if err := c.validateWritablePath(c.DotfilesRoot, "dotfiles_root"); err != nil {
+				errs = append(errs, err.Error())
+			}
 		}
 	}
 
@@ -85,37 +114,37 @@ func (c *DotfilesConfig) Validate() error {
 			errs = append(errs, fmt.Sprintf("invalid backup_directory path: %v", err))
 		} else {
 			c.BackupDirectory = absPath
+
+			// Validate that BackupDirectory is writable
+			if err := c.validateWritablePath(c.BackupDirectory, "backup_directory"); err != nil {
+				errs = append(errs, err.Error())
+			}
 		}
 	}
 
 	// Validate strategy
-	validStrategies := []string{"symlink", "copy", "template"}
-	if !contains(validStrategies, c.Strategy) {
-		errs = append(errs, fmt.Sprintf("invalid strategy '%s', must be one of: %v", c.Strategy, validStrategies))
+	if !contains(ValidStrategies, c.Strategy) {
+		errs = append(errs, fmt.Sprintf("invalid strategy '%s', must be one of: %v", c.Strategy, ValidStrategies))
 	}
 
 	// Validate conflict resolution
-	validConflictResolutions := []string{"backup", "overwrite", "skip", "prompt"}
-	if !contains(validConflictResolutions, c.ConflictResolution) {
-		errs = append(errs, fmt.Sprintf("invalid conflict_resolution '%s', must be one of: %v", c.ConflictResolution, validConflictResolutions))
+	if !contains(ValidConflictResolutions, c.ConflictResolution) {
+		errs = append(errs, fmt.Sprintf("invalid conflict_resolution '%s', must be one of: %v", c.ConflictResolution, ValidConflictResolutions))
 	}
 
 	// Validate target platform
-	validPlatforms := []string{"auto", "macos", "linux", "windows"}
-	if !contains(validPlatforms, c.TargetPlatform) {
-		errs = append(errs, fmt.Sprintf("invalid target_platform '%s', must be one of: %v", c.TargetPlatform, validPlatforms))
+	if !contains(ValidPlatforms, c.TargetPlatform) {
+		errs = append(errs, fmt.Sprintf("invalid target_platform '%s', must be one of: %v", c.TargetPlatform, ValidPlatforms))
 	}
 
 	// Validate template engine
-	validEngines := []string{"go", "handlebars", "none"}
-	if !contains(validEngines, c.TemplateEngine) {
-		errs = append(errs, fmt.Sprintf("invalid template_engine '%s', must be one of: %v", c.TemplateEngine, validEngines))
+	if !contains(ValidTemplateEngines, c.TemplateEngine) {
+		errs = append(errs, fmt.Sprintf("invalid template_engine '%s', must be one of: %v", c.TemplateEngine, ValidTemplateEngines))
 	}
 
 	// Validate log level
-	validLogLevels := []string{"debug", "info", "warn", "error"}
-	if !contains(validLogLevels, c.LogLevel) {
-		errs = append(errs, fmt.Sprintf("invalid log_level '%s', must be one of: %v", c.LogLevel, validLogLevels))
+	if !contains(ValidLogLevels, c.LogLevel) {
+		errs = append(errs, fmt.Sprintf("invalid log_level '%s', must be one of: %v", c.LogLevel, ValidLogLevels))
 	}
 
 	if len(errs) > 0 {
@@ -133,4 +162,48 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// validateWritablePath checks if a path is writable, or if its parent directory is writable for creation.
+func (c *DotfilesConfig) validateWritablePath(path, pathType string) error {
+	// Check if path exists
+	if info, err := os.Stat(path); err == nil {
+		// Path exists, check if it's writable
+		if info.IsDir() {
+			// For directories, try to create a test file
+			testFile := filepath.Join(path, ".terraform-provider-dotfiles-write-test")
+			if file, err := os.Create(testFile); err != nil {
+				return fmt.Errorf("%s directory '%s' is not writable: %w", pathType, path, err)
+			} else {
+			if err := file.Close(); err != nil {
+				// Log error but continue - this is just cleanup
+				fmt.Printf("Warning: failed to close test file: %v\n", err)
+			}
+			if err := os.Remove(testFile); err != nil {
+				// Log error but continue - this is just cleanup
+				fmt.Printf("Warning: failed to remove test file: %v\n", err)
+			}
+			}
+		} else {
+			return fmt.Errorf("%s path '%s' exists but is not a directory", pathType, path)
+		}
+	} else if os.IsNotExist(err) {
+		// Path doesn't exist, check if parent directory is writable
+		parentDir := filepath.Dir(path)
+		if parentInfo, err := os.Stat(parentDir); err != nil {
+			return fmt.Errorf("%s parent directory '%s' does not exist or is not accessible: %w", pathType, parentDir, err)
+		} else if !parentInfo.IsDir() {
+			return fmt.Errorf("%s parent path '%s' is not a directory", pathType, parentDir)
+		} else {
+			// Try to create the directory to test writability
+			if err := os.MkdirAll(path, 0755); err != nil {
+				return fmt.Errorf("cannot create %s directory '%s': %w", pathType, path, err)
+			}
+			// Directory created successfully, it's writable
+		}
+	} else {
+		return fmt.Errorf("cannot access %s path '%s': %w", pathType, path, err)
+	}
+
+	return nil
 }

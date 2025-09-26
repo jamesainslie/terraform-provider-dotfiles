@@ -5,8 +5,6 @@ package provider
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -14,8 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
 )
 
 // Ensure DotfilesProvider satisfies various provider interfaces.
@@ -87,8 +88,11 @@ func (p *DotfilesProvider) Schema(ctx context.Context, req provider.SchemaReques
 				Optional:            true,
 			},
 			"template_engine": schema.StringAttribute{
-				MarkdownDescription: "Template engine to use: go (default), handlebars, or none",
+				MarkdownDescription: "Template engine to use: go (default), handlebars, or mustache",
 				Optional:            true,
+				Validators: []validator.String{
+					validators.ValidTemplateEngine(),
+				},
 			},
 			"log_level": schema.StringAttribute{
 				MarkdownDescription: "Log level: debug, info (default), warn, or error",
@@ -113,19 +117,9 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 	// Create and configure the client
 	config := &DotfilesConfig{}
 
-	// Set configuration values with defaults
+	// Set configuration values from provider data
 	if !data.DotfilesRoot.IsNull() {
 		config.DotfilesRoot = data.DotfilesRoot.ValueString()
-	} else {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to get user home directory",
-				"Could not determine user home directory: "+err.Error(),
-			)
-			return
-		}
-		config.DotfilesRoot = filepath.Join(homeDir, "dotfiles")
 	}
 
 	if !data.BackupEnabled.IsNull() {
@@ -136,28 +130,14 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 
 	if !data.BackupDirectory.IsNull() {
 		config.BackupDirectory = data.BackupDirectory.ValueString()
-	} else {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to get user home directory",
-				"Could not determine user home directory for backup directory: "+err.Error(),
-			)
-			return
-		}
-		config.BackupDirectory = filepath.Join(homeDir, ".dotfiles-backups")
 	}
 
 	if !data.Strategy.IsNull() {
 		config.Strategy = data.Strategy.ValueString()
-	} else {
-		config.Strategy = "symlink"
 	}
 
 	if !data.ConflictResolution.IsNull() {
 		config.ConflictResolution = data.ConflictResolution.ValueString()
-	} else {
-		config.ConflictResolution = "backup"
 	}
 
 	if !data.DryRun.IsNull() {
@@ -174,24 +154,42 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 
 	if !data.TargetPlatform.IsNull() {
 		config.TargetPlatform = data.TargetPlatform.ValueString()
-	} else {
-		config.TargetPlatform = "auto"
 	}
 
 	if !data.TemplateEngine.IsNull() {
 		config.TemplateEngine = data.TemplateEngine.ValueString()
-	} else {
-		config.TemplateEngine = "go"
 	}
 
 	if !data.LogLevel.IsNull() {
 		config.LogLevel = data.LogLevel.ValueString()
-	} else {
-		config.LogLevel = "info"
+	}
+
+	// Set defaults for any empty values
+	if err := config.SetDefaults(); err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to set configuration defaults",
+			"An error occurred while setting default configuration values: "+err.Error(),
+		)
+		return
 	}
 
 	// Handle backup strategy configuration
 	if data.BackupStrategy != nil {
+		// Warn if both top-level and backup_strategy block are used
+		if !data.BackupEnabled.IsNull() && !data.BackupStrategy.Enabled.IsNull() {
+			resp.Diagnostics.AddWarning(
+				"Conflicting backup configuration",
+				"Both top-level 'backup_enabled' and 'backup_strategy.enabled' are set. The backup_strategy block takes precedence.",
+			)
+		}
+		if !data.BackupDirectory.IsNull() && !data.BackupStrategy.Directory.IsNull() {
+			resp.Diagnostics.AddWarning(
+				"Conflicting backup directory configuration",
+				"Both top-level 'backup_directory' and 'backup_strategy.directory' are set. The backup_strategy block takes precedence.",
+			)
+		}
+
+		// Apply backup strategy configuration (overrides top-level settings)
 		if !data.BackupStrategy.Enabled.IsNull() {
 			config.BackupEnabled = data.BackupStrategy.Enabled.ValueBool()
 		}
