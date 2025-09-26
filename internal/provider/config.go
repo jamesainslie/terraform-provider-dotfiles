@@ -179,9 +179,10 @@ func (c *DotfilesConfig) validateWritablePath(path, pathType string) error {
 				// Log error but continue - this is just cleanup
 				fmt.Printf("Warning: failed to close test file: %v\n", err)
 			}
-				if err := os.Remove(testFile); err != nil {
-					// Log error but continue - this is just cleanup
-				}
+			if err := os.Remove(testFile); err != nil {
+				// Log error but continue - this is just cleanup
+				fmt.Printf("Warning: failed to remove test file: %v\n", err)
+			}
 			}
 		} else {
 			return fmt.Errorf("%s path '%s' exists but is not a directory", pathType, path)
