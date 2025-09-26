@@ -452,6 +452,7 @@ func LoadBackupMetadata(metadataPath string) (*BackupMetadata, error) {
 	defer func() {
 		if err := file.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close metadata file: %v\n", err)
 		}
 	}()
 
@@ -473,6 +474,7 @@ func LoadBackupIndex(indexPath string) (*BackupIndex, error) {
 	defer func() {
 		if err := file.Close(); err != nil {
 			// Log error but don't fail the operation
+			fmt.Printf("Warning: failed to close metadata file: %v\n", err)
 		}
 	}()
 
