@@ -216,6 +216,16 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
 	targetPath := data.TargetPath.ValueString()
 
+	// Pre-apply validation: check if source file exists
+	if err := r.validateSourceFileExists(sourcePath); err != nil {
+		sourceErr := errors.ValidationError("validate_source_file", "file", "Source file validation failed", err).
+			WithPath(sourcePath).
+			WithContext("file_name", data.Name.ValueString()).
+			WithContext("repository", data.Repository.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, sourceErr, "Source file not found")
+		return
+	}
+
 	// Expand target path
 	platformProvider := platform.DetectPlatform()
 	expandedTargetPath, err := platformProvider.ExpandPath(targetPath)
@@ -459,6 +469,16 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// Build paths
 	sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
 	targetPath := data.TargetPath.ValueString()
+
+	// Pre-apply validation: check if source file exists
+	if err := r.validateSourceFileExists(sourcePath); err != nil {
+		sourceErr := errors.ValidationError("validate_source_file", "file", "Source file validation failed", err).
+			WithPath(sourcePath).
+			WithContext("file_name", data.Name.ValueString()).
+			WithContext("repository", data.Repository.ValueString())
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, sourceErr, "Source file not found")
+		return
+	}
 
 	// Expand target path
 	platformProvider := platform.DetectPlatform()
@@ -1045,6 +1065,32 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 	tflog.Info(ctx, fmt.Sprintf("Command executed successfully: %s", cmdStr), map[string]interface{}{
 		"output": string(output),
 	})
+
+	return nil
+}
+
+// validateSourceFileExists checks if the source file exists and is readable.
+func (r *FileResource) validateSourceFileExists(sourcePath string) error {
+	// Check if source file exists
+	info, err := os.Stat(sourcePath)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("source file '%s' does not exist", sourcePath)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot access source file '%s': %w", sourcePath, err)
+	}
+
+	// Check if it's a regular file (not a directory or special file)
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("source path '%s' is not a regular file (mode: %s)", sourcePath, info.Mode().String())
+	}
+
+	// Check if file is readable by attempting to open it
+	file, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("source file '%s' is not readable: %w", sourcePath, err)
+	}
+	file.Close()
 
 	return nil
 }

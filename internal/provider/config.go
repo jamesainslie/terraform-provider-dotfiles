@@ -90,6 +90,11 @@ func (c *DotfilesConfig) Validate() error {
 			errs = append(errs, fmt.Sprintf("invalid dotfiles_root path: %v", err))
 		} else {
 			c.DotfilesRoot = absPath
+
+			// Validate that DotfilesRoot is writable
+			if err := c.validateWritablePath(c.DotfilesRoot, "dotfiles_root"); err != nil {
+				errs = append(errs, err.Error())
+			}
 		}
 	}
 
@@ -109,6 +114,11 @@ func (c *DotfilesConfig) Validate() error {
 			errs = append(errs, fmt.Sprintf("invalid backup_directory path: %v", err))
 		} else {
 			c.BackupDirectory = absPath
+
+			// Validate that BackupDirectory is writable
+			if err := c.validateWritablePath(c.BackupDirectory, "backup_directory"); err != nil {
+				errs = append(errs, err.Error())
+			}
 		}
 	}
 
@@ -157,4 +167,42 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// validateWritablePath checks if a path is writable, or if its parent directory is writable for creation.
+func (c *DotfilesConfig) validateWritablePath(path, pathType string) error {
+	// Check if path exists
+	if info, err := os.Stat(path); err == nil {
+		// Path exists, check if it's writable
+		if info.IsDir() {
+			// For directories, try to create a test file
+			testFile := filepath.Join(path, ".terraform-provider-dotfiles-write-test")
+			if file, err := os.Create(testFile); err != nil {
+				return fmt.Errorf("%s directory '%s' is not writable: %w", pathType, path, err)
+			} else {
+				file.Close()
+				os.Remove(testFile) // Clean up test file
+			}
+		} else {
+			return fmt.Errorf("%s path '%s' exists but is not a directory", pathType, path)
+		}
+	} else if os.IsNotExist(err) {
+		// Path doesn't exist, check if parent directory is writable
+		parentDir := filepath.Dir(path)
+		if parentInfo, err := os.Stat(parentDir); err != nil {
+			return fmt.Errorf("%s parent directory '%s' does not exist or is not accessible: %w", pathType, parentDir, err)
+		} else if !parentInfo.IsDir() {
+			return fmt.Errorf("%s parent path '%s' is not a directory", pathType, parentDir)
+		} else {
+			// Try to create the directory to test writability
+			if err := os.MkdirAll(path, 0755); err != nil {
+				return fmt.Errorf("cannot create %s directory '%s': %w", pathType, path, err)
+			}
+			// Directory created successfully, it's writable
+		}
+	} else {
+		return fmt.Errorf("cannot access %s path '%s': %w", pathType, path, err)
+	}
+
+	return nil
 }
