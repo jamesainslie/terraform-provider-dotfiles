@@ -199,7 +199,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 	targetPath := data.TargetPath.ValueString()
 
 	// Pre-apply validation: check if source file exists
-	if err := r.validateSourceFileExists(sourcePath); err != nil {
+	if err := r.validateSourceFileExists(ctx, sourcePath); err != nil {
 		sourceErr := errors.ValidationError("validate_source_file", "file", "Source file validation failed", err).
 			WithPath(sourcePath).
 			WithContext("file_name", data.Name.ValueString()).
@@ -453,7 +453,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	targetPath := data.TargetPath.ValueString()
 
 	// Pre-apply validation: check if source file exists
-	if err := r.validateSourceFileExists(sourcePath); err != nil {
+	if err := r.validateSourceFileExists(ctx, sourcePath); err != nil {
 		sourceErr := errors.ValidationError("validate_source_file", "file", "Source file validation failed", err).
 			WithPath(sourcePath).
 			WithContext("file_name", data.Name.ValueString()).
@@ -965,7 +965,7 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 }
 
 // validateSourceFileExists checks if the source file exists and is readable.
-func (r *FileResource) validateSourceFileExists(sourcePath string) error {
+func (r *FileResource) validateSourceFileExists(ctx context.Context, sourcePath string) error {
 	// Check if source file exists
 	info, err := os.Stat(sourcePath)
 	if os.IsNotExist(err) {
