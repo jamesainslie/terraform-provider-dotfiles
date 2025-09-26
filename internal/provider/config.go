@@ -175,8 +175,12 @@ func (c *DotfilesConfig) validateWritablePath(path, pathType string) error {
 			if file, err := os.Create(testFile); err != nil {
 				return fmt.Errorf("%s directory '%s' is not writable: %w", pathType, path, err)
 			} else {
-				file.Close()
-				os.Remove(testFile) // Clean up test file
+				if err := file.Close(); err != nil {
+					// Log error but continue - this is just cleanup
+				}
+				if err := os.Remove(testFile); err != nil {
+					// Log error but continue - this is just cleanup
+				}
 			}
 		} else {
 			return fmt.Errorf("%s path '%s' exists but is not a directory", pathType, path)

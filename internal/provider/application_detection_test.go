@@ -97,7 +97,11 @@ func TestApplicationDetectionMethods(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create test app in working directory: %v", err)
 		}
-		defer os.RemoveAll(testAppPath)
+		defer func() {
+			if err := os.RemoveAll(testAppPath); err != nil {
+				t.Logf("Failed to clean up test app path: %v", err)
+			}
+		}()
 
 		// Test file detection with existing file
 		result := appResource.detectByFile(ctx, "TestApp", platformProvider)

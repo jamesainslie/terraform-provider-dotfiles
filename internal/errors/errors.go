@@ -247,10 +247,19 @@ func Retry(ctx context.Context, config RetryConfig, operation RetryableOperation
 
 		// Check if error is retryable
 		var providerErr *ProviderError
-		if errors.As(err, &providerErr) && !providerErr.IsRetryable() {
-			tflog.Debug(ctx, "Error is not retryable, stopping", map[string]interface{}{
-				"error_type": providerErr.Type.String(),
-				"attempt":    attempt,
+		if errors.As(err, &providerErr) {
+			if !providerErr.IsRetryable() {
+				tflog.Debug(ctx, "Error is not retryable, stopping", map[string]interface{}{
+					"error_type": providerErr.Type.String(),
+					"attempt":    attempt,
+				})
+				return err
+			}
+		} else {
+			// Standard errors (non-ProviderError) are not retryable
+			tflog.Debug(ctx, "Standard error is not retryable, stopping", map[string]interface{}{
+				"error": err.Error(),
+				"attempt": attempt,
 			})
 			return err
 		}

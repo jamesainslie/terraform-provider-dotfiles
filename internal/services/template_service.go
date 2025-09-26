@@ -5,7 +5,7 @@ package services
 
 import (
 	"context"
-	"io"
+	"strings"
 	"text/template"
 )
 
@@ -325,15 +325,13 @@ func (e *GoEngine) Render(templateContent string, variables map[string]interface
 		return "", err
 	}
 
-	var buf io.Writer
-	err = tmpl.Execute(buf, variables)
+	var buf strings.Builder
+	err = tmpl.Execute(&buf, variables)
 	if err != nil {
 		return "", err
 	}
 
-	// This is a simplified implementation
-	// In practice, you'd use a bytes.Buffer
-	return "", nil
+	return buf.String(), nil
 }
 
 func (e *GoEngine) Validate(templateContent string) error {

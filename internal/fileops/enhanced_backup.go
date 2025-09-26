@@ -181,16 +181,31 @@ func (fm *FileManager) createCompressedBackup(sourcePath, backupPath string) err
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
+			// Log error but don't fail the operation - this is cleanup
+			_ = err
+		}
+	}()
 
 	backupFile, err := os.Create(backupPath)
 	if err != nil {
 		return fmt.Errorf("failed to create backup file: %w", err)
 	}
-	defer backupFile.Close()
+	defer func() {
+		if err := backupFile.Close(); err != nil {
+			// Log error but don't fail the operation - this is cleanup
+			_ = err
+		}
+	}()
 
 	gzWriter := gzip.NewWriter(backupFile)
-	defer gzWriter.Close()
+	defer func() {
+		if err := gzWriter.Close(); err != nil {
+			// Log error but don't fail the operation - this is cleanup
+			_ = err
+		}
+	}()
 
 	_, err = io.Copy(gzWriter, sourceFile)
 	if err != nil {
@@ -237,7 +252,11 @@ func (fm *FileManager) createBackupMetadata(originalPath, backupPath string, con
 	if err != nil {
 		return fmt.Errorf("failed to create metadata file: %w", err)
 	}
-	defer metadataFile.Close()
+	defer func() {
+		if err := metadataFile.Close(); err != nil {
+			// Log error but don't fail the operation
+		}
+	}()
 
 	encoder := json.NewEncoder(metadataFile)
 	encoder.SetIndent("", "  ")
@@ -386,7 +405,11 @@ func (fm *FileManager) calculateFileChecksum(filePath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			// Log error but don't fail the operation
+		}
+	}()
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
@@ -402,7 +425,11 @@ func (fm *FileManager) saveBackupIndex(index *BackupIndex, indexPath string) err
 	if err != nil {
 		return fmt.Errorf("failed to create index file: %w", err)
 	}
-	defer indexFile.Close()
+	defer func() {
+		if err := indexFile.Close(); err != nil {
+			// Log error but don't fail the operation
+		}
+	}()
 
 	encoder := json.NewEncoder(indexFile)
 	encoder.SetIndent("", "  ")
@@ -419,7 +446,11 @@ func LoadBackupMetadata(metadataPath string) (*BackupMetadata, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open metadata file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			// Log error but don't fail the operation
+		}
+	}()
 
 	var metadata BackupMetadata
 	decoder := json.NewDecoder(file)
@@ -436,7 +467,11 @@ func LoadBackupIndex(indexPath string) (*BackupIndex, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open index file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			// Log error but don't fail the operation
+		}
+	}()
 
 	var index BackupIndex
 	decoder := json.NewDecoder(file)

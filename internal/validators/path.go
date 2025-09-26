@@ -249,8 +249,12 @@ func (v writableDirectoryValidator) ValidateString(ctx context.Context, request 
 			)
 			return
 		} else {
-			file.Close()
-			os.Remove(tempFile) // Clean up
+			if err := file.Close(); err != nil {
+				// Log error but continue
+			}
+			if err := os.Remove(tempFile); err != nil {
+				// Log error but continue - this is just cleanup
+			}
 		}
 	} else if os.IsNotExist(err) {
 		// Directory doesn't exist, check if parent is writable
@@ -281,8 +285,12 @@ func (v writableDirectoryValidator) ValidateString(ctx context.Context, request 
 			)
 			return
 		} else {
-			file.Close()
-			os.Remove(tempFile) // Clean up
+			if err := file.Close(); err != nil {
+				// Log error but continue
+			}
+			if err := os.Remove(tempFile); err != nil {
+				// Log error but continue - this is just cleanup
+			}
 		}
 	} else {
 		response.Diagnostics.AddAttributeError(

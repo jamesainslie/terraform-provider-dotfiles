@@ -30,7 +30,11 @@ func TestDotfilesConfigComprehensive(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create test dotfiles dir: %v", err)
 		}
-		defer os.RemoveAll(testDotfilesDir)
+		defer func() {
+			if err := os.RemoveAll(testDotfilesDir); err != nil {
+				t.Logf("Failed to clean up test dotfiles dir: %v", err)
+			}
+		}()
 
 		config.BackupEnabled = true
 		config.Strategy = "symlink"
