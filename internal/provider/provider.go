@@ -12,8 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
 )
 
 // Ensure DotfilesProvider satisfies various provider interfaces.
@@ -85,8 +88,11 @@ func (p *DotfilesProvider) Schema(ctx context.Context, req provider.SchemaReques
 				Optional:            true,
 			},
 			"template_engine": schema.StringAttribute{
-				MarkdownDescription: "Template engine to use: go (default), handlebars, or none",
+				MarkdownDescription: "Template engine to use: go (default), handlebars, or mustache",
 				Optional:            true,
+				Validators: []validator.String{
+					validators.ValidTemplateEngine(),
+				},
 			},
 			"log_level": schema.StringAttribute{
 				MarkdownDescription: "Log level: debug, info (default), warn, or error",

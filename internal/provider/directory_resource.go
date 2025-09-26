@@ -14,10 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
 )
 
 var _ resource.Resource = &DirectoryResource{}
@@ -68,10 +70,18 @@ func (r *DirectoryResource) Schema(ctx context.Context, req resource.SchemaReque
 			"source_path": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Path to source directory in repository",
+				Validators: []validator.String{
+					validators.ValidPath(),
+					validators.EnvironmentVariableExpansion(),
+				},
 			},
 			"target_path": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Target directory path",
+				Validators: []validator.String{
+					validators.ValidPath(),
+					validators.EnvironmentVariableExpansion(),
+				},
 			},
 			"recursive": schema.BoolAttribute{
 				Optional:            true,

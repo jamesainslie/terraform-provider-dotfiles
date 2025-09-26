@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
+	"github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -80,10 +82,18 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		"source_path": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Path to source file in repository",
+			Validators: []validator.String{
+				validators.ValidPath(),
+				validators.EnvironmentVariableExpansion(),
+			},
 		},
 		"target_path": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Target path where file should be placed",
+			Validators: []validator.String{
+				validators.ValidPath(),
+				validators.EnvironmentVariableExpansion(),
+			},
 		},
 		"is_template": schema.BoolAttribute{
 			Optional:            true,
@@ -92,6 +102,9 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		"file_mode": schema.StringAttribute{
 			Optional:            true,
 			MarkdownDescription: "File permissions (e.g., '0644') - deprecated, use permissions block",
+			Validators: []validator.String{
+				validators.ValidFileMode(),
+			},
 		},
 		"backup_enabled": schema.BoolAttribute{
 			Optional:            true,
