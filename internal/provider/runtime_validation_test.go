@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -234,7 +235,7 @@ func TestFileResourceSourceValidation(t *testing.T) {
 			resource := &FileResource{}
 
 			// Test the validation method
-			err := resource.validateSourceFileExists(sourcePath)
+			err := resource.validateSourceFileExists(context.Background(), sourcePath)
 
 			if tt.expectError {
 				if err == nil {
