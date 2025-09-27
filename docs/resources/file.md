@@ -8,51 +8,63 @@ description: |-
 
 # dotfiles_file (Resource)
 
-Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection.
+Manages individual dotfiles via **copy operations only**. For symlinks use `dotfiles_symlink`, for directories use `dotfiles_directory`, for multi-strategy application configs use `dotfiles_application`.
 
-**⚠️ Important**: This resource performs **copy operations only**. For strategy-based deployment (symlink, copy, template), use the [`dotfiles_application`](application.md) resource instead.
+## Usage Examples
 
-## Resource Selection Guide
-
-| Use Case | Correct Resource | Why |
-|----------|------------------|-----|
-| Single file copy | `dotfiles_file` | ✅ Direct file copy with templating |
-| Single symlink | `dotfiles_symlink` | ✅ Direct symlink creation |
-| Application configs with multiple strategies | `dotfiles_application` | ✅ Handles strategy field properly |
-| Directory operations | `dotfiles_directory` | ✅ Directory-specific operations |
-
-## Common Anti-Patterns
-
-### ❌ Don't Do This
+### File Copy Operations
 
 ```hcl
-# WRONG - strategy field is ignored in dotfiles_file
-resource "dotfiles_file" "app_config" {
-  source_path = "config.json"
-  target_path = "~/.config/myapp/config.json"
-  strategy    = "symlink"  # This is ignored!
-}
-```
-
-### ✅ Do This Instead
-
-```hcl
-# For application configs with strategy support
-resource "dotfiles_application" "app_config" {
-  application_name = "myapp"
-  config_mappings = {
-    "config.json" = {
-      target_path = "~/.config/myapp/config.json"
-      strategy   = "symlink"  # Properly handled
-    }
+# Copy and process a template file
+resource "dotfiles_file" "gitconfig" {
+  repository  = dotfiles_repository.main.id
+  name        = "git-config"
+  source_path = "git/gitconfig.template"
+  target_path = "~/.gitconfig"
+  is_template = true
+  file_mode   = "0644"
+  
+  template_vars = {
+    user_name  = "John Doe"
+    user_email = "john@example.com"
   }
 }
 
-# OR use specific resource types
-resource "dotfiles_symlink" "app_config" {
-  source_path = "config.json"
-  target_path = "~/.config/myapp/config.json"
+# Simple file copy
+resource "dotfiles_file" "vimrc" {
+  repository  = dotfiles_repository.main.id
+  name        = "vim-config"
+  source_path = "vim/vimrc"
+  target_path = "~/.vimrc"
+  file_mode   = "0644"
+}
+```
+
+### For Other Operations, Use Dedicated Resources
+
+```hcl
+# For symlinks
+resource "dotfiles_symlink" "nvim_config" {
+  repository     = dotfiles_repository.main.id
+  name           = "neovim-config"
+  source_path    = "nvim/"
+  target_path    = "~/.config/nvim"
   create_parents = true
+}
+
+# For application configs with multiple strategies
+resource "dotfiles_application" "development_tools" {
+  application_name = "neovim"
+  config_mappings = {
+    "nvim/init.lua" = {
+      target_path = "~/.config/nvim/init.lua"
+      strategy   = "symlink"
+    }
+    "nvim/templates/" = {
+      target_path = "~/.config/nvim/templates/"
+      strategy   = "copy"
+    }
+  }
 }
 ```
 
@@ -85,7 +97,6 @@ resource "dotfiles_symlink" "app_config" {
 - `recovery_test` (Block, Optional) Recovery testing configuration (see [below for nested schema](#nestedblock--recovery_test))
 - `require_application` (String) Require this application to be installed before configuring
 - `skip_if_app_missing` (Boolean) Skip this resource if required application is missing
-- `strategy` (String) **⚠️ DEPRECATED**: Strategy field is not supported by dotfiles_file. Use `dotfiles_application` for strategy-based deployment, or use specific resources (`dotfiles_symlink`, `dotfiles_directory`) directly.
 - `template_engine` (String) Template engine to use: go (default), handlebars, or mustache
 - `template_functions` (Map of String) Custom template functions (name -> value mappings)
 - `template_vars` (Map of String) Variables for template processing

@@ -205,13 +205,13 @@ resource "dotfiles_application" "development_tools" {
 
 ### Core Resources
 
-| Resource | Purpose | Use Case | Strategy Support |
-|----------|---------|----------|------------------|
-| `dotfiles_repository` | Git/local repository management | Clone and manage dotfiles repositories | N/A |
-| `dotfiles_file` | Individual file management | Deploy **single files via copy only** | ❌ No strategy field |
-| `dotfiles_symlink` | Symlink creation | Create **single symbolic links** | ❌ Symlinks only |
-| `dotfiles_directory` | Directory operations | Sync **entire directories** | ❌ Copy/sync only |
-| `dotfiles_application` | Application config mapping | **Multi-file configs with strategy support** | ✅ Full strategy support |
+| Resource | Purpose | Use Case |
+|----------|---------|----------|
+| `dotfiles_repository` | Git/local repository management | Clone and manage dotfiles repositories |
+| `dotfiles_file` | Individual file management | **Copy single files** (with templating support) |
+| `dotfiles_symlink` | Symlink creation | **Create symbolic links** to files or directories |
+| `dotfiles_directory` | Directory operations | **Sync entire directories** recursively |
+| `dotfiles_application` | Application config mapping | **Multi-file configs with strategy selection** |
 
 ### 🎯 Resource Selection Guide
 
@@ -220,17 +220,29 @@ resource "dotfiles_application" "development_tools" {
 ```hcl
 # ✅ Single file copy with templating
 resource "dotfiles_file" "gitconfig" {
+  repository  = dotfiles_repository.main.id
+  name        = "git-config"
   source_path = "git/gitconfig" 
   target_path = "~/.gitconfig"
   is_template = true
-  # Note: No strategy field - always copies
 }
 
 # ✅ Single symlink
 resource "dotfiles_symlink" "fish_config" {
-  source_path = "fish"
-  target_path = "~/.config/fish"
+  repository     = dotfiles_repository.main.id
+  name           = "fish-config"
+  source_path    = "fish"
+  target_path    = "~/.config/fish"
   create_parents = true
+}
+
+# ✅ Directory operations
+resource "dotfiles_directory" "tools_config" {
+  repository  = dotfiles_repository.main.id
+  name        = "tools-config"
+  source_path = "tools"
+  target_path = "~/.config/tools"
+  recursive   = true
 }
 
 # ✅ Application configs with multiple strategies
@@ -239,37 +251,22 @@ resource "dotfiles_application" "development_tools" {
   config_mappings = {
     "nvim/init.lua" = {
       target_path = "~/.config/nvim/init.lua"
-      strategy   = "symlink"  # Properly supported
+      strategy   = "symlink"
     }
     "nvim/templates/" = {
       target_path = "~/.config/nvim/templates/"
-      strategy   = "copy"     # Different strategy
+      strategy   = "copy"
     }
   }
 }
 ```
 
-### ⚠️ Common Mistakes
+### 🎯 Resource Selection Guidelines
 
-```hcl
-# ❌ DON'T DO THIS - strategy field ignored
-resource "dotfiles_file" "wrong_usage" {
-  source_path = "config.json"
-  target_path = "~/.config/app/config.json"
-  strategy   = "symlink"  # THIS IS IGNORED!
-}
-
-# ✅ DO THIS INSTEAD
-resource "dotfiles_application" "correct_usage" {
-  application_name = "myapp"
-  config_mappings = {
-    "config.json" = {
-      target_path = "~/.config/app/config.json"
-      strategy   = "symlink"  # This works correctly
-    }
-  }
-}
-```
+- **Use `dotfiles_file`** for single file copy operations (with optional templating)
+- **Use `dotfiles_symlink`** for creating symbolic links to files or directories
+- **Use `dotfiles_directory`** for recursive directory synchronization
+- **Use `dotfiles_application`** when you need different strategies for different files
 
 ### Data Sources
 

@@ -64,7 +64,6 @@ func (r *FileResource) Metadata(ctx context.Context, req resource.MetadataReques
 	resp.TypeName = req.ProviderTypeName + "_file"
 }
 
-
 func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// Get post-hooks attributes and merge with base attributes
 	baseAttributes := map[string]schema.Attribute{
