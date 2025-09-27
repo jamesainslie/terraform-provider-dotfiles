@@ -205,13 +205,71 @@ resource "dotfiles_application" "development_tools" {
 
 ### Core Resources
 
-| Resource | Purpose | Use Case |
-|----------|---------|----------|
-| `dotfiles_repository` | Git/local repository management | Clone and manage dotfiles repositories |
-| `dotfiles_file` | Individual file management | Deploy single configuration files with templating |
-| `dotfiles_symlink` | Symlink creation | Create symbolic links to configuration files |
-| `dotfiles_directory` | Directory operations | Sync entire configuration directories |
-| `dotfiles_application` | Application config mapping | Map configuration files to application-specific locations |
+| Resource | Purpose | Use Case | Strategy Support |
+|----------|---------|----------|------------------|
+| `dotfiles_repository` | Git/local repository management | Clone and manage dotfiles repositories | N/A |
+| `dotfiles_file` | Individual file management | Deploy **single files via copy only** | ❌ No strategy field |
+| `dotfiles_symlink` | Symlink creation | Create **single symbolic links** | ❌ Symlinks only |
+| `dotfiles_directory` | Directory operations | Sync **entire directories** | ❌ Copy/sync only |
+| `dotfiles_application` | Application config mapping | **Multi-file configs with strategy support** | ✅ Full strategy support |
+
+### 🎯 Resource Selection Guide
+
+**Choose the right resource for your use case:**
+
+```hcl
+# ✅ Single file copy with templating
+resource "dotfiles_file" "gitconfig" {
+  source_path = "git/gitconfig" 
+  target_path = "~/.gitconfig"
+  is_template = true
+  # Note: No strategy field - always copies
+}
+
+# ✅ Single symlink
+resource "dotfiles_symlink" "fish_config" {
+  source_path = "fish"
+  target_path = "~/.config/fish"
+  create_parents = true
+}
+
+# ✅ Application configs with multiple strategies
+resource "dotfiles_application" "development_tools" {
+  application_name = "neovim"
+  config_mappings = {
+    "nvim/init.lua" = {
+      target_path = "~/.config/nvim/init.lua"
+      strategy   = "symlink"  # Properly supported
+    }
+    "nvim/templates/" = {
+      target_path = "~/.config/nvim/templates/"
+      strategy   = "copy"     # Different strategy
+    }
+  }
+}
+```
+
+### ⚠️ Common Mistakes
+
+```hcl
+# ❌ DON'T DO THIS - strategy field ignored
+resource "dotfiles_file" "wrong_usage" {
+  source_path = "config.json"
+  target_path = "~/.config/app/config.json"
+  strategy   = "symlink"  # THIS IS IGNORED!
+}
+
+# ✅ DO THIS INSTEAD
+resource "dotfiles_application" "correct_usage" {
+  application_name = "myapp"
+  config_mappings = {
+    "config.json" = {
+      target_path = "~/.config/app/config.json"
+      strategy   = "symlink"  # This works correctly
+    }
+  }
+}
+```
 
 ### Data Sources
 

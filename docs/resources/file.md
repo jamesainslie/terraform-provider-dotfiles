@@ -8,7 +8,53 @@ description: |-
 
 # dotfiles_file (Resource)
 
-Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection
+Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection.
+
+**⚠️ Important**: This resource performs **copy operations only**. For strategy-based deployment (symlink, copy, template), use the [`dotfiles_application`](application.md) resource instead.
+
+## Resource Selection Guide
+
+| Use Case | Correct Resource | Why |
+|----------|------------------|-----|
+| Single file copy | `dotfiles_file` | ✅ Direct file copy with templating |
+| Single symlink | `dotfiles_symlink` | ✅ Direct symlink creation |
+| Application configs with multiple strategies | `dotfiles_application` | ✅ Handles strategy field properly |
+| Directory operations | `dotfiles_directory` | ✅ Directory-specific operations |
+
+## Common Anti-Patterns
+
+### ❌ Don't Do This
+
+```hcl
+# WRONG - strategy field is ignored in dotfiles_file
+resource "dotfiles_file" "app_config" {
+  source_path = "config.json"
+  target_path = "~/.config/myapp/config.json"
+  strategy    = "symlink"  # This is ignored!
+}
+```
+
+### ✅ Do This Instead
+
+```hcl
+# For application configs with strategy support
+resource "dotfiles_application" "app_config" {
+  application_name = "myapp"
+  config_mappings = {
+    "config.json" = {
+      target_path = "~/.config/myapp/config.json"
+      strategy   = "symlink"  # Properly handled
+    }
+  }
+}
+
+# OR use specific resource types
+resource "dotfiles_symlink" "app_config" {
+  source_path = "config.json"
+  target_path = "~/.config/myapp/config.json"
+  create_parents = true
+}
+```
 
 
 
@@ -39,6 +85,7 @@ Manages individual dotfiles with comprehensive features: permissions, backup, te
 - `recovery_test` (Block, Optional) Recovery testing configuration (see [below for nested schema](#nestedblock--recovery_test))
 - `require_application` (String) Require this application to be installed before configuring
 - `skip_if_app_missing` (Boolean) Skip this resource if required application is missing
+- `strategy` (String) **⚠️ DEPRECATED**: Strategy field is not supported by dotfiles_file. Use `dotfiles_application` for strategy-based deployment, or use specific resources (`dotfiles_symlink`, `dotfiles_directory`) directly.
 - `template_engine` (String) Template engine to use: go (default), handlebars, or mustache
 - `template_functions` (Map of String) Custom template functions (name -> value mappings)
 - `template_vars` (Map of String) Variables for template processing

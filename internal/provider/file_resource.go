@@ -64,6 +64,7 @@ func (r *FileResource) Metadata(ctx context.Context, req resource.MetadataReques
 	resp.TypeName = req.ProviderTypeName + "_file"
 }
 
+
 func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// Get post-hooks attributes and merge with base attributes
 	baseAttributes := map[string]schema.Attribute{
@@ -146,7 +147,7 @@ func (r *FileResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	// This resource focuses solely on file management
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages individual dotfiles with comprehensive features: permissions, backup, templates, hooks, and application detection",
+		MarkdownDescription: "Manages individual dotfiles via **copy operations only**. For symlinks use `dotfiles_symlink`, for directories use `dotfiles_directory`, for multi-strategy application configs use `dotfiles_application`.",
 		Attributes:          baseAttributes,
 		Blocks: map[string]schema.Block{
 			"permissions":   GetPermissionsSchemaBlock(),
