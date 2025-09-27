@@ -11,10 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -71,7 +69,8 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 				MarkdownDescription: "Name of the application (used for organization and templating)",
 			},
 			"config_mappings": schema.MapNestedAttribute{
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				MarkdownDescription: "Map of source files to target configuration mappings",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -87,15 +86,6 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 						},
 					},
 				},
-				Default: mapdefault.StaticValue(types.MapValueMust(
-					types.ObjectType{
-						AttrTypes: map[string]attr.Type{
-							"target_path": types.StringType,
-							"strategy":    types.StringType,
-						},
-					},
-					map[string]attr.Value{},
-				)),
 			},
 			"configured_files": schema.ListAttribute{
 				ElementType:         types.StringType,
