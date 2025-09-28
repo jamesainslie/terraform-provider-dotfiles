@@ -25,8 +25,12 @@ jobs:
       - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
       - uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
-          go-version-file: 'go.mod'
+          go-version: '1.25.1'
           cache: true
+      - name: Set Go toolchain environment
+        run: |
+          echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
+          echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
       - run: go mod download
       - run: go build -v .
       - name: Run linters
@@ -40,8 +44,12 @@ jobs:
       - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
       - uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
-          go-version-file: 'go.mod'
+          go-version: '1.25.1'
           cache: true
+      - name: Set Go toolchain environment
+        run: |
+          echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
+          echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
       # We need the latest version of Terraform for our documentation generation to use
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
@@ -72,8 +80,12 @@ jobs:
       - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
       - uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
-          go-version-file: 'go.mod'
+          go-version: '1.25.1'
           cache: true
+      - name: Set Go toolchain environment
+        run: |
+          echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
+          echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: ${{ matrix.terraform }}
