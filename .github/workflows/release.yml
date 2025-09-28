@@ -115,12 +115,19 @@ jobs:
           
       # Documentation is already generated and committed, skip regeneration to avoid dirty state
           
-      - name: Check if release already exists
+      - name: Check if release already exists with assets
         id: check_release
         run: |
+          # Check if release exists and has assets
           if gh release view ${{ github.ref_name }} >/dev/null 2>&1; then
-            echo "release_exists=true" >> $GITHUB_OUTPUT
-            echo "Release ${{ github.ref_name }} already exists, will skip GoReleaser"
+            asset_count=$(gh release view ${{ github.ref_name }} --json assets --jq '.assets | length' 2>/dev/null || echo "0")
+            if [ "$asset_count" -gt 0 ]; then
+              echo "release_exists=true" >> $GITHUB_OUTPUT
+              echo "Release ${{ github.ref_name }} already exists with $asset_count assets, will skip GoReleaser"
+            else
+              echo "release_exists=false" >> $GITHUB_OUTPUT
+              echo "Release ${{ github.ref_name }} exists but has no assets, proceeding with GoReleaser"
+            fi
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
             echo "Release ${{ github.ref_name }} does not exist, proceeding with GoReleaser"
@@ -147,7 +154,7 @@ jobs:
           echo "INFO: Release ${{ github.ref_name }} already exists with the following assets:"
           gh release view ${{ github.ref_name }} --json assets --jq '.assets[] | "  - " + .name + " (" + (.size | tostring) + " bytes)"'
           echo "SUCCESS: Skipping GoReleaser execution to prevent duplicate asset upload failures"
-          echo "NOTE: This is expected behavior when re-running releases with the same tag"
+          echo "NOTE: This is expected behavior when re-running releases with the same tag that already has assets"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
