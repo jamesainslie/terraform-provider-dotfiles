@@ -14,12 +14,14 @@ COMMIT_HASH := $(shell git rev-parse HEAD)
 
 # Go toolchain and build flags
 GOTOOLCHAIN := go1.25.1
+GOPROXY := https://proxy.golang.org,direct
 LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT_HASH)"
 GOFLAGS_BUILD := -gcflags=all=-lang=go1.25
 GOFLAGS_TEST := -gcflags=all=-lang=go1.24
 
 # Export environment variables for all targets
 export GOTOOLCHAIN
+export GOPROXY
 
 # Default target
 .PHONY: default
