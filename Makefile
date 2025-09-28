@@ -1,115 +1,85 @@
 # Makefile for terraform-provider-dotfiles
 
-# Go parameters
-GOCMD=go
-GOBUILD=$(GOCMD) build
-GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
-GOGET=$(GOCMD) get
-GOMOD=$(GOCMD) mod
-GOFMT=gofmt
-GOLINT=golangci-lint
+# This Makefile provides standard targets for building, testing, and maintaining
+# the Terraform provider.
 
-# Binary names
-BINARY_NAME=terraform-provider-dotfiles
-BINARY_UNIX=$(BINARY_NAME)_unix
-
-# Build targets
-.PHONY: all build clean test coverage lint fmt vet deps help
-
-all: test build
-
-## Build the binary
-build:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./...
-
-## Clean build artifacts
-clean:
-	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
-	rm -f $(BINARY_UNIX)
-
-## Run tests
-test:
-	$(GOTEST) -v ./...
-
-## Run tests with coverage
-coverage:
-	$(GOTEST) -race -coverprofile=coverage.out -covermode=atomic ./...
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
-
-## Run tests with race detection
-test-race:
-	$(GOTEST) -race -short ./...
-
-## Run benchmarks
-bench:
-	$(GOTEST) -bench=. -benchmem ./...
-
-## Run linting
-lint:
-	$(GOLINT) run
-
-## Run linting with auto-fix
-lint-fix:
-	$(GOLINT) run --fix
-
-## Format code
-fmt:
-	$(GOFMT) -s -w .
-	$(GOCMD) mod tidy
-
-## Run go vet
-vet:
-	$(GOCMD) vet ./...
-
-## Update dependencies
-deps:
-	$(GOMOD) download
-	$(GOMOD) tidy
-	$(GOMOD) verify
-
-## Install development tools
-install-tools:
-	@echo "Installing development tools..."
-	$(GOGET) -u github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Installing pre-commit..."
-	@command -v pre-commit >/dev/null 2>&1 || { echo "Please install pre-commit: pip install pre-commit"; exit 1; }
-	pre-commit install
-
-## Run security scan
-security:
-	@command -v gosec >/dev/null 2>&1 || { echo "Installing gosec..."; $(GOGET) -u github.com/securecodewarrior/gosec/v2/cmd/gosec@latest; }
-	gosec ./...
-
-## Generate mocks (if using mockery)
-mocks:
-	@command -v mockery >/dev/null 2>&1 || { echo "Installing mockery..."; $(GOGET) -u github.com/vektra/mockery/v2@latest; }
-	mockery --all --output=./mocks
-
-## Cross compilation
-build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v
-
-## Docker build
-docker-build:
-	docker build -t $(BINARY_NAME) .
-
-## Run pre-commit hooks
-pre-commit:
-	pre-commit run --all-files
-
-## Full check (what CI would run)
-ci: deps fmt vet lint test-race coverage
-
-## Development setup
-dev-setup: install-tools deps
-	@echo "Development environment setup complete!"
-
-## Help
-help:
-	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+GO := go
+GOLANGCI_LINT := golangci-lint
+BINARY_NAME := terraform-provider-dotfiles
+TOOLS_DIR := tools
+DOCS_VERSION := v0.22.0  # Match the version in tools/go.mod for terraform-plugin-docs
 
 # Default target
-.DEFAULT_GOAL := help
+.PHONY: default
+default: fmt lint install generate
+
+# Help
+.PHONY: help
+help: ## Show this help
+	@egrep -h '\\s##\\s' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+# Build
+.PHONY: build
+build: ## Build the provider binary
+	$(GO) build -v ./...
+
+# Install
+.PHONY: install
+install: build ## Install the provider binary
+	$(GO) install -v ./...
+
+# Test
+.PHONY: test
+test: ## Run unit tests
+	GOTOOLCHAIN=go1.25.1 $(GO) test -v -cover -timeout=120s -parallel=10 -gcflags=all=-lang=go1.24 -vet=off ./...
+
+# Test with race detector
+.PHONY: test-race
+test-race: ## Run tests with race detector
+	GOTOOLCHAIN=go1.25.1 $(GO) test -race -v -gcflags=all=-lang=go1.24 -vet=off ./...
+
+# Acceptance tests (requires TF_ACC=1 env var)
+.PHONY: testacc
+testacc: ## Run acceptance tests
+	TF_ACC=1 GOTOOLCHAIN=go1.25.1 $(GO) test -v -cover -timeout 120m -gcflags=all=-lang=go1.24 -vet=off ./...
+
+# Lint
+.PHONY: lint
+lint: ## Run golangci-lint
+	$(GOLANGCI_LINT) run
+
+# Format
+.PHONY: fmt
+fmt: ## Format Go code
+	gofmt -s -w -e .
+
+# Generate
+.PHONY: generate
+generate: ## Generate code and documentation
+	cd $(TOOLS_DIR) && $(GO) generate ./...
+	$(GO) mod tidy
+
+# Install tools
+.PHONY: tools
+tools: ## Install development tools from tools/go.mod
+	cd $(TOOLS_DIR) && $(GO) install github.com/hashicorp/terraform-plugin-docs@${DOCS_VERSION}
+	cd $(TOOLS_DIR) && $(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+# Dev setup
+.PHONY: dev
+dev: tools generate fmt lint test ## Setup development environment (install tools, generate, fmt, lint, test)
+
+# Clean
+.PHONY: clean
+clean: ## Clean build artifacts and caches
+	$(GO) clean -cache -testcache -modcache
+	rm -f $(BINARY_NAME) coverage.out coverage.html
+
+# Build migrate-config tool
+.PHONY: build-migrate
+build-migrate: ## Build the migrate-config binary
+	$(GO) build -o bin/migrate-config ./cmd/migrate-config
+
+# CI (what CI runs)
+.PHONY: ci
+ci: fmt lint test test-race ## Run checks for CI
