@@ -21,11 +21,11 @@ permissions:
   id-token: write   # For signing artifacts
 
 jobs:
-  # Run full test suite before release
-  test:
-    name: Run Tests Before Release
+  # Run comprehensive quality gate before release
+  quality-gate:
+    name: Pre-Release Quality Gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -33,19 +33,24 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
         
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
-          go-version-file: 'go.mod'
+          go-version: '1.25.1'
           cache: true
-          
-      - name: Download dependencies
-        run: go mod download
+      - name: Set Go toolchain environment
+        run: |
+          echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
+          echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
+      - run: go mod download
         
-      - name: Run unit tests
-        run: go test -v ./internal/... -race
+      - name: Install required tools
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
         
-      - name: Build provider
-        run: go build -v .
+      - name: Run pre-release quality gate
+        run: make pre-release
 
   # Test on macOS 
   test-macos:
@@ -78,7 +83,7 @@ jobs:
   # Create GitHub release with goreleaser
   goreleaser:
     name: Create Release
-    needs: [test, test-macos]
+    needs: [quality-gate, test-macos]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -148,7 +153,7 @@ jobs:
   # Create security advisory if vulnerabilities found
   security-check:
     name: Security Check
-    needs: [test, test-macos]
+    needs: [quality-gate, test-macos]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

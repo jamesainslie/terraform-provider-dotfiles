@@ -191,3 +191,30 @@ benchmark: ## Run benchmark tests
 # CI (what CI runs)
 .PHONY: ci
 ci: mod fmt lint staticcheck test test-race ## Run comprehensive CI checks
+
+# Pre-release quality gate
+.PHONY: pre-release
+pre-release: ## Run comprehensive pre-release quality gate
+	@echo "Running pre-release quality gate..."
+	@echo "=================================="
+	@echo "1. Checking Go modules..."
+	@$(MAKE) mod
+	@echo "Go modules OK"
+	@echo "2. Running static analysis..."
+	@$(MAKE) lint
+	@echo "Linting passed"
+	@echo "3. Running security checks..."
+	@$(MAKE) security  
+	@echo "Security checks passed"
+	@echo "4. Running unit tests with race detection..."
+	@$(MAKE) test-race
+	@echo "Unit tests passed"
+	@echo "5. Building binaries..."
+	@$(MAKE) build
+	@echo "Build successful"
+	@echo "6. Running test coverage analysis..."
+	@$(MAKE) test-coverage
+	@echo "Coverage analysis complete"
+	@echo ""
+	@echo "All quality gates passed! Ready for release."
+	@echo "=================================="

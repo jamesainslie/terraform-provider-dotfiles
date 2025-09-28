@@ -6,6 +6,7 @@ package services
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -119,30 +120,35 @@ func NewInMemoryCache(config CacheConfig) *InMemoryCache {
 // Get implements CacheService.Get.
 func (c *InMemoryCache) Get(ctx context.Context, key string) (interface{}, bool) {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	entry, exists := c.data[key]
 	if !exists {
-		c.stats.Misses++
+		atomic.AddInt64(&c.stats.Misses, 1)
+		c.mu.RUnlock()
 		return nil, false
 	}
 
 	// Check if expired
 	if time.Now().After(entry.ExpiresAt) {
+		// Need to upgrade to write lock to delete entry
 		c.mu.RUnlock()
 		c.mu.Lock()
-		delete(c.data, key)
-		c.stats.Evictions++
+		// Double-check the entry still exists and is still expired
+		entry, exists = c.data[key]
+		if exists && time.Now().After(entry.ExpiresAt) {
+			delete(c.data, key)
+			atomic.AddInt64(&c.stats.Evictions, 1)
+			c.stats.Size = len(c.data)
+		}
+		atomic.AddInt64(&c.stats.Misses, 1)
 		c.mu.Unlock()
-		c.mu.RLock()
-		c.stats.Misses++
 		return nil, false
 	}
 
 	// Update access statistics
 	entry.AccessCount++
 	entry.LastAccess = time.Now()
-	c.stats.Hits++
+	atomic.AddInt64(&c.stats.Hits, 1)
+	c.mu.RUnlock()
 
 	return entry.Value, true
 }
