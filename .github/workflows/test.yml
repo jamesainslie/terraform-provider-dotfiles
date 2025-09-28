@@ -31,6 +31,7 @@ jobs:
         run: |
           echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
           echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
       - run: go mod download
       - run: go build -v .
       - name: Run linters
@@ -50,6 +51,7 @@ jobs:
         run: |
           echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
           echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
       # We need the latest version of Terraform for our documentation generation to use
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
@@ -86,6 +88,7 @@ jobs:
         run: |
           echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
           echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: ${{ matrix.terraform }}
