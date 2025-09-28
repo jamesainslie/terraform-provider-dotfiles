@@ -250,10 +250,10 @@ func TestCompareFileStates(t *testing.T) {
 		t.Fatalf("Failed to get modified file state: %v", err)
 	}
 
-	// Compare states - should detect changes
-	hasChanged := CompareFileStates(state1, state2)
-	if !hasChanged {
-		t.Error("Expected changes to be detected")
+	// Compare states - should detect changes (return false for different states)
+	statesEqual := CompareFileStates(state1, state2)
+	if statesEqual {
+		t.Error("Expected states to be different")
 	}
 }
 
@@ -280,9 +280,9 @@ func TestCompareFileStatesIdentical(t *testing.T) {
 	}
 
 	// Compare identical states
-	hasChanged := CompareFileStates(state1, state2)
-	if hasChanged {
-		t.Error("Expected no changes for identical states")
+	statesEqual := CompareFileStates(state1, state2)
+	if !statesEqual {
+		t.Error("Expected states to be identical")
 	}
 }
 
@@ -302,19 +302,19 @@ func TestCompareFileStatesNil(t *testing.T) {
 	}
 
 	// Compare with nil states
-	hasChanged1 := CompareFileStates(nil, state)
-	if !hasChanged1 {
-		t.Error("Expected changes when comparing nil to valid state")
+	statesEqual1 := CompareFileStates(nil, state)
+	if statesEqual1 {
+		t.Error("Expected states to be different when comparing nil to valid state")
 	}
 
-	hasChanged2 := CompareFileStates(state, nil)
-	if !hasChanged2 {
-		t.Error("Expected changes when comparing valid state to nil")
+	statesEqual2 := CompareFileStates(state, nil)
+	if statesEqual2 {
+		t.Error("Expected states to be different when comparing valid state to nil")
 	}
 
-	hasChanged3 := CompareFileStates(nil, nil)
-	if hasChanged3 {
-		t.Error("Expected no changes when comparing nil to nil")
+	statesEqual3 := CompareFileStates(nil, nil)
+	if !statesEqual3 {
+		t.Error("Expected states to be equal when comparing nil to nil")
 	}
 }
 
@@ -351,10 +351,10 @@ func TestCompareDirectoryStates(t *testing.T) {
 		t.Fatalf("Failed to get modified directory state: %v", err)
 	}
 
-	// Compare states - should detect changes
-	hasChanged := CompareDirectoryStates(state1, state2)
-	if !hasChanged {
-		t.Error("Expected changes to be detected")
+	// Compare states - should detect changes (return false for different states)
+	statesEqual := CompareDirectoryStates(state1, state2)
+	if statesEqual {
+		t.Error("Expected states to be different")
 	}
 }
 
@@ -384,9 +384,9 @@ func TestCompareDirectoryStatesIdentical(t *testing.T) {
 	}
 
 	// Compare identical states
-	hasChanged := CompareDirectoryStates(state1, state2)
-	if hasChanged {
-		t.Error("Expected no changes for identical directory states")
+	statesEqual := CompareDirectoryStates(state1, state2)
+	if !statesEqual {
+		t.Error("Expected states to be identical")
 	}
 }
 

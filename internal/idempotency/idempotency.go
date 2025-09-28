@@ -68,14 +68,19 @@ func GetFileState(path string) (*FileState, error) {
 	info, err := os.Lstat(path)
 	if os.IsNotExist(err) {
 		state.Exists = false
-		return state, nil
+		return nil, fmt.Errorf("file does not exist: %s", path)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file %s: %w", path, err)
 	}
 
 	state.Exists = true
-	state.Size = info.Size()
+	// For directories, set size to 0 for consistency
+	if info.IsDir() {
+		state.Size = 0
+	} else {
+		state.Size = info.Size()
+	}
 	state.ModTime = info.ModTime()
 	state.Mode = info.Mode()
 
@@ -113,6 +118,9 @@ func calculateFileHash(path string) (string, error) {
 
 // CompareFileStates compares two file states to determine if they're equivalent.
 func CompareFileStates(before, after *FileState) bool {
+	if before == nil && after == nil {
+		return true
+	}
 	if before == nil || after == nil {
 		return false
 	}
@@ -169,7 +177,7 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		state.Exists = false
-		return state, nil
+		return nil, fmt.Errorf("directory does not exist: %s", path)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat directory %s: %w", path, err)
@@ -197,8 +205,8 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 			return nil
 		}
 
-		// For non-recursive mode, skip subdirectories
-		if !recursive && info.IsDir() && filepath.Dir(filePath) != path {
+		// For non-recursive mode, skip subdirectories but don't include them in the state
+		if !recursive && info.IsDir() {
 			return filepath.SkipDir
 		}
 
@@ -223,8 +231,9 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 			return err
 		}
 
-		state.Files[relPath] = fileState
+		// Only include files in the state, not directories
 		if !info.IsDir() {
+			state.Files[relPath] = fileState
 			state.FileCount++
 		}
 
@@ -251,8 +260,13 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 				continue
 			}
 
+			// Skip directories in non-recursive mode
+			if info.IsDir() {
+				continue
+			}
+
 			err = walkFunc(entryPath, info, nil)
-			if err != nil {
+			if err != nil && err != filepath.SkipDir {
 				return nil, err
 			}
 		}
@@ -267,6 +281,9 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 
 // CompareDirectoryStates compares two directory states to determine if they're equivalent.
 func CompareDirectoryStates(before, after *DirectoryState) bool {
+	if before == nil && after == nil {
+		return true
+	}
 	if before == nil || after == nil {
 		return false
 	}

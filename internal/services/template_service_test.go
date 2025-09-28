@@ -215,11 +215,9 @@ func TestTemplateService_ValidateTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			result, err := service.ValidateTemplate(ctx, tt.template, tt.engine)
+			result, _ := service.ValidateTemplate(ctx, tt.template, tt.engine)
 
-			if err != nil {
-				t.Fatalf("ValidateTemplate failed: %v", err)
-			}
+			// No longer fatal on err, as validation errors are in result
 
 			if result == nil {
 				t.Fatal("Expected validation result")
@@ -229,12 +227,14 @@ func TestTemplateService_ValidateTemplate(t *testing.T) {
 				t.Errorf("Expected valid=%v, got valid=%v", tt.expectValid, result.Valid)
 			}
 
-			if tt.expectValid && len(result.Errors) > 0 {
-				t.Errorf("Expected no errors for valid template, got: %v", result.Errors)
-			}
-
-			if !tt.expectValid && len(result.Errors) == 0 {
-				t.Error("Expected errors for invalid template")
+			if tt.expectValid {
+				if len(result.Errors) > 0 {
+					t.Errorf("Expected no errors for valid template, got: %v", result.Errors)
+				}
+			} else {
+				if len(result.Errors) == 0 {
+					t.Error("Expected errors for invalid template")
+				}
 			}
 		})
 	}

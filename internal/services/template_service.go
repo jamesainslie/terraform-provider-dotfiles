@@ -5,6 +5,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"text/template"
 )
@@ -180,8 +181,8 @@ func (s *DefaultTemplateService) ValidateTemplate(ctx context.Context, templateC
 	if err != nil {
 		return &ValidationResult{
 			Valid:  false,
-			Errors: []string{err.Error()},
-		}, err
+			Errors: []string{fmt.Sprintf("Template validation failed: %v", err)},
+		}, nil
 	}
 
 	return &ValidationResult{

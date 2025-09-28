@@ -5,7 +5,9 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -252,9 +254,40 @@ func (s *DefaultBackupService) simulateBackup(_ context.Context, sourcePath, bac
 }
 
 func (s *DefaultBackupService) performBackup(ctx context.Context, sourcePath, backupDir string, options BackupOptions) (*BackupResult, error) {
-	// Implementation would go here
-	// This is a placeholder for the actual backup logic
-	return nil, nil
+	// Ensure backup directory exists
+	if err := s.platformProvider.CreateDirectory(backupDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	backupPath := s.generateBackupPath(sourcePath, backupDir, options.Format)
+
+	// Copy the source to backup path
+	mode := os.FileMode(0644)
+	if err := s.platformProvider.CopyFile(sourcePath, backupPath, mode); err != nil {
+		return nil, fmt.Errorf("failed to copy file for backup: %w", err)
+	}
+
+	// Get file info for the backup
+	info, err := s.platformProvider.GetFileInfo(backupPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get backup file info: %w", err)
+	}
+
+	// Calculate checksum
+	checksum, err := s.platformProvider.CalculateChecksum(backupPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+
+	result := &BackupResult{
+		BackupPath: backupPath,
+		Size:       info.Size(),
+		CreatedAt:  time.Now(),
+		Checksum:   checksum,
+		Compressed: options.Compression,
+		Metadata:   options.Metadata,
+	}
+	return result, nil
 }
 
 func (s *DefaultBackupService) simulateEnhancedBackup(_ context.Context, sourcePath string, config *EnhancedBackupConfig) (*BackupResult, error) {
@@ -270,8 +303,28 @@ func (s *DefaultBackupService) simulateEnhancedBackup(_ context.Context, sourceP
 }
 
 func (s *DefaultBackupService) performEnhancedBackup(ctx context.Context, sourcePath string, config *EnhancedBackupConfig) (*BackupResult, error) {
-	// Implementation would go here
-	return nil, nil
+	if !config.Enabled {
+		return nil, fmt.Errorf("enhanced backup not enabled")
+	}
+
+	options := BackupOptions{
+		Format:      config.Format,
+		Compression: config.Compression,
+		Metadata:    config.Metadata,
+	}
+
+	result, err := s.performBackup(ctx, sourcePath, config.Directory, options)
+	if err != nil {
+		return nil, err
+	}
+
+	// Optionally apply retention policy
+	if err := s.CleanupBackups(ctx, config.Directory, config.Retention); err != nil {
+		// Log warning but don't fail the backup - cleanup errors are non-fatal
+		_ = err // Explicitly ignore the error
+	}
+
+	return result, nil
 }
 
 func (s *DefaultBackupService) simulateRestore(ctx context.Context, backupPath, targetPath string) error {
@@ -311,6 +364,16 @@ func (s *DefaultBackupService) performValidation(_ context.Context, _ string) (*
 }
 
 func (s *DefaultBackupService) generateBackupPath(sourcePath, backupDir string, format BackupFormat) string {
-	// Implementation would generate appropriate backup path based on format
-	return ""
+	base := filepath.Base(sourcePath)
+	timestamp := time.Now().Format("20060102-150405")
+	switch format {
+	case BackupFormatTimestamped:
+		return filepath.Join(backupDir, base+".backup."+timestamp)
+	case BackupFormatNumbered:
+		return filepath.Join(backupDir, base+".backup.1") // Simple implementation
+	case BackupFormatGitStyle:
+		return filepath.Join(backupDir, base+".backup~1")
+	default:
+		return filepath.Join(backupDir, base+".backup")
+	}
 }
