@@ -60,7 +60,10 @@ jobs:
         run: go clean -modcache
 
       - name: Install tools
-        run: make tools
+        run: |
+          echo "Force installing golangci-lint v2 to match local environment..."
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.5.0
+          make tools
 
       - name: Run comprehensive quality checks
         run: make quality
