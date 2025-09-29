@@ -20,7 +20,6 @@ output:
   format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   sort-results: true
 
 linters:
@@ -102,6 +101,13 @@ linters:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: true
+  exclude-dirs:
+    - vendor
+    - .git
+    - bin
+    - dist
+    - tools
 
 formatters:
   enable:
