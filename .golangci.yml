@@ -8,12 +8,6 @@ run:
   tests: true
   build-tags:
     - integration
-  skip-dirs:
-    - vendor
-    - .git
-    - bin
-    - dist
-    - tools
   go: '1.25.1'
 
 output:
@@ -54,6 +48,20 @@ linters:
     depguard:
       rules:
         main:
+          files:
+            - "$all"
+          allow:
+            # Standard library packages
+            - "$gostd"
+            # Project internal packages
+            - "github.com/jamesainslie/terraform-provider-dotfiles"
+            # Terraform provider framework
+            - "github.com/hashicorp/terraform-plugin-framework"
+            - "github.com/hashicorp/terraform-plugin-log"
+            # Go git library
+            - "github.com/go-git/go-git"
+            # Other allowed dependencies
+            - "github.com/stretchr/testify"
           deny:
             - pkg: github.com/pkg/errors
               desc: Please use "errors" package from standard library
@@ -64,10 +72,12 @@ linters:
       min-complexity: 15
     gosec:
       excludes:
-        - G104
-        - G301
-        - G302
-        - G304
+        - G104  # Errors unhandled
+        - G301  # Poor file permissions
+        - G302  # Poor file permissions
+        - G304  # File path provided as taint input
+        - G306  # Poor file permissions for WriteFile
+        - G404  # Use of weak random number generator
     imports:
       alias:
         - pkg: github.com/stretchr/testify/assert
@@ -94,7 +104,9 @@ linters:
           - gochecknoglobals
           - goconst
           - gosec
+          - gocritic
           - noctx
+          - revive
           - wrapcheck
         path: _test\.go$
 

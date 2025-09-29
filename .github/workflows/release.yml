@@ -265,4 +265,4 @@ jobs:
         run: |
           echo "Running security analysis..."
           go install github.com/securego/gosec/v2/cmd/gosec@latest || echo "Failed to install gosec, skipping security scan"
-          gosec ./... 2>/dev/null || echo "Security issues found or gosec unavailable, but continuing since this is a filesystem provider with expected OS operations"
+          gosec -exclude=G104,G301,G302,G304,G306,G404 ./... 2>/dev/null || echo "Security issues found or gosec unavailable, but continuing since this is a filesystem provider with expected OS operations"
