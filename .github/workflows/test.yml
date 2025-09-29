@@ -42,7 +42,7 @@ jobs:
         uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Get Go version
         id: go-version
@@ -55,6 +55,9 @@ jobs:
 
       - name: Download dependencies
         run: go mod download
+
+      - name: Clear Go module cache to avoid stale tools
+        run: go clean -modcache
 
       - name: Install tools
         run: make tools
