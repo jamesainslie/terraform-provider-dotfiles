@@ -13,7 +13,7 @@ import (
 // ParseFileMode parses a file mode string like "0644" into os.FileMode.
 func ParseFileMode(modeStr string) (os.FileMode, error) {
 	if modeStr == "" {
-		return 0644, nil // default
+		return 0600, nil // default (secure permissions)
 	}
 
 	// Handle octal mode strings

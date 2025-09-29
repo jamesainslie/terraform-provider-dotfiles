@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package utils
@@ -18,15 +18,15 @@ func TestParseFileMode(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "Empty string defaults to 0644",
+			name:     "Empty string defaults to 0600",
 			input:    "",
-			expected: 0644,
+			expected: 0600,
 			wantErr:  false,
 		},
 		{
-			name:     "Octal format 0644",
-			input:    "0644",
-			expected: 0644,
+			name:     "Octal format 0600",
+			input:    "0600",
+			expected: 0600,
 			wantErr:  false,
 		},
 		{
@@ -79,9 +79,9 @@ func TestFormatFileMode(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "Mode 0644",
-			input:    0644,
-			expected: "0644",
+			name:     "Mode 0600",
+			input:    0600,
+			expected: "0600",
 		},
 		{
 			name:     "Mode 0755",
@@ -111,7 +111,7 @@ func TestPathExists(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.txt")
-	err := os.WriteFile(testFile, []byte("test content"), 0644)
+	err := os.WriteFile(testFile, []byte("test content"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestIsSymlink(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.txt")
-	err := os.WriteFile(testFile, []byte("test content"), 0644)
+	err := os.WriteFile(testFile, []byte("test content"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -262,17 +262,17 @@ func TestCompareFileContent(t *testing.T) {
 	content2 := "identical content"
 	content3 := "different content"
 
-	err := os.WriteFile(file1, []byte(content1), 0644)
+	err := os.WriteFile(file1, []byte(content1), 0600)
 	if err != nil {
 		t.Fatalf("Failed to create file1: %v", err)
 	}
 
-	err = os.WriteFile(file2, []byte(content2), 0644)
+	err = os.WriteFile(file2, []byte(content2), 0600)
 	if err != nil {
 		t.Fatalf("Failed to create file2: %v", err)
 	}
 
-	err = os.WriteFile(file3, []byte(content3), 0644)
+	err = os.WriteFile(file3, []byte(content3), 0600)
 	if err != nil {
 		t.Fatalf("Failed to create file3: %v", err)
 	}
