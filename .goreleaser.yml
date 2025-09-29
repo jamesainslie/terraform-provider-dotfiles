@@ -96,10 +96,8 @@ builds:
 # Archive configuration
 archives:
   - id: terraform-provider-dotfiles
-    builds:
-      - terraform-provider-dotfiles
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: zip
+    formats: [zip]
     files:
       - LICENSE
       - README.md
