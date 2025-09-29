@@ -184,12 +184,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
-        with:
-          languages: ${{ matrix.language }}
-          queries: security-extended,security-and-quality
-
       - name: Set up Go
         uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
@@ -201,6 +195,12 @@ jobs:
           echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
           echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
 
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
       - name: Download dependencies
         run: go mod download
 
@@ -210,16 +210,37 @@ jobs:
           # Create output directory
           mkdir -p bin
 
+          # Set build flags consistent with Makefile
+          export GOFLAGS="-gcflags=all=-lang=go1.25"
+
           # Build all packages to ensure CodeQL can analyze them
           go build -v ./...
 
-          # Also build the main binary
-          go build -v -o terraform-provider-dotfiles ./
+          # Build the main binary with version info
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+          LDFLAGS="-ldflags \"-s -w -X main.version=${VERSION} -X main.commit=${COMMIT_HASH}\""
+
+          go build -v ${LDFLAGS} -o terraform-provider-dotfiles ./
 
           # Build the migrate-config tool
           go build -v -o bin/migrate-config ./cmd/migrate-config
 
           echo "Build completed successfully for CodeQL analysis"
+
+      - name: Verify build outputs for CodeQL
+        run: |
+          echo "Verifying build outputs..."
+          ls -la terraform-provider-dotfiles 2>/dev/null && echo "✓ Main binary built successfully" || echo "⚠ Main binary not found"
+          ls -la bin/migrate-config 2>/dev/null && echo "✓ Migration tool built successfully" || echo "⚠ Migration tool not found"
+
+          # Check if Go packages were compiled (look for .a files in build cache)
+          echo "Checking Go build cache..."
+          go list -f '{{.Target}}' ./... | head -5
+
+          echo "Go environment for CodeQL:"
+          go version
+          go env GOARCH GOOS GOMOD GOWORK
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
