@@ -176,7 +176,7 @@ var ValidGitAuthMethods = []string{
 // Provider metadata constants.
 const (
 	ProviderName        = "dotfiles"
-	ProviderVersion     = "0.1.0"
+	ProviderVersion     = "0.1.1"
 	ProviderDescription = "Terraform provider for managing dotfiles and configuration"
 )
 
