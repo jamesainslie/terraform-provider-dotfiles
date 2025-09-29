@@ -28,10 +28,7 @@ type EnhancedFileResourceModel struct {
 	Permissions     *PermissionsModel `tfsdk:"permissions"`
 	PermissionRules types.Map         `tfsdk:"permission_rules"`
 
-	// Post-creation hooks (Priority 2 feature)
-	PostCreateCommands types.List `tfsdk:"post_create_commands"`
-	PostUpdateCommands types.List `tfsdk:"post_update_commands"`
-	PreDestroyCommands types.List `tfsdk:"pre_destroy_commands"`
+	// Shell command hooks removed for security (G204 vulnerability)
 }
 
 // EnhancedSymlinkResourceModel extends SymlinkResourceModel with permission management.
@@ -40,10 +37,7 @@ type EnhancedSymlinkResourceModel struct {
 	Permissions     *PermissionsModel `tfsdk:"permissions"`
 	PermissionRules types.Map         `tfsdk:"permission_rules"`
 
-	// Post-creation hooks (Priority 2 feature)
-	PostCreateCommands types.List `tfsdk:"post_create_commands"`
-	PostUpdateCommands types.List `tfsdk:"post_update_commands"`
-	PreDestroyCommands types.List `tfsdk:"pre_destroy_commands"`
+	// Shell command hooks removed for security (G204 vulnerability)
 }
 
 // GetPermissionsSchemaBlock returns the schema block for permissions.
@@ -82,25 +76,12 @@ func GetPermissionRulesAttribute() schema.MapAttribute {
 	}
 }
 
-// GetPostHooksAttributes returns the schema attributes for post-creation hooks.
+// GetPostHooksAttributes has been removed for security reasons (G204 vulnerability).
+// Shell command execution has been completely eliminated from all resources.
+// Use terraform-provider-package for service management operations.
 func GetPostHooksAttributes() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"post_create_commands": schema.ListAttribute{
-			Optional:            true,
-			ElementType:         types.StringType,
-			MarkdownDescription: "Commands to execute after resource creation",
-		},
-		"post_update_commands": schema.ListAttribute{
-			Optional:            true,
-			ElementType:         types.StringType,
-			MarkdownDescription: "Commands to execute after resource update",
-		},
-		"pre_destroy_commands": schema.ListAttribute{
-			Optional:            true,
-			ElementType:         types.StringType,
-			MarkdownDescription: "Commands to execute before resource destruction",
-		},
-	}
+	// Return empty map - shell command attributes no longer supported
+	return map[string]schema.Attribute{}
 }
 
 // parsePermission parses a permission string (e.g., "0644") to uint32.

@@ -401,12 +401,8 @@ func (r *FileResource) processRegularFile(ctx context.Context, data *EnhancedFil
 
 // finalizeFileCreation handles post-create commands, metadata updates, and state saving
 func (r *FileResource) finalizeFileCreation(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, resp *resource.CreateResponse) {
-	// Post-create commands have been removed for security reasons (G204 vulnerability)
+	// Shell command execution has been completely removed for security reasons (G204 vulnerability)
 	// Use terraform-provider-package for service management or dotfiles_file_permissions for permissions
-	if !data.PostCreateCommands.IsNull() && len(data.PostCreateCommands.Elements()) > 0 {
-		errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Post-create Commands Deprecated",
-			"Shell commands have been removed for security reasons. Use terraform-provider-package for service management or dotfiles_file_permissions for file permissions.")
-	}
 
 	// Update computed attributes
 	if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
@@ -648,14 +644,8 @@ func (r *FileResource) processTemplateFileUpdate(ctx context.Context, data *Enha
 
 // finalizeFileUpdate handles post-update commands, metadata updates, and state saving
 func (r *FileResource) finalizeFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, resp *resource.UpdateResponse) {
-	// Post-update commands have been removed for security reasons (G204 vulnerability)
+	// Shell command execution has been completely removed for security reasons (G204 vulnerability)
 	// Use terraform-provider-package for service management or dotfiles_file_permissions for permissions
-	if !data.PostUpdateCommands.IsNull() && len(data.PostUpdateCommands.Elements()) > 0 {
-		resp.Diagnostics.AddWarning(
-			"Post-update Commands Deprecated",
-			"Shell commands have been removed for security reasons. Use terraform-provider-package for service management or dotfiles_file_permissions for file permissions.",
-		)
-	}
 
 	// Update computed attributes
 	if err := r.updateComputedAttributes(ctx, &data.FileResourceModel, expandedTargetPath); err != nil {
@@ -688,14 +678,8 @@ func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		"target_path": data.TargetPath.ValueString(),
 	})
 
-	// Pre-destroy commands have been removed for security reasons (G204 vulnerability)
+	// Shell command execution has been completely removed for security reasons (G204 vulnerability)
 	// Use terraform-provider-package for service management or dotfiles_file_permissions for permissions
-	if !data.PreDestroyCommands.IsNull() && len(data.PreDestroyCommands.Elements()) > 0 {
-		resp.Diagnostics.AddWarning(
-			"Pre-destroy Commands Deprecated",
-			"Shell commands have been removed for security reasons. Use terraform-provider-package for service management or dotfiles_file_permissions for file permissions.",
-		)
-	}
 
 	// For file resources, we typically remove the managed file
 	// but preserve any backups

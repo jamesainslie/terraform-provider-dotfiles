@@ -40,11 +40,8 @@ type SymlinkResourceModel struct {
 	CreateParents types.Bool   `tfsdk:"create_parents"`
 
 	// Enhanced fields
-	Permissions        *PermissionsModel `tfsdk:"permissions"`
-	PermissionRules    types.Map         `tfsdk:"permission_rules"`
-	PostCreateCommands types.List        `tfsdk:"post_create_commands"`
-	PostUpdateCommands types.List        `tfsdk:"post_update_commands"`
-	PreDestroyCommands types.List        `tfsdk:"pre_destroy_commands"`
+	Permissions     *PermissionsModel `tfsdk:"permissions"`
+	PermissionRules types.Map         `tfsdk:"permission_rules"`
 
 	// Computed attributes
 	LinkExists   types.Bool   `tfsdk:"link_exists"`
@@ -107,11 +104,8 @@ func (r *SymlinkResource) Schema(ctx context.Context, req resource.SchemaRequest
 		},
 	}
 
-	// Add post-hooks attributes
-	postHooksAttrs := GetPostHooksAttributes()
-	for key, attr := range postHooksAttrs {
-		baseAttributes[key] = attr
-	}
+	// Shell command hooks removed for security reasons (G204 vulnerability)
+	// Use terraform-provider-package for service management operations
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages symbolic links to dotfiles with comprehensive permission management",
