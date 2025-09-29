@@ -219,9 +219,8 @@ jobs:
           # Build the main binary with version info
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
           COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
-          LDFLAGS="-ldflags \"-s -w -X main.version=${VERSION} -X main.commit=${COMMIT_HASH}\""
 
-          go build -v ${LDFLAGS} -o terraform-provider-dotfiles ./
+          go build -v -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT_HASH}" -o terraform-provider-dotfiles ./
 
           # Build the migrate-config tool
           go build -v -o bin/migrate-config ./cmd/migrate-config
