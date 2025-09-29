@@ -4,12 +4,12 @@ This example demonstrates how to use the Terraform Dotfiles Provider to manage d
 
 ## Features Demonstrated
 
-- ✅ **Public GitHub repositories** (no authentication required)
-- ✅ **Private GitHub repositories** with Personal Access Token authentication
-- ✅ **SSH authentication** with private keys
-- ✅ **Enterprise GitHub** support
-- ✅ **Automatic repository updates** with configurable intervals
-- ✅ **Secure credential handling** via environment variables and Terraform variables
+-  **Public GitHub repositories** (no authentication required)
+-  **Private GitHub repositories** with Personal Access Token authentication
+-  **SSH authentication** with private keys
+-  **Enterprise GitHub** support
+-  **Automatic repository updates** with configurable intervals
+-  **Secure credential handling** via environment variables and Terraform variables
 
 ## Quick Start
 
@@ -113,12 +113,12 @@ resource "dotfiles_repository" "enterprise" {
 
 ### 1. Never Hardcode Tokens
 
-❌ **Don't do this:**
+ **Don't do this:**
 ```hcl
 git_personal_access_token = "ghp_hardcoded_token_here"  # NEVER DO THIS
 ```
 
-✅ **Do this instead:**
+ **Do this instead:**
 ```hcl
 git_personal_access_token = var.github_token            # Use variables
 # or let it read from GITHUB_TOKEN environment variable automatically

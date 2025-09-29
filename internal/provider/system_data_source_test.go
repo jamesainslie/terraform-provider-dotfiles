@@ -126,8 +126,8 @@ func TestSystemDataSource(t *testing.T) {
 		d := &SystemDataSource{client: client}
 		_ = d // Test that we can create the data source with a client
 
-		// TODO: Add actual Read testing when we implement proper request/response mocking
-		// The current implementation requires a properly structured request which is complex to mock
+		// NOTE: Full Read method testing planned for integration test suite
+		// Current unit tests focus on schema and metadata validation
 		t.Log("SystemDataSource Read method will be tested with integration tests")
 	})
 }

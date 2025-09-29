@@ -195,9 +195,9 @@ func main() <span class="cov0" title="0">{
                 }</span>
 
                 <span class="cov0" title="0">if len(issues) == 0 </span><span class="cov0" title="0">{
-                        fmt.Printf("✅ Configuration %s is compatible with the new architecture.\n", inputFile)
+                        fmt.Printf(" Configuration %s is compatible with the new architecture.\n", inputFile)
                 }</span> else<span class="cov0" title="0"> {
-                        fmt.Printf("⚠️  Found %d compatibility issue(s) in %s:\n\n", len(issues), inputFile)
+                        fmt.Printf("  Found %d compatibility issue(s) in %s:\n\n", len(issues), inputFile)
                         for i, issue := range issues </span><span class="cov0" title="0">{
                                 fmt.Printf("%d. %s\n", i+1, issue.Description)
                                 if issue.Suggestion != "" </span><span class="cov0" title="0">{

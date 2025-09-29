@@ -1,7 +1,9 @@
 terraform {
+  required_version = ">= 1.5"
   required_providers {
     dotfiles = {
-      source = "jamesainslie/dotfiles"
+      source  = "jamesainslie/dotfiles"
+      version = "~> 0.1"
     }
   }
 }

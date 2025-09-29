@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -86,10 +87,23 @@ func (d *FileInfoDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	// TODO: Implement actual file info reading logic
+	// NOTE: Basic file info implementation - full filesystem integration planned for v0.2
 	data.ID = data.Path
-	data.Exists = types.BoolValue(false)
-	data.IsSymlink = types.BoolValue(false)
+
+	// Check if file exists
+	if _, err := os.Stat(data.Path.ValueString()); err != nil {
+		data.Exists = types.BoolValue(false)
+		data.IsSymlink = types.BoolValue(false)
+	} else {
+		data.Exists = types.BoolValue(true)
+
+		// Check if it's a symlink
+		if info, err := os.Lstat(data.Path.ValueString()); err == nil {
+			data.IsSymlink = types.BoolValue(info.Mode()&os.ModeSymlink != 0)
+		} else {
+			data.IsSymlink = types.BoolValue(false)
+		}
+	}
 	data.Permissions = types.StringValue("0644")
 	data.Size = types.Int64Value(0)
 

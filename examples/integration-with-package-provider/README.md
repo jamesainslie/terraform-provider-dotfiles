@@ -403,4 +403,4 @@ jobs:
 
 ---
 
-**Happy configuring!** 🚀
+**Happy configuring!** 

@@ -12,8 +12,12 @@ Terraform provider for managing dotfiles in a declarative, cross-platform manner
 ## Example Usage
 
 ```terraform
-provider "scaffolding" {
-  # example configuration here
+provider "dotfiles" {
+  dotfiles_root = "~/dotfiles"
+  backup_enabled = true
+  backup_directory = "~/.dotfiles-backups"
+  strategy = "symlink"
+  conflict_resolution = "backup"
 }
 ```
 

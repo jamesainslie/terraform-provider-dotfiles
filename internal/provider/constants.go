@@ -176,7 +176,7 @@ var ValidGitAuthMethods = []string{
 // Provider metadata constants.
 const (
 	ProviderName        = "dotfiles"
-	ProviderVersion     = "1.0.0"
+	ProviderVersion     = "0.1.0"
 	ProviderDescription = "Terraform provider for managing dotfiles and configuration"
 )
 
@@ -261,7 +261,7 @@ const (
 	PathPattern = `^[a-zA-Z0-9._/\\~${}:-]+$`
 
 	// VersionPattern matches semantic version strings.
-	VersionPattern = `^v?(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.-]+))?(?:\+([a-zA-Z0-9.-]+))?$`
+	VersionPattern = `^v?(\d+)\.(\d+)\.(\d+)(?[a-zA-Z0-9.-]+))?(?:\+([a-zA-Z0-9.-]+))?$`
 
 	// GitURLPattern matches Git repository URLs.
 	GitURLPattern = `^(https?://|git@|ssh://)`

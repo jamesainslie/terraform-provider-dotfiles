@@ -2,7 +2,7 @@
 
 This directory contains comprehensive examples demonstrating various use cases and integration patterns for the terraform-provider-dotfiles.
 
-## 🏗️ Provider Separation of Concerns
+##  Provider Separation of Concerns
 
 The terraform-provider-dotfiles focuses solely on **configuration file management**. For application installation and lifecycle management, use [terraform-provider-package](https://github.com/jamesainslie/terraform-provider-package).
 
@@ -11,9 +11,9 @@ The terraform-provider-dotfiles focuses solely on **configuration file managemen
 | `terraform-provider-dotfiles` | Configuration Management | File operations, Git repos, templates, backups |
 | `terraform-provider-package` | Application Lifecycle | Package install/remove, service management |
 
-## 📁 Available Examples
+##  Available Examples
 
-### 🌟 [Integration with Package Provider](./integration-with-package-provider/)
+###  [Integration with Package Provider](./integration-with-package-provider/)
 **Complete development environment setup showing proper separation of concerns**
 
 - Package installation using terraform-provider-package
@@ -24,7 +24,7 @@ The terraform-provider-dotfiles focuses solely on **configuration file managemen
 
 **Use this example when:** Setting up a complete development environment with both application installation and configuration management.
 
-### 🔧 [Basic Setup](./basic-setup/)
+###  [Basic Setup](./basic-setup/)
 **Simple dotfiles management without external dependencies**
 
 - Local dotfiles repository management
@@ -33,7 +33,7 @@ The terraform-provider-dotfiles focuses solely on **configuration file managemen
 
 **Use this example when:** Getting started with simple dotfiles management or working with local-only configurations.
 
-### 🌍 [Complete Environment](./complete-environment/)
+###  [Complete Environment](./complete-environment/)
 **Advanced configuration with all provider features**
 
 - Git repository integration
@@ -44,7 +44,7 @@ The terraform-provider-dotfiles focuses solely on **configuration file managemen
 
 **Use this example when:** You need comprehensive dotfiles management with advanced features like templating and Git integration.
 
-### 📡 [GitHub Repository](./github-repository/)
+###  [GitHub Repository](./github-repository/)
 **Git-based dotfiles management with authentication**
 
 - GitHub repository cloning
@@ -54,7 +54,7 @@ The terraform-provider-dotfiles focuses solely on **configuration file managemen
 
 **Use this example when:** Your dotfiles are stored in a Git repository and you need automated cloning and synchronization.
 
-### 📊 [Data Sources](./data-sources/)
+###  [Data Sources](./data-sources/)
 **Using provider data sources for conditional logic**
 
 - System information gathering
@@ -64,7 +64,7 @@ The terraform-provider-dotfiles focuses solely on **configuration file managemen
 
 **Use this example when:** You need conditional logic based on system information or file existence.
 
-## 🚀 Quick Start Guide
+##  Quick Start Guide
 
 ### 1. Choose Your Use Case
 
@@ -101,7 +101,7 @@ Each example is designed to be a starting point. Customize:
 - Backup strategies and retention policies
 - Platform-specific logic
 
-## 📋 Common Patterns
+##  Common Patterns
 
 ### Application Installation + Configuration
 
@@ -173,7 +173,7 @@ resource "dotfiles_application" "optional_app" {
 }
 ```
 
-## 🔧 Configuration Patterns
+##  Configuration Patterns
 
 ### Provider Configuration
 
@@ -218,7 +218,7 @@ variable "application_configs" {
 }
 ```
 
-## 🎯 Best Practices
+##  Best Practices
 
 ### 1. Separation of Concerns
 - Use terraform-provider-package for installation
@@ -245,7 +245,7 @@ variable "application_configs" {
 - Use meaningful commit messages
 - Tag releases for stable configurations
 
-## 🔍 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
@@ -289,7 +289,7 @@ terraform state show resource.name
 terraform validate
 ```
 
-## 📚 Additional Resources
+##  Additional Resources
 
 ### Documentation
 - [Provider Registry Docs](https://registry.terraform.io/providers/jamesainslie/dotfiles/latest/docs)
@@ -304,7 +304,7 @@ terraform validate
 - [GitHub Issues](https://github.com/jamesainslie/terraform-provider-dotfiles/issues)
 - [GitHub Discussions](https://github.com/jamesainslie/terraform-provider-dotfiles/discussions)
 
-## 🤝 Contributing
+##  Contributing
 
 Found an issue with an example or have a suggestion for improvement?
 
@@ -323,4 +323,4 @@ Found an issue with an example or have a suggestion for improvement?
 
 ---
 
-**Ready to get started?** Choose an example that matches your use case and start customizing! 🚀
+**Ready to get started?** Choose an example that matches your use case and start customizing! 

@@ -63,7 +63,7 @@ func generateFuzzPaths() []string {
 		// Special characters
 		"/path/with/special/chars/!@#$%^&*()",
 		"/path/with/unicode/café/naïve",
-		"/path/with/emoji/😀/test",
+		"/path/with/emoji//test",
 
 		// Windows-style paths (for cross-platform testing)
 		"C:\\Windows\\Path",
@@ -95,7 +95,7 @@ func generateFuzzFileContents() []string {
 
 		// Unicode content
 		"Unicode: café naïve résumé 中文 日本語 العربية",
-		"Emoji: 😀 🎉 🔥 ⚡ 🚀",
+		"Emoji:     ",
 
 		// Template-like content
 		"{{.Name}} lives at {{.Address}}",

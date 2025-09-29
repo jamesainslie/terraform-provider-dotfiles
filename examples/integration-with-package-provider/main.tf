@@ -15,7 +15,7 @@ terraform {
     # Configuration management
     dotfiles = {
       source  = "jamesainslie/dotfiles"
-      version = "~> 1.0"
+      version = "~> 0.1"
     }
   }
 }

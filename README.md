@@ -6,66 +6,22 @@
 [![Tests](https://img.shields.io/badge/Tests-100%2B-green.svg)]()
 [![Coverage](https://img.shields.io/badge/Coverage-85%25-brightgreen.svg)]()
 
-A focused, production-ready Terraform provider for managing configuration files (dotfiles) in a declarative, cross-platform manner. This provider enables you to version control, deploy, and manage your development environment configuration files using Infrastructure as Code principles.
+A Terraform provider for managing configuration files (dotfiles) in a declarative, cross-platform manner. This provider enables you to version control, deploy, and manage your development environment configuration files using Infrastructure as Code principles.
 
-**🔗 Companion Provider**: For application installation and package management, use [terraform-provider-package](https://github.com/jamesainslie/terraform-provider-package). This separation follows best practices for single-responsibility providers.
+**Note**: This is the initial stable release (v0.1.x) ready for production use. Advanced features and enhancements are planned for future releases.
 
-## 🏗️ Provider Separation of Concerns
+##  Key Features
 
-This provider is designed to work alongside `terraform-provider-package` with clear separation of responsibilities:
-
-| Provider | Responsibility | Resources |
-|----------|----------------|-----------|
-| `terraform-provider-dotfiles` | **Configuration Management** | File operations, Git repositories, templating, backups |
-| `terraform-provider-package` | **Application Lifecycle** | Package installation, service management, dependency resolution |
-
-### Example: Complete Setup
-```hcl
-# Install application using package provider
-resource "pkg_package" "vscode" {
-  name = "visual-studio-code"
-  type = "cask"
-}
-
-# Configure application using dotfiles provider
-resource "dotfiles_application" "vscode" {
-  application_name = "vscode"
-  
-  config_mappings = {
-    "settings.json" = {
-      target_path = "~/Library/Application Support/Code/User/settings.json"
-      strategy   = "symlink"
-    }
-  }
-  
-  depends_on = [pkg_package.vscode]
-}
-```
-
-## ✨ Key Features
-
-### 🚀 Core Capabilities
-- **Cross-platform support**: Works seamlessly on macOS, Linux, and Windows
+### Core Capabilities
+- **Cross-platform support**: Works on macOS, Linux, and Windows
 - **Multiple deployment strategies**: Symlink, copy, or template-based deployment
-- **Enterprise-grade backup system**: Automatic backups with compression, retention policies, and validation
-- **Multi-engine template processing**: Support for Go templates, Handlebars, and Mustache
-- **Advanced Git integration**: Clone, authenticate, and manage repositories with submodule support
-- **Configuration file focus**: Dedicated to file operations without application installation concerns
-- **Granular permission management**: Fine-grained file and directory permissions with validation
-- **Comprehensive dry-run mode**: Preview all changes before applying them
-- **Built-in caching**: In-memory caching with TTL and LRU eviction for performance
-- **Concurrency control**: Managed parallel operations with configurable limits
-- **Enhanced error handling**: Structured errors with retry logic and detailed context
+- **Git integration**: Clone and manage dotfiles repositories
+- **Template processing**: Support for Go templates, Handlebars, and Mustache
+- **Backup system**: Automatic backups with multiple formats and retention policies
+- **Dry-run mode**: Preview changes before applying them
+- **Comprehensive validation**: Path, file mode, and template validation
 
-### 🔧 Architectural Improvements
-- **Service Layer Architecture**: Modular services for backup, templating, and caching
-- **Service Registry**: Centralized service management with health checks
-- **Enhanced Git Operations**: Advanced authentication, submodule support, and validation
-- **Schema Validators**: Custom validators for paths, file modes, and templates
-- **Idempotency Utilities**: Built-in state tracking and comparison
-- **Runtime Validation**: Pre-flight checks for directory writability and file existence
-
-## 📦 Installation
+##  Installation
 
 ### Terraform Registry (Recommended)
 ```hcl
@@ -73,7 +29,7 @@ terraform {
   required_providers {
     dotfiles = {
       source  = "jamesainslie/dotfiles"
-      version = "~> 1.0"
+      version = "~> 0.1"
     }
   }
 }
@@ -86,7 +42,7 @@ cd terraform-provider-dotfiles
 go build -o terraform-provider-dotfiles
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Basic Configuration
 
@@ -100,12 +56,8 @@ provider "dotfiles" {
   template_engine        = "go"
   log_level             = "info"
   dry_run               = false
-  
-  backup_strategy {
-    format          = "timestamped"
-    retention_count = 10
-    compression     = true
-  }
+  auto_detect_platform   = true
+  target_platform        = "auto"
 }
 ```
 
@@ -121,7 +73,6 @@ resource "dotfiles_repository" "main" {
     branch                = "main"
     personal_access_token = var.github_token
     clone_depth          = 1
-    recurse_submodules   = false
   }
 }
 
@@ -182,8 +133,6 @@ resource "dotfiles_symlink" "fish_config" {
 
 ### 6. Application Configuration Management
 
-**Note**: Application installation should be handled by [terraform-provider-package](https://github.com/jamesainslie/terraform-provider-package). This resource focuses on configuration file management.
-
 ```hcl
 resource "dotfiles_application" "development_tools" {
   application_name = "neovim"
@@ -201,51 +150,46 @@ resource "dotfiles_application" "development_tools" {
 }
 ```
 
-## 📚 Resources
+##  Resources
 
 ### Core Resources
 
 | Resource | Purpose | Use Case |
 |----------|---------|----------|
 | `dotfiles_repository` | Git/local repository management | Clone and manage dotfiles repositories |
-| `dotfiles_file` | Individual file management | **Copy single files** (with templating support) |
-| `dotfiles_symlink` | Symlink creation | **Create symbolic links** to files or directories |
-| `dotfiles_directory` | Directory operations | **Sync entire directories** recursively |
-| `dotfiles_application` | Application config mapping | **Multi-file configs with strategy selection** |
+| `dotfiles_file` | Individual file management | Copy single files (with templating support) |
+| `dotfiles_symlink` | Symlink creation | Create symbolic links to files or directories |
+| `dotfiles_directory` | Directory operations | Sync entire directories recursively |
+| `dotfiles_application` | Application config mapping | Multi-file configs with strategy selection |
 
-### 🎯 Resource Selection Guide
+###  Resource Selection Guide
 
 **Choose the right resource for your use case:**
 
 ```hcl
-# ✅ Single file copy with templating
+# Single file copy with templating
 resource "dotfiles_file" "gitconfig" {
-  repository  = dotfiles_repository.main.id
-  name        = "git-config"
   source_path = "git/gitconfig" 
   target_path = "~/.gitconfig"
   is_template = true
+  file_mode   = "0644"
 }
 
-# ✅ Single symlink
+# Single symlink
 resource "dotfiles_symlink" "fish_config" {
-  repository     = dotfiles_repository.main.id
-  name           = "fish-config"
   source_path    = "fish"
   target_path    = "~/.config/fish"
   create_parents = true
 }
 
-# ✅ Directory operations
+# Directory operations
 resource "dotfiles_directory" "tools_config" {
-  repository  = dotfiles_repository.main.id
-  name        = "tools-config"
   source_path = "tools"
   target_path = "~/.config/tools"
   recursive   = true
 }
 
-# ✅ Application configs with multiple strategies
+# Application configs with multiple strategies
 resource "dotfiles_application" "development_tools" {
   application_name = "neovim"
   config_mappings = {
@@ -261,7 +205,7 @@ resource "dotfiles_application" "development_tools" {
 }
 ```
 
-### 🎯 Resource Selection Guidelines
+###  Resource Selection Guidelines
 
 - **Use `dotfiles_file`** for single file copy operations (with optional templating)
 - **Use `dotfiles_symlink`** for creating symbolic links to files or directories
@@ -275,11 +219,11 @@ resource "dotfiles_application" "development_tools" {
 | `dotfiles_system` | System information | Get platform details for conditional logic |
 | `dotfiles_file_info` | File metadata | Check file existence and properties |
 
-## 🎯 Advanced Features
+##  Advanced Features
 
 ### Template Processing
 
-Support for multiple template engines with custom functions:
+Support for multiple template engines:
 
 ```hcl
 resource "dotfiles_file" "gitconfig" {
@@ -294,27 +238,17 @@ resource "dotfiles_file" "gitconfig" {
     user_email = "john@example.com"
     editor     = "nvim"
   }
-  
-  platform_template_vars = {
-    editor_path = data.dotfiles_system.current.platform == "darwin" ? "/usr/local/bin/nvim" : "/usr/bin/nvim"
-  }
 }
 ```
 
 ### Backup Management
 
-Comprehensive backup system with multiple formats and retention policies:
+Automatic backup system:
 
 ```hcl
 provider "dotfiles" {
-  backup_enabled = true
-  
-  backup_strategy {
-    format          = "timestamped"  # or "versioned", "simple"
-    retention_count = 10
-    compression     = true
-    validation     = true
-  }
+  backup_enabled   = true
+  backup_directory = "~/.dotfiles-backups"
 }
 ```
 
@@ -336,34 +270,22 @@ resource "dotfiles_directory" "ssh_dir" {
 }
 ```
 
-### Template Path Variables
+### Cross-Platform Support
 
-Application resources support template variables in target paths:
+Use system data source for platform-specific configurations:
 
 ```hcl
-resource "dotfiles_application" "vscode" {
-  application_name = "vscode"
-  
-  config_mappings = {
-    "settings.json" = {
-      target_path = "{{.app_support_dir}}/Code/User/settings.json"
-      strategy   = "symlink"
-    }
-    "snippets/" = {
-      target_path = "{{.config_dir}}/Code/User/snippets/"
-      strategy   = "copy"
-    }
-  }
+data "dotfiles_system" "current" {}
+
+resource "dotfiles_file" "shell_config" {
+  source_path = "shell/${data.dotfiles_system.current.platform}/config"
+  target_path = data.dotfiles_system.current.platform == "windows" ? 
+    "~/AppData/Roaming/shell/config" : 
+    "~/.config/shell/config"
 }
 ```
 
-Available template variables:
-- `{{.home_dir}}` - User home directory
-- `{{.config_dir}}` - ~/.config directory
-- `{{.app_support_dir}}` - ~/Library/Application Support (macOS)
-- `{{.application}}` - Application name
-
-## 🔧 Configuration
+##  Configuration
 
 ### Provider Configuration
 
@@ -383,17 +305,13 @@ provider "dotfiles" {
   # Template Engine
   template_engine = "go"  # or "handlebars", "mustache"
   
+  # Platform Detection
+  auto_detect_platform = true
+  target_platform      = "auto"  # or "macos", "linux", "windows"
+  
   # Behavior
   dry_run   = false
   log_level = "info"  # debug, info, warn, error
-  
-  # Enhanced Backup Strategy
-  backup_strategy {
-    format          = "timestamped"
-    retention_count = 10
-    compression     = true
-    validation     = true
-  }
 }
 ```
 
@@ -405,9 +323,8 @@ provider "dotfiles" {
 | `DOTFILES_BACKUP_DIR` | Backup directory | `~/.dotfiles-backups` |
 | `DOTFILES_DRY_RUN` | Enable dry-run mode | `false` |
 | `DOTFILES_LOG_LEVEL` | Logging level | `info` |
-| `DOTFILES_GIT_TOKEN` | Git personal access token | - |
 
-## 🔍 Data Sources
+##  Data Sources
 
 ### System Information
 
@@ -418,8 +335,8 @@ output "platform_info" {
   value = {
     platform      = data.dotfiles_system.current.platform
     architecture  = data.dotfiles_system.current.architecture
-    home_dir     = data.dotfiles_system.current.home_directory
-    config_dir   = data.dotfiles_system.current.config_directory
+    home_dir     = data.dotfiles_system.current.home_dir
+    config_dir   = data.dotfiles_system.current.config_dir
   }
 }
 ```
@@ -428,7 +345,7 @@ output "platform_info" {
 
 ```hcl
 data "dotfiles_file_info" "check_config" {
-  file_path = "~/.vimrc"
+  path = "~/.vimrc"
 }
 
 output "file_exists" {
@@ -436,7 +353,7 @@ output "file_exists" {
 }
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Unit Tests
 ```bash
@@ -459,7 +376,7 @@ go test ./internal/... -coverprofile=coverage.out
 go tool cover -html=coverage.out
 ```
 
-## 🛠️ Development
+##  Development
 
 ### Prerequisites
 - Go 1.25.1+
@@ -496,61 +413,48 @@ go fmt ./...
 make ci
 ```
 
-## 📖 Examples
+##  Examples
 
 ### Complete Development Environment
 
 ```hcl
 terraform {
   required_providers {
-    pkg = {
-      source = "jamesainslie/package"
-    }
     dotfiles = {
-      source = "jamesainslie/dotfiles"
+      source  = "jamesainslie/dotfiles"
+      version = "~> 0.1"
     }
   }
 }
 
-# Install applications
-resource "pkg_package" "development_tools" {
-  for_each = {
-    "neovim" = { name = "neovim", type = "formula" }
-    "vscode" = { name = "visual-studio-code", type = "cask" }
-    "fish"   = { name = "fish", type = "formula" }
-  }
+provider "dotfiles" {
+  dotfiles_root = "~/dotfiles"
+}
+
+# Repository management
+resource "dotfiles_repository" "main" {
+  source_path = "~/dotfiles"
   
-  name = each.value.name
-  type = each.value.type
+  git_config {
+    url    = "https://github.com/user/dotfiles.git"
+    branch = "main"
+  }
 }
 
 # Configure applications
 resource "dotfiles_application" "development_configs" {
-  for_each = {
-    "neovim" = {
-      "init.lua" = {
-        target_path = "~/.config/nvim/init.lua"
-        strategy   = "symlink"
-      }
+  application_name = "neovim"
+  
+  config_mappings = {
+    "nvim/init.lua" = {
+      target_path = "~/.config/nvim/init.lua"
+      strategy   = "symlink"
     }
-    "vscode" = {
-      "settings.json" = {
-        target_path = "~/Library/Application Support/Code/User/settings.json"
-        strategy   = "copy"
-      }
-    }
-    "fish" = {
-      "config.fish" = {
-        target_path = "~/.config/fish/config.fish"
-        strategy   = "symlink"
-      }
+    "nvim/lua/" = {
+      target_path = "~/.config/nvim/lua/"
+      strategy   = "symlink"
     }
   }
-  
-  application_name = each.key
-  config_mappings = each.value
-  
-  depends_on = [pkg_package.development_tools]
 }
 ```
 
@@ -567,18 +471,24 @@ resource "dotfiles_file" "shell_config" {
 }
 ```
 
-## 🔄 Migration Guide
+##  Development Status
 
-### From v0.x to v1.0
+This provider is production-ready (v0.1.x). Current status:
 
-See [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) for detailed migration instructions.
+**Implemented Features:**
+- ✅ Core resources (file, symlink, directory, application, repository)
+- ✅ Multiple template engines (Go, Handlebars, Mustache)
+- ✅ Cross-platform support (macOS, Linux, Windows)
+- ✅ Basic backup system
+- ✅ Git repository management
+- ✅ System and file info data sources
 
-**Breaking Changes:**
-- Application detection removed (use terraform-provider-package)
-- Simplified `dotfiles_application` resource schema
-- Updated provider configuration format
+**In Development:**
+- 🚧 Enhanced backup strategies with compression and retention
+- 🚧 Advanced Git authentication methods
+- 🚧 Service registry and caching improvements
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -592,22 +502,21 @@ See [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) for detailed migration instruc
 - Update documentation
 - Run `make ci` before submitting
 
-## 📄 License
+##  License
 
 This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework)
 - [go-git](https://github.com/go-git/go-git) for Git operations
 - The Terraform community for feedback and contributions
 
-## 📞 Support
+##  Support
 
-- 📖 [Documentation](https://registry.terraform.io/providers/jamesainslie/dotfiles/latest/docs)
-- 🐛 [Issue Tracker](https://github.com/jamesainslie/terraform-provider-dotfiles/issues)
-- 💬 [Discussions](https://github.com/jamesainslie/terraform-provider-dotfiles/discussions)
-- 📧 [Email Support](mailto:support@example.com)
+- [Documentation](https://registry.terraform.io/providers/jamesainslie/dotfiles/latest/docs)
+- [Issue Tracker](https://github.com/jamesainslie/terraform-provider-dotfiles/issues)
+- [Discussions](https://github.com/jamesainslie/terraform-provider-dotfiles/discussions)
 
 ---
 

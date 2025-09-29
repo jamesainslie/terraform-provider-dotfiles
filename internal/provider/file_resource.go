@@ -637,8 +637,8 @@ func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 // getRepositoryLocalPath returns the local path for a repository.
 func (r *FileResource) getRepositoryLocalPath(repositoryID string) string {
 	// For now, assume repository ID maps to the dotfiles root
-	// TODO: Implement proper repository lookup when repository state management is added
-	_ = repositoryID // TODO: Use repositoryID when repository lookup is implemented
+	// NOTE: Repository lookup feature planned for v0.2.0 - will enable proper multi-repository support
+	_ = repositoryID // Placeholder for future repository lookup implementation
 	return r.client.Config.DotfilesRoot
 }
 

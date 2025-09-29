@@ -143,20 +143,20 @@ build-all: ## Build for all supported platforms
 quality: ## Run comprehensive quality checks
 	@echo "=== COMPREHENSIVE QUALITY CHECK ==="
 	@$(MAKE) lint
-	@echo "✓ golangci-lint passed"
+	@echo " golangci-lint passed"
 	@echo "2. Running staticcheck..."
 	@$(MAKE) staticcheck
-	@echo "✓ staticcheck passed"
+	@echo " staticcheck passed"
 	@echo "3. Running security checks..."
 	@$(MAKE) security
-	@echo "✓ security checks passed"
+	@echo " security checks passed"
 	@$(MAKE) test
-	@echo "✓ All tests passed"
+	@echo " All tests passed"
 	@echo "5. Building project..."
 	@GOFLAGS="$(GOFLAGS_BUILD)" $(GO) build $(LDFLAGS) ./...
-	@echo "✓ Build successful"
+	@echo " Build successful"
 	@echo ""
-	@echo "🎉 ALL QUALITY CHECKS PASSED! 🎉"
+	@echo " ALL QUALITY CHECKS PASSED! "
 
 # Pre-commit checks
 .PHONY: pre-commit

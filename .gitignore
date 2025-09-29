@@ -31,6 +31,9 @@ terraform-provider-dotfiles
 # Test artifacts
 coverage.out
 
+# Development documentation (should not be committed)
+.desigdocs/
+
 website/vendor
 
 # Test exclusions

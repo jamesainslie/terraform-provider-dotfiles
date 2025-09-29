@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -27,10 +26,10 @@ func main() {
 			log.Fatalf("Migration failed: %v", err)
 		}
 
-		fmt.Printf("Configuration migrated successfully!\n")
-		fmt.Printf("Input:  %s\n", inputFile)
-		fmt.Printf("Output: %s\n", outputFile)
-		fmt.Printf("\nPlease review the output file and test the configuration before applying.\n")
+		log.Println("Configuration migrated successfully!")
+		log.Printf("Input:  %s", inputFile)
+		log.Printf("Output: %s", outputFile)
+		log.Println("\nPlease review the output file and test the configuration before applying.")
 
 	case "validate":
 		if len(os.Args) < 3 {
@@ -45,15 +44,14 @@ func main() {
 		}
 
 		if len(issues) == 0 {
-			fmt.Printf("✅ Configuration %s is compatible with the new architecture.\n", inputFile)
+			log.Printf("✓ Configuration %s is compatible with the new architecture.", inputFile)
 		} else {
-			fmt.Printf("⚠️  Found %d compatibility issue(s) in %s:\n\n", len(issues), inputFile)
+			log.Printf("⚠ Found %d compatibility issue(s) in %s:\n", len(issues), inputFile)
 			for i, issue := range issues {
-				fmt.Printf("%d. %s\n", i+1, issue.Description)
+				log.Printf("%d. %s", i+1, issue.Description)
 				if issue.Suggestion != "" {
-					fmt.Printf("   Suggestion: %s\n", issue.Suggestion)
+					log.Printf("   Suggestion: %s", issue.Suggestion)
 				}
-				fmt.Printf("\n")
 			}
 		}
 
@@ -64,7 +62,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Printf(`terraform-provider-dotfiles Migration Tool
+	log.Printf(`terraform-provider-dotfiles Migration Tool
 
 This tool helps migrate Terraform configurations to the new explicit resource architecture
 where the strategy field has been removed from dotfiles_file resource.
