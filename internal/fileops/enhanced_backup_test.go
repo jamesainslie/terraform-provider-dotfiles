@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package fileops
@@ -85,7 +85,7 @@ func TestBackupFormats(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
-	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("test content"), 0600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -156,7 +156,7 @@ func TestBackupCompression(t *testing.T) {
 	// Create test file with some content
 	testContent := strings.Repeat("This is test content for compression testing. ", 100)
 	testFile := filepath.Join(tempDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte(testContent), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(testContent), 0600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -251,7 +251,7 @@ func TestBackupRetention(t *testing.T) {
 
 	// Create test file
 	testFile := filepath.Join(tempDir, "config.txt")
-	if err := os.WriteFile(testFile, []byte("initial content"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("initial content"), 0600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -271,7 +271,7 @@ func TestBackupRetention(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		// Update file content
 		content := fmt.Sprintf("content version %d", i)
-		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0600); err != nil {
 			t.Fatalf("Failed to update test file: %v", err)
 		}
 
@@ -317,7 +317,7 @@ func TestBackupMetadata(t *testing.T) {
 	// Create test file
 	testFile := filepath.Join(tempDir, "test.conf")
 	testContent := "test configuration content"
-	if err := os.WriteFile(testFile, []byte(testContent), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(testContent), 0600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -366,7 +366,7 @@ func TestBackupMetadata(t *testing.T) {
 		// Create multiple backups
 		for i := 0; i < 3; i++ {
 			content := fmt.Sprintf("content version %d", i)
-			if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+			if err := os.WriteFile(testFile, []byte(content), 0600); err != nil {
 				t.Fatalf("Failed to update test file: %v", err)
 			}
 
@@ -400,7 +400,7 @@ func TestIncrementalBackup(t *testing.T) {
 	// Create test file
 	testFile := filepath.Join(tempDir, "config.txt")
 	originalContent := "original content"
-	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(originalContent), 0600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -446,7 +446,7 @@ func TestIncrementalBackup(t *testing.T) {
 	t.Run("Changed content should create new backup", func(t *testing.T) {
 		// Change file content
 		newContent := "modified content"
-		if err := os.WriteFile(testFile, []byte(newContent), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte(newContent), 0600); err != nil {
 			t.Fatalf("Failed to update test file: %v", err)
 		}
 

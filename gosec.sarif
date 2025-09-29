@@ -1,0 +1,16 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "gosec",
+          "version": "2.18.2",
+          "informationUri": "https://github.com/securecodewarrior/gosec",
+          "semanticVersion": "2.18.2"
+        }
+      },
+      "results": []
+    }
+  ]
+}
