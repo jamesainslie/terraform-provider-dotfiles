@@ -362,7 +362,6 @@ func (r *FilePermissionsResource) applyFilePermissions(ctx context.Context, data
 	// Apply ownership if specified
 	if (!data.Owner.IsNull() && data.Owner.ValueString() != "current_user") ||
 		(!data.Group.IsNull() && data.Group.ValueString() != "current_group") {
-
 		owner := data.Owner.ValueString()
 		group := data.Group.ValueString()
 
