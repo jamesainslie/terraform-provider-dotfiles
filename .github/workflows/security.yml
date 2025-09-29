@@ -48,14 +48,22 @@ jobs:
       - name: Run govulncheck
         run: |
           echo "Running govulncheck for vulnerability scanning..."
-          govulncheck -json ./... > govulncheck-report.json || true
+          set +e
+          govulncheck -json ./... > govulncheck-report.json
+          VULN_EXIT_CODE=$?
 
           # Display human-readable output
           echo "=== Vulnerability Report ==="
-          govulncheck ./... || echo "Vulnerabilities found (see details above)"
+          govulncheck ./...
+
+          if [ $VULN_EXIT_CODE -ne 0 ]; then
+            echo "::warning::Vulnerabilities found by govulncheck (exit code: $VULN_EXIT_CODE)"
+          else
+            echo "::notice::No vulnerabilities found"
+          fi
 
       - name: Upload govulncheck report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: always()
         with:
           name: govulncheck-report
@@ -91,22 +99,31 @@ jobs:
       - name: Run gosec security scanner
         run: |
           echo "Running gosec security analysis..."
+          set +e
           gosec -fmt sarif -out gosec-report.sarif ./...
+          SARIF_EXIT_CODE=$?
           gosec -fmt json -out gosec-report.json ./...
 
           # Display human-readable output
           echo "=== Security Analysis Report ==="
-          gosec ./... || echo "Security issues found (see SARIF report for details)"
+          gosec ./...
+          GOSEC_EXIT_CODE=$?
+
+          if [ $GOSEC_EXIT_CODE -ne 0 ]; then
+            echo "::warning::Security issues found by gosec (exit code: $GOSEC_EXIT_CODE)"
+          else
+            echo "::notice::No security issues found"
+          fi
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
         if: always()
         with:
           sarif_file: gosec-report.sarif
           category: gosec
 
       - name: Upload gosec reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: always()
         with:
           name: gosec-reports
@@ -133,7 +150,7 @@ jobs:
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
@@ -150,10 +167,10 @@ jobs:
           echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
         with:
           category: "/language:${{matrix.language}}"
 
@@ -178,21 +195,28 @@ jobs:
       - name: Check licenses
         run: |
           echo "Checking dependency licenses..."
+          set +e
           go-licenses report ./... > license-report.txt
+          LICENSE_EXIT_CODE=$?
+
           echo "=== License Report ==="
           cat license-report.txt
 
           # Check for forbidden licenses (customize as needed)
           if grep -E "(GPL|AGPL|LGPL)" license-report.txt; then
-            echo "ERROR: Found copyleft licenses that may not be compatible"
+            echo "::error::Found copyleft licenses that may not be compatible"
             echo "Please review the licenses above"
             exit 1
           else
-            echo " No problematic licenses found"
+            echo "::notice::No problematic licenses found"
+          fi
+
+          if [ $LICENSE_EXIT_CODE -ne 0 ]; then
+            echo "::warning::go-licenses exited with code $LICENSE_EXIT_CODE"
           fi
 
       - name: Upload license report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: always()
         with:
           name: license-report
@@ -207,7 +231,7 @@ jobs:
     if: always()
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: security-reports/
 
