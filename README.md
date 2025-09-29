@@ -476,17 +476,17 @@ resource "dotfiles_file" "shell_config" {
 This provider is production-ready (v0.1.x). Current status:
 
 **Implemented Features:**
-- ✅ Core resources (file, symlink, directory, application, repository)
-- ✅ Multiple template engines (Go, Handlebars, Mustache)
-- ✅ Cross-platform support (macOS, Linux, Windows)
-- ✅ Basic backup system
-- ✅ Git repository management
-- ✅ System and file info data sources
+-  Core resources (file, symlink, directory, application, repository)
+-  Multiple template engines (Go, Handlebars, Mustache)
+-  Cross-platform support (macOS, Linux, Windows)
+-  Basic backup system
+-  Git repository management
+-  System and file info data sources
 
 **In Development:**
-- 🚧 Enhanced backup strategies with compression and retention
-- 🚧 Advanced Git authentication methods
-- 🚧 Service registry and caching improvements
+-  Enhanced backup strategies with compression and retention
+-  Advanced Git authentication methods
+-  Service registry and caching improvements
 
 ##  Contributing
 
@@ -520,4 +520,4 @@ This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) 
 
 ---
 
-**Made with ❤️ for the Terraform community**
+**Made with  for the Terraform community**

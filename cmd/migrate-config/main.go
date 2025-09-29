@@ -44,9 +44,9 @@ func main() {
 		}
 
 		if len(issues) == 0 {
-			log.Printf("✓ Configuration %s is compatible with the new architecture.", inputFile)
+			log.Printf(" Configuration %s is compatible with the new architecture.", inputFile)
 		} else {
-			log.Printf("⚠ Found %d compatibility issue(s) in %s:\n", len(issues), inputFile)
+			log.Printf(" Found %d compatibility issue(s) in %s:\n", len(issues), inputFile)
 			for i, issue := range issues {
 				log.Printf("%d. %s", i+1, issue.Description)
 				if issue.Suggestion != "" {
