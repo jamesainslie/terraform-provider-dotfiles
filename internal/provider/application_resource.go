@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -251,9 +251,8 @@ func (r *ApplicationResource) Delete(ctx context.Context, req resource.DeleteReq
 
 // deployApplicationConfig deploys configuration files according to the mappings.
 func (r *ApplicationResource) deployApplicationConfig(ctx context.Context, data *ApplicationResourceModel) (types.List, error) {
-	var configuredFiles []string
-
 	configMappings := data.ConfigMappings.Elements()
+	configuredFiles := make([]string, 0, len(configMappings))
 	for sourceFile, mappingValue := range configMappings {
 		// Extract the mapping configuration
 		mappingObj := mappingValue.(types.Object)

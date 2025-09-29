@@ -1,70 +1,205 @@
-# GoReleaser configuration for Terraform Dotfiles Provider
-# Visit https://goreleaser.com for documentation on how to customize this behavior.
+# GoReleaser configuration for terraform-provider-dotfiles
+# Documentation: https://goreleaser.com
 version: 2
 
+# Project configuration
 project_name: terraform-provider-dotfiles
+dist: dist
 
-before:
-  hooks:
-    - go mod tidy
-    # Tests are already run in separate CI jobs, skip here to avoid duplicates
-    - go vet ./...
+# Environment variables required for build
+env:
+  - CGO_ENABLED=0
+  - GO111MODULE=on
+  - GOPROXY=https://proxy.golang.org,direct
 
+# Git configuration
+git:
+  tag_sort: -version:refname
+  prerelease_suffix: "-"
+
+# Changelog configuration
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: 'New Features'
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 2
+    - title: 'Refactoring'
+      regexp: '^.*?refactor(\(.+\))??!?:.+$'
+      order: 3
+    - title: 'Documentation'
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 4
+    - title: 'Tests'
+      regexp: '^.*?test(\(.+\))??!?:.+$'
+      order: 5
+    - title: 'Other'
+      order: 999
+  filters:
+    exclude:
+      - '^chore'
+      - '^ci'
+      - '^build'
+      - typo
+      - merge conflict
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+
+# Build configuration
 builds:
-- env:
-    # goreleaser does not work with CGO, it could also complicate
-    # usage by users in CI/CD systems like HCP Terraform where
-    # they are unable to install libraries.
-    - CGO_ENABLED=0
-    # Force reproducible builds for consistent checksums across environments
-    - SOURCE_DATE_EPOCH={{ .CommitTimestamp }}
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  flags:
-    - -trimpath
-  ldflags:
-    - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
-  goos:
-    - windows
-    - linux
-    - darwin
-  goarch:
-    - amd64
-    - arm64
-  ignore:
-    - goos: windows
-      goarch: arm64
-  binary: '{{ .ProjectName }}'
+  - id: terraform-provider-dotfiles
+    binary: terraform-provider-dotfiles_v{{ .Version }}
+    main: .
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      # Darwin doesn't support 32-bit or ARM6
+      - goos: darwin
+        goarch: "386"
+      - goos: darwin
+        goarch: arm
+        goarm: "6"
+      # Windows ARM is not well supported yet
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+      - -mod=readonly
+    env:
+      - CGO_ENABLED=0
+
+# Archive configuration
 archives:
-- id: zip
-  format: zip
-  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-  wrap_in_directory: false
-  files:
-    - 'terraform-registry-manifest.json'
+  - id: terraform-provider-dotfiles
+    builds:
+      - terraform-provider-dotfiles
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: zip
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+# Checksum configuration
 checksum:
-  extra_files:
-    - glob: 'terraform-registry-manifest.json'
-      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
-  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
+
+# Signing configuration
 signs:
-  - artifacts: checksum
+  - id: terraform-provider-dotfiles
+    artifacts: checksum
     args:
-      # if you are using this in a GitHub action or some other automated pipeline, you
-      # need to pass the batch flag to indicate its not interactive.
       - "--batch"
       - "--local-user"
-      - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
+      - "{{ .Env.GPG_FINGERPRINT }}"
       - "--output"
       - "${signature}"
       - "--detach-sign"
       - "${artifact}"
+
+# GitHub release configuration
 release:
+  github:
+    owner: jamesainslie
+    name: terraform-provider-dotfiles
+  draft: false
+  prerelease: auto
   mode: replace
+  header: |
+    ## Release {{ .Tag }} ({{ .Date }})
+
+    This release of the terraform-provider-dotfiles includes the following changes:
+  footer: |
+    ## Installation
+
+    ### Terraform Registry (Recommended)
+    ```hcl
+    terraform {
+      required_providers {
+        dotfiles = {
+          source  = "jamesainslie/dotfiles"
+          version = "{{ .Tag }}"
+        }
+      }
+    }
+    ```
+
+    ### Manual Installation
+    Download the appropriate binary for your platform from the assets below and follow the [Terraform plugin installation guide](https://developer.hashicorp.com/terraform/cli/config/config-file#implied-local-mirror-directories).
+
+    ## Verification
+
+    All binaries are signed with GPG key `{{ .Env.GPG_FINGERPRINT }}` and checksums are provided.
+
+    ```bash
+    # Verify checksum
+    sha256sum -c terraform-provider-dotfiles_{{ .Version }}_SHA256SUMS
+
+    # Verify signature
+    gpg --verify terraform-provider-dotfiles_{{ .Version }}_SHA256SUMS.sig terraform-provider-dotfiles_{{ .Version }}_SHA256SUMS
+    ```
+
+    **Full Changelog**: https://github.com/jamesainslie/terraform-provider-dotfiles/compare/{{ .PreviousTag }}...{{ .Tag }}
   extra_files:
-    - glob: 'terraform-registry-manifest.json'
-      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
-  # If you want to manually examine the release before its live, uncomment this line:
-  # draft: true
-changelog:
-  disable: true
+    - glob: terraform-registry-manifest.json
+    - glob: docs/**/*.md
+
+# Metadata for Terraform Registry
+metadata:
+  mod_timestamp: "{{ .CommitTimestamp }}"
+
+# Upload to Terraform Registry (if configured)
+publishers:
+  - name: terraform-registry
+    ids:
+      - terraform-provider-dotfiles
+    checksum: true
+    signature: true
+    env:
+      - TF_REGISTRY_TOKEN={{ .Env.TF_REGISTRY_TOKEN }}
+    cmd: |
+      if [ -n "$TF_REGISTRY_TOKEN" ]; then
+        echo "Publishing to Terraform Registry..."
+        # This would integrate with terraform registry API
+        echo "Registry publication would happen here"
+      else
+        echo "No Terraform Registry token provided, skipping registry publication"
+      fi
+
+# Validation
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - go generate ./...
+    - make quality
+
+# Announcement configuration
+announce:
+  skip: "{{ .Env.SKIP_ANNOUNCE | default \"false\" }}"

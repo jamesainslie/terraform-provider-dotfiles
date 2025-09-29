@@ -1,0 +1,199 @@
+# Quality metrics tracking workflow for terraform-provider-dotfiles
+name: Quality Metrics
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Run metrics collection daily at 4 AM UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  # Code quality metrics
+  quality-metrics:
+    name: Quality Metrics Collection
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+        with:
+          fetch-depth: 0  # Need full history for metrics
+
+      - name: Set up Go
+        uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set Go toolchain environment
+        run: |
+          echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
+
+      - name: Install tools
+        run: make tools
+
+      - name: Collect code metrics
+        run: |
+          echo "Collecting code quality metrics..."
+
+          # Lines of code
+          echo "=== Lines of Code ===" > metrics-report.txt
+          find . -name "*.go" -not -path "./vendor/*" -not -path "./.git/*" | xargs wc -l | tail -1 >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+          # Go packages and modules
+          echo "=== Go Packages ===" >> metrics-report.txt
+          go list ./... | wc -l >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+          # Dependencies
+          echo "=== Dependencies ===" >> metrics-report.txt
+          go list -m all | wc -l >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+          # Test files
+          echo "=== Test Files ===" >> metrics-report.txt
+          find . -name "*_test.go" | wc -l >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+          # Git metrics
+          echo "=== Git Metrics ===" >> metrics-report.txt
+          echo "Commits in last 30 days:" >> metrics-report.txt
+          git log --since="30 days ago" --oneline | wc -l >> metrics-report.txt
+          echo "Contributors:" >> metrics-report.txt
+          git log --format='%aN' | sort -u | wc -l >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+      - name: Run test coverage analysis
+        run: |
+          echo "Running test coverage analysis..."
+          make test-coverage
+
+          # Extract coverage percentage
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "Test Coverage: $COVERAGE" >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+      - name: Run complexity analysis
+        run: |
+          echo "Running complexity analysis..."
+
+          # Cyclomatic complexity
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          echo "=== Complexity Analysis ===" >> metrics-report.txt
+          echo "Top 10 most complex functions:" >> metrics-report.txt
+          gocyclo -top 10 . >> metrics-report.txt || echo "No complexity issues found" >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+      - name: Analyze technical debt
+        run: |
+          echo "Analyzing technical debt..."
+
+          # TODO/FIXME/HACK comments
+          echo "=== Technical Debt Indicators ===" >> metrics-report.txt
+          echo "TODO comments:" >> metrics-report.txt
+          grep -r "TODO" --include="*.go" . | wc -l >> metrics-report.txt || echo "0" >> metrics-report.txt
+          echo "FIXME comments:" >> metrics-report.txt
+          grep -r "FIXME" --include="*.go" . | wc -l >> metrics-report.txt || echo "0" >> metrics-report.txt
+          echo "HACK comments:" >> metrics-report.txt
+          grep -r "HACK" --include="*.go" . | wc -l >> metrics-report.txt || echo "0" >> metrics-report.txt
+          echo "" >> metrics-report.txt
+
+      - name: Generate quality summary
+        run: |
+          echo "# Quality Metrics Report" >> $GITHUB_STEP_SUMMARY
+          echo "Generated on: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat metrics-report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          # Display report in logs
+          echo "=== QUALITY METRICS REPORT ==="
+          cat metrics-report.txt
+
+      - name: Upload metrics report
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-metrics-report
+          path: |
+            metrics-report.txt
+            coverage.out
+            coverage.html
+          retention-days: 90
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const metricsReport = fs.readFileSync('metrics-report.txt', 'utf8');
+
+            const body = `##  Quality Metrics Report
+
+            \`\`\`
+            ${metricsReport}
+            \`\`\`
+
+            *This report was automatically generated by the Quality Metrics workflow.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  # Performance benchmarks tracking
+  benchmark-tracking:
+    name: Performance Benchmark Tracking
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'  # Only run on main branch
+    steps:
+      - name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set Go toolchain environment
+        run: |
+          echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
+
+      - name: Run benchmarks
+        run: |
+          echo "Running performance benchmarks..."
+          make benchmark | tee benchmark-results.txt
+
+      - name: Store benchmark results
+        run: |
+          # Create benchmarks directory if it doesn't exist
+          mkdir -p .benchmarks
+
+          # Store results with timestamp
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          cp benchmark-results.txt .benchmarks/benchmark_${TIMESTAMP}.txt
+
+          echo "Benchmark results stored for $(date)"
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.txt
+            .benchmarks/
+          retention-days: 180

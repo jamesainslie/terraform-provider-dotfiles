@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package platform
@@ -110,7 +110,7 @@ func TestResolvePathFunctions(t *testing.T) {
 						name:        "Current directory",
 						input:       ".",
 						shouldError: false,
-						checkFunc:   func(result string) bool { return filepath.IsAbs(result) },
+						checkFunc:   filepath.IsAbs,
 					},
 					{
 						name:        "Empty path",
@@ -161,10 +161,8 @@ func TestPlatformSpecificExpandPath(t *testing.T) {
 		result, err := platform.ExpandPath("~")
 		if err != nil {
 			t.Errorf("ExpandPath('~') failed: %v", err)
-		} else {
-			if result != homeDir {
-				t.Errorf("ExpandPath('~') = %s, expected %s", result, homeDir)
-			}
+		} else if result != homeDir {
+			t.Errorf("ExpandPath('~') = %s, expected %s", result, homeDir)
 		}
 
 		// Test home subdirectory expansion
@@ -183,10 +181,8 @@ func TestPlatformSpecificExpandPath(t *testing.T) {
 			result, err = platform.ExpandPath("$HOME")
 			if err != nil {
 				t.Errorf("ExpandPath('$HOME') failed: %v", err)
-			} else {
-				if result != homeDir {
-					t.Errorf("ExpandPath('$HOME') = %s, expected %s", result, homeDir)
-				}
+			} else if result != homeDir {
+				t.Errorf("ExpandPath('$HOME') = %s, expected %s", result, homeDir)
 			}
 		}
 	})

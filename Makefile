@@ -89,6 +89,7 @@ security: ## Run security vulnerability checks
 	@echo "Running security checks..."
 	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck not found. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; exit 1; }
 	GOFLAGS="" govulncheck ./...
+	@echo "Note: gosec scan temporarily disabled due to repository access issues"
 
 # Go vet
 .PHONY: vet
@@ -121,11 +122,50 @@ mod: ## Tidy and verify go modules
 .PHONY: tools
 tools: ## Install development tools from tools/go.mod
 	@echo "Installing development tools..."
-	cd $(TOOLS_DIR) && $(GO) install github.com/hashicorp/terraform-plugin-docs@${DOCS_VERSION}
-	cd $(TOOLS_DIR) && $(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	cd $(TOOLS_DIR) && $(GO) install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@${DOCS_VERSION}
+	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	$(GO) install honnef.co/go/tools/cmd/staticcheck@latest
 	$(GO) install golang.org/x/tools/cmd/goimports@latest
 	$(GO) install golang.org/x/vuln/cmd/govulncheck@latest
+	@echo "Note: gosec and goreleaser installation temporarily disabled due to network access issues"
+	@echo " Essential development tools installed"
+
+# Dependency management
+.PHONY: deps
+deps: ## Check and update dependencies
+	@echo "Checking dependencies..."
+	$(GO) list -u -m -json all | jq -r 'select(.Update) | .Path + ": " + .Version + " -> " + .Update.Version' || echo "No updates available (jq not installed)"
+	@echo "Running go mod tidy..."
+	$(GO) mod tidy
+	@echo " Dependencies checked and updated"
+
+# Vulnerability scanning
+.PHONY: vuln-scan
+vuln-scan: ## Run comprehensive vulnerability scan
+	@echo "Running vulnerability scan..."
+	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck not found. Install with: make tools"; exit 1; }
+	govulncheck ./...
+	@echo " Vulnerability scan completed"
+
+# License compliance check
+.PHONY: license-check
+license-check: ## Check license compliance of dependencies
+	@echo "Checking license compliance..."
+	@$(GO) list -m -json all | jq -r '.Path + " " + (.Version // "unknown")' | sort
+	@echo " Dependencies listed (manual review required)"
+
+# Performance benchmarks
+.PHONY: bench-compare
+bench-compare: ## Run benchmarks and compare with previous
+	@echo "Running benchmark comparison..."
+	@if [ -f benchmark-prev.txt ]; then \
+		GOFLAGS="$(GOFLAGS_TEST)" $(GO) test -bench=. -benchmem ./... > benchmark-current.txt; \
+		echo "Previous vs Current benchmark comparison:"; \
+		echo "Run 'benchcmp benchmark-prev.txt benchmark-current.txt' if benchcmp is installed"; \
+	else \
+		echo "No previous benchmark found, creating baseline..."; \
+		GOFLAGS="$(GOFLAGS_TEST)" $(GO) test -bench=. -benchmem ./... > benchmark-prev.txt; \
+	fi
 
 # Cross-platform builds
 .PHONY: build-all
@@ -142,6 +182,7 @@ build-all: ## Build for all supported platforms
 .PHONY: quality
 quality: ## Run comprehensive quality checks
 	@echo "=== COMPREHENSIVE QUALITY CHECK ==="
+	@echo "1. Running linting..."
 	@$(MAKE) lint
 	@echo " golangci-lint passed"
 	@echo "2. Running staticcheck..."
@@ -150,19 +191,40 @@ quality: ## Run comprehensive quality checks
 	@echo "3. Running security checks..."
 	@$(MAKE) security
 	@echo " security checks passed"
+	@echo "4. Running go vet..."
+	@$(MAKE) vet
+	@echo " go vet passed"
+	@echo "5. Running unit tests..."
 	@$(MAKE) test
 	@echo " All tests passed"
-	@echo "5. Building project..."
+	@echo "6. Building project..."
 	@GOFLAGS="$(GOFLAGS_BUILD)" $(GO) build $(LDFLAGS) ./...
 	@echo " Build successful"
 	@echo ""
 	@echo " ALL QUALITY CHECKS PASSED! "
 
-# Pre-commit checks
+# Enhanced pre-commit checks
 .PHONY: pre-commit
-pre-commit: ## Run pre-commit checks
+pre-commit: ## Run pre-commit checks (fast version for commits)
 	@echo "Running pre-commit checks..."
-	@$(MAKE) fmt mod lint test
+	@$(MAKE) fmt mod lint-fast test-fast
+
+# Fast lint for pre-commit (only changed files)
+.PHONY: lint-fast
+lint-fast: ## Run golangci-lint on changed files only
+	@echo "Running fast linting on changed files..."
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		GOFLAGS="$(GOFLAGS_BUILD)" $(GOLANGCI_LINT) run --new-from-rev=HEAD~1; \
+	else \
+		echo "golangci-lint not found, falling back to full lint"; \
+		$(MAKE) lint; \
+	fi
+
+# Fast tests for pre-commit
+.PHONY: test-fast
+test-fast: ## Run fast unit tests (no race detector)
+	@echo "Running fast unit tests..."
+	@GOFLAGS="$(GOFLAGS_TEST)" $(GO) test -short -timeout=60s -parallel=4 ./...
 
 # Dev setup
 .PHONY: dev
@@ -204,7 +266,7 @@ pre-release: ## Run comprehensive pre-release quality gate
 	@$(MAKE) lint
 	@echo "Linting passed"
 	@echo "3. Running security checks..."
-	@$(MAKE) security  
+	@$(MAKE) security
 	@echo "Security checks passed"
 	@echo "4. Running unit tests with race detection..."
 	@$(MAKE) test-race

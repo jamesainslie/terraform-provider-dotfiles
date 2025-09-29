@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package idempotency
@@ -92,15 +92,13 @@ func GetFileState(path string) (*FileState, error) {
 			return nil, fmt.Errorf("failed to read symlink target for %s: %w", path, err)
 		}
 		state.SymlinkTarget = target
-	} else {
+	} else if info.Mode().IsRegular() {
 		// Calculate content hash for regular files
-		if info.Mode().IsRegular() {
-			hash, err := calculateFileHash(path)
-			if err != nil {
-				return nil, fmt.Errorf("failed to calculate hash for %s: %w", path, err)
-			}
-			state.ContentHash = hash
+		hash, err := calculateFileHash(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate hash for %s: %w", path, err)
 		}
+		state.ContentHash = hash
 	}
 
 	return state, nil
@@ -168,6 +166,22 @@ type DirectoryState struct {
 
 // GetDirectoryState captures the current state of a directory and its contents.
 func GetDirectoryState(ctx context.Context, path string, recursive bool) (*DirectoryState, error) {
+	// Initialize and validate directory
+	state, err := initializeDirectoryState(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Walk the directory and populate file states
+	if err := populateDirectoryState(ctx, path, recursive, state); err != nil {
+		return nil, fmt.Errorf("failed to walk directory %s: %w", path, err)
+	}
+
+	return state, nil
+}
+
+// initializeDirectoryState initializes and validates directory state
+func initializeDirectoryState(path string) (*DirectoryState, error) {
 	state := &DirectoryState{
 		Path:  path,
 		Files: make(map[string]*FileState),
@@ -190,8 +204,22 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 	state.Exists = true
 	state.ModTime = info.ModTime()
 
-	// Walk the directory to get file states
-	walkFunc := func(filePath string, info os.FileInfo, err error) error {
+	return state, nil
+}
+
+// populateDirectoryState walks the directory and populates file states
+func populateDirectoryState(ctx context.Context, path string, recursive bool, state *DirectoryState) error {
+	walkFunc := createDirectoryWalkFunc(ctx, path, recursive, state)
+
+	if recursive {
+		return filepath.Walk(path, walkFunc)
+	}
+	return walkDirectoryNonRecursive(ctx, path, walkFunc)
+}
+
+// createDirectoryWalkFunc creates the walk function for directory traversal
+func createDirectoryWalkFunc(ctx context.Context, rootPath string, recursive bool, state *DirectoryState) filepath.WalkFunc {
+	return func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			tflog.Warn(ctx, "Error walking directory", map[string]interface{}{
 				"path":  filePath,
@@ -201,7 +229,7 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 		}
 
 		// Skip the root directory itself
-		if filePath == path {
+		if filePath == rootPath {
 			return nil
 		}
 
@@ -211,10 +239,10 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 		}
 
 		// Get relative path for consistent keys
-		relPath, err := filepath.Rel(path, filePath)
+		relPath, err := filepath.Rel(rootPath, filePath)
 		if err != nil {
 			tflog.Warn(ctx, "Failed to get relative path", map[string]interface{}{
-				"base":  path,
+				"base":  rootPath,
 				"file":  filePath,
 				"error": err.Error(),
 			})
@@ -239,44 +267,39 @@ func GetDirectoryState(ctx context.Context, path string, recursive bool) (*Direc
 
 		return nil
 	}
+}
 
-	if recursive {
-		err = filepath.Walk(path, walkFunc)
-	} else {
-		// For non-recursive, just read the immediate directory
-		entries, err := os.ReadDir(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read directory %s: %w", path, err)
-		}
-
-		for _, entry := range entries {
-			entryPath := filepath.Join(path, entry.Name())
-			info, err := entry.Info()
-			if err != nil {
-				tflog.Warn(ctx, "Failed to get entry info", map[string]interface{}{
-					"path":  entryPath,
-					"error": err.Error(),
-				})
-				continue
-			}
-
-			// Skip directories in non-recursive mode
-			if info.IsDir() {
-				continue
-			}
-
-			err = walkFunc(entryPath, info, nil)
-			if err != nil && err != filepath.SkipDir {
-				return nil, err
-			}
-		}
-	}
-
+// walkDirectoryNonRecursive handles non-recursive directory walking
+func walkDirectoryNonRecursive(ctx context.Context, path string, walkFunc filepath.WalkFunc) error {
+	// For non-recursive, just read the immediate directory
+	entries, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to walk directory %s: %w", path, err)
+		return fmt.Errorf("failed to read directory %s: %w", path, err)
 	}
 
-	return state, nil
+	for _, entry := range entries {
+		entryPath := filepath.Join(path, entry.Name())
+		info, err := entry.Info()
+		if err != nil {
+			tflog.Warn(ctx, "Failed to get entry info", map[string]interface{}{
+				"path":  entryPath,
+				"error": err.Error(),
+			})
+			continue
+		}
+
+		// Skip directories in non-recursive mode
+		if info.IsDir() {
+			continue
+		}
+
+		err = walkFunc(entryPath, info, nil)
+		if err != nil && err != filepath.SkipDir {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // CompareDirectoryStates compares two directory states to determine if they're equivalent.
@@ -347,7 +370,7 @@ func EnsureIdempotentFileOperation(ctx context.Context, targetPath string, opera
 			"error": err.Error(),
 		})
 		// Operation succeeded, state check is just informational
-		// nolint:nilerr // Intentionally ignoring error as this is post-operation state checking
+		//nolint:nilerr // Intentionally ignoring error as this is post-operation state checking
 		return nil
 	}
 
@@ -401,7 +424,7 @@ func EnsureIdempotentDirectoryOperation(ctx context.Context, targetPath string, 
 			"error": err.Error(),
 		})
 		// Operation succeeded, state check is just informational
-		// nolint:nilerr // Intentionally ignoring error as this is post-operation state checking
+		//nolint:nilerr // Intentionally ignoring error as this is post-operation state checking
 		return nil
 	}
 

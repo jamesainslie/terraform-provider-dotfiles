@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -221,7 +221,7 @@ const (
 	EnvVarBackupDir    = "DOTFILES_BACKUP_DIR"
 	EnvVarDryRun       = "DOTFILES_DRY_RUN"
 	EnvVarLogLevel     = "DOTFILES_LOG_LEVEL"
-	EnvVarGitToken     = "DOTFILES_GIT_TOKEN"
+	EnvVarGitToken     = "DOTFILES_GIT_TOKEN" //nolint:gosec // G101: This is just an env var name, not a hardcoded credential
 	EnvVarGitSSHKey    = "DOTFILES_SSH_KEY"
 )
 

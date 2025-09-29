@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package utils
@@ -98,7 +98,7 @@ set -gx EDITOR vim`,
 
 	for filePath, content := range files {
 		fullPath := filepath.Join(repoDir, filePath)
-		err := os.WriteFile(fullPath, []byte(content), 0644)
+		err := os.WriteFile(fullPath, []byte(content), 0600)
 		if err != nil {
 			return "", err
 		}

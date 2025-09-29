@@ -1,0 +1,105 @@
+# golangci-lint configuration for terraform-provider-dotfiles
+# Using the same linter configuration as ~/Development/club for consistency
+version: "2"
+
+run:
+  timeout: 10m
+  issues-exit-code: 1
+  tests: true
+  build-tags:
+    - integration
+  skip-dirs:
+    - vendor
+    - .git
+    - bin
+    - dist
+    - tools
+  go: '1.25.1'
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters:
+  default: none
+  enable:
+    - contextcheck
+    - copyloopvar
+    - depguard
+    - dupl
+    - gocritic
+    - gocyclo
+    - gosec
+    - imports
+    - misspell
+    - nakedret
+    - nolintlint
+    - prealloc
+    - revive
+    - unconvert
+    - whitespace
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: Please use "errors" package from standard library
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G104
+        - G301
+        - G302
+        - G304
+    imports:
+      alias:
+        - pkg: github.com/stretchr/testify/assert
+          alias: assert
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - tools$
+    rules:
+      - linters:
+          - bodyclose
+          - depguard
+          - dupl
+          - funlen
+          - gochecknoglobals
+          - goconst
+          - gosec
+          - noctx
+          - wrapcheck
+        path: _test\.go$
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - tools$

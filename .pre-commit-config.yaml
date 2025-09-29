@@ -11,8 +11,30 @@ repos:
       - id: go-fmt
       - id: go-imports
       - id: go-mod-tidy
-      - id: go-vet-mod
-      - id: golangci-lint-mod
+      - id: go-vet
+      - id: golangci-lint
+        args: [--new-from-rev=HEAD~1]  # Only lint changed files
+
+  # Local hooks using our Makefile targets
+  - repo: local
+    hooks:
+      - id: make-pre-commit
+        name: Make Pre-commit Checks
+        entry: make
+        args: [pre-commit]
+        language: system
+        files: \.go$
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: test-fast
+        name: Fast Unit Tests
+        entry: make
+        args: [test-fast]
+        language: system
+        files: \.go$
+        pass_filenames: false
+        stages: [pre-push]
 
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -32,12 +54,16 @@ repos:
       - id: detect-private-key
       - id: check-executables-have-shebangs
 
-  # Go security checks
-  - repo: https://github.com/securecodewarrior/github-action-add-sarif
-    rev: v1.1.0
-    hooks:
-      - id: gosec
-        args: ['-fmt', 'sarif', '-out', 'gosec.sarif', './...']
+  # Go security checks (temporarily disabled due to network issues)
+  # - repo: local
+  #   hooks:
+  #     - id: gosec
+  #       name: Go Security Scanner
+  #       entry: gosec
+  #       args: ['-fmt', 'text', './...']
+  #       language: system
+  #       files: \.go$
+  #       pass_filenames: false
 
   # Markdown linting
   - repo: https://github.com/igorshubovych/markdownlint-cli

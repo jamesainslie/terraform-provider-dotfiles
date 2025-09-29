@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -117,7 +117,47 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 	// Create and configure the client
 	config := &DotfilesConfig{}
 
-	// Set configuration values from provider data
+	// Map provider data to configuration
+	p.mapProviderDataToConfig(&data, config)
+
+	// Set defaults for any empty values
+	if err := config.SetDefaults(); err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to set configuration defaults",
+			"An error occurred while setting default configuration values: "+err.Error(),
+		)
+		return
+	}
+
+	// Handle backup strategy configuration
+	p.handleBackupStrategyConfig(ctx, &data, config, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Handle recovery configuration
+	p.handleRecoveryConfig(ctx, &data)
+
+	// Create and validate client
+	client, err := p.createAndValidateClient(config, resp)
+	if err != nil {
+		return
+	}
+
+	tflog.Info(ctx, "Configured dotfiles provider", map[string]interface{}{
+		"dotfiles_root":   config.DotfilesRoot,
+		"backup_enabled":  config.BackupEnabled,
+		"strategy":        config.Strategy,
+		"target_platform": config.TargetPlatform,
+		"dry_run":         config.DryRun,
+	})
+
+	resp.DataSourceData = client
+	resp.ResourceData = client
+}
+
+// mapProviderDataToConfig maps provider data to configuration struct
+func (p *DotfilesProvider) mapProviderDataToConfig(data *EnhancedProviderModel, config *DotfilesConfig) {
 	if !data.DotfilesRoot.IsNull() {
 		config.DotfilesRoot = data.DotfilesRoot.ValueString()
 	}
@@ -163,62 +203,64 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 	if !data.LogLevel.IsNull() {
 		config.LogLevel = data.LogLevel.ValueString()
 	}
+}
 
-	// Set defaults for any empty values
-	if err := config.SetDefaults(); err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to set configuration defaults",
-			"An error occurred while setting default configuration values: "+err.Error(),
-		)
+// handleBackupStrategyConfig handles backup strategy configuration and conflict detection
+func (p *DotfilesProvider) handleBackupStrategyConfig(ctx context.Context, data *EnhancedProviderModel, config *DotfilesConfig, resp *provider.ConfigureResponse) {
+	if data.BackupStrategy == nil {
 		return
 	}
 
-	// Handle backup strategy configuration
-	if data.BackupStrategy != nil {
-		// Warn if both top-level and backup_strategy block are used
-		if !data.BackupEnabled.IsNull() && !data.BackupStrategy.Enabled.IsNull() {
-			resp.Diagnostics.AddWarning(
-				"Conflicting backup configuration",
-				"Both top-level 'backup_enabled' and 'backup_strategy.enabled' are set. The backup_strategy block takes precedence.",
-			)
-		}
-		if !data.BackupDirectory.IsNull() && !data.BackupStrategy.Directory.IsNull() {
-			resp.Diagnostics.AddWarning(
-				"Conflicting backup directory configuration",
-				"Both top-level 'backup_directory' and 'backup_strategy.directory' are set. The backup_strategy block takes precedence.",
-			)
-		}
-
-		// Apply backup strategy configuration (overrides top-level settings)
-		if !data.BackupStrategy.Enabled.IsNull() {
-			config.BackupEnabled = data.BackupStrategy.Enabled.ValueBool()
-		}
-		if !data.BackupStrategy.Directory.IsNull() {
-			config.BackupDirectory = data.BackupStrategy.Directory.ValueString()
-		}
-		// Additional backup strategy fields can be handled here as needed
-		// For now, we keep the existing simple backup configuration approach
+	// Warn if both top-level and backup_strategy block are used
+	if !data.BackupEnabled.IsNull() && !data.BackupStrategy.Enabled.IsNull() {
+		resp.Diagnostics.AddWarning(
+			"Conflicting backup configuration",
+			"Both top-level 'backup_enabled' and 'backup_strategy.enabled' are set. The backup_strategy block takes precedence.",
+		)
+	}
+	if !data.BackupDirectory.IsNull() && !data.BackupStrategy.Directory.IsNull() {
+		resp.Diagnostics.AddWarning(
+			"Conflicting backup directory configuration",
+			"Both top-level 'backup_directory' and 'backup_strategy.directory' are set. The backup_strategy block takes precedence.",
+		)
 	}
 
-	// Handle recovery configuration
-	if data.Recovery != nil {
-		// Recovery configuration is mainly used by resources
-		// Log that recovery features are enabled if configured
-		if !data.Recovery.CreateRestoreScripts.IsNull() && data.Recovery.CreateRestoreScripts.ValueBool() {
-			tflog.Debug(ctx, "Recovery restore scripts enabled")
-		}
-		if !data.Recovery.ValidateBackups.IsNull() && data.Recovery.ValidateBackups.ValueBool() {
-			tflog.Debug(ctx, "Backup validation enabled")
-		}
+	// Apply backup strategy configuration (overrides top-level settings)
+	if !data.BackupStrategy.Enabled.IsNull() {
+		config.BackupEnabled = data.BackupStrategy.Enabled.ValueBool()
+	}
+	if !data.BackupStrategy.Directory.IsNull() {
+		config.BackupDirectory = data.BackupStrategy.Directory.ValueString()
+	}
+	// Additional backup strategy fields can be handled here as needed
+	// For now, we keep the existing simple backup configuration approach
+}
+
+// handleRecoveryConfig handles recovery configuration
+func (p *DotfilesProvider) handleRecoveryConfig(ctx context.Context, data *EnhancedProviderModel) {
+	if data.Recovery == nil {
+		return
 	}
 
+	// Recovery configuration is mainly used by resources
+	// Log that recovery features are enabled if configured
+	if !data.Recovery.CreateRestoreScripts.IsNull() && data.Recovery.CreateRestoreScripts.ValueBool() {
+		tflog.Debug(ctx, "Recovery restore scripts enabled")
+	}
+	if !data.Recovery.ValidateBackups.IsNull() && data.Recovery.ValidateBackups.ValueBool() {
+		tflog.Debug(ctx, "Backup validation enabled")
+	}
+}
+
+// createAndValidateClient creates and validates the dotfiles client
+func (p *DotfilesProvider) createAndValidateClient(config *DotfilesConfig, resp *provider.ConfigureResponse) (*DotfilesClient, error) {
 	// Validate configuration
 	if err := config.Validate(); err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid provider configuration",
 			"The provider configuration is invalid: "+err.Error(),
 		)
-		return
+		return nil, err
 	}
 
 	// Create the client
@@ -228,19 +270,10 @@ func (p *DotfilesProvider) Configure(ctx context.Context, req provider.Configure
 			"Unable to create dotfiles client",
 			"An error occurred while creating the dotfiles client: "+err.Error(),
 		)
-		return
+		return nil, err
 	}
 
-	tflog.Info(ctx, "Configured dotfiles provider", map[string]interface{}{
-		"dotfiles_root":   config.DotfilesRoot,
-		"backup_enabled":  config.BackupEnabled,
-		"strategy":        config.Strategy,
-		"target_platform": config.TargetPlatform,
-		"dry_run":         config.DryRun,
-	})
-
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	return client, nil
 }
 
 func (p *DotfilesProvider) Resources(ctx context.Context) []func() resource.Resource {

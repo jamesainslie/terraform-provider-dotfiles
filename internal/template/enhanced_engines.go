@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package template
@@ -184,29 +184,10 @@ func (e *MustacheTemplateEngine) ValidateTemplate(templateContent string) error 
 
 // (getDefaultTemplateFunctions is implemented in engine.go).
 
-// convertHandlebarsToGo converts Handlebars syntax to Go template syntax.
-func convertHandlebarsToGo(content string) string {
-	// More robust conversion for Handlebars compatibility
-	result := content
-
-	// Convert {{#if var}} to {{if .var}}
-	result = strings.ReplaceAll(result, "{{#if ", "{{if .")
-	result = strings.ReplaceAll(result, "{{/if}}", "{{end}}")
-
-	// Convert {{#unless var}} to {{if not .var}}
-	result = strings.ReplaceAll(result, "{{#unless ", "{{if not .")
-	result = strings.ReplaceAll(result, "{{/unless}}", "{{end}}")
-
-	// Convert {{#each items}} to {{range .items}}
-	result = strings.ReplaceAll(result, "{{#each ", "{{range .")
-	result = strings.ReplaceAll(result, "{{/each}}", "{{end}}")
-
-	// Convert {{#with obj}} to {{with .obj}}
-	result = strings.ReplaceAll(result, "{{#with ", "{{with .")
-	result = strings.ReplaceAll(result, "{{/with}}", "{{end}}")
-
-	// Convert simple variables: {{var}} to {{.var}} (but not if already has dot or contains spaces/operators)
-	lines := strings.Split(result, "\n")
+// processTemplateVariables processes template content to convert simple variables from {{var}} to {{.var}}
+// skipConditions defines additional conditions to skip variable conversion
+func processTemplateVariables(content string, skipConditions func(string) bool) string {
+	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		// Find all {{...}} patterns
 		start := 0
@@ -230,12 +211,11 @@ func convertHandlebarsToGo(content string) string {
 			// Skip if it's a control structure, already has dot, or contains operators
 			if !strings.HasPrefix(content, ".") &&
 				!strings.Contains(content, " ") &&
-				!strings.Contains(content, "if") &&
 				!strings.Contains(content, "range") &&
 				!strings.Contains(content, "with") &&
 				!strings.Contains(content, "end") &&
-				!strings.Contains(content, "not") &&
-				content != "" {
+				content != "" &&
+				!skipConditions(content) {
 				// Replace {{var}} with {{.var}}
 				newContent := "{{." + content + "}}"
 				line = line[:openIdx] + newContent + line[closeIdx:]
@@ -246,8 +226,36 @@ func convertHandlebarsToGo(content string) string {
 		}
 		lines[i] = line
 	}
-
 	return strings.Join(lines, "\n")
+}
+
+// convertHandlebarsToGo converts Handlebars syntax to Go template syntax.
+func convertHandlebarsToGo(content string) string {
+	// More robust conversion for Handlebars compatibility
+	result := content
+
+	// Convert {{#if var}} to {{if .var}}
+	result = strings.ReplaceAll(result, "{{#if ", "{{if .")
+	result = strings.ReplaceAll(result, "{{/if}}", "{{end}}")
+
+	// Convert {{#unless var}} to {{if not .var}}
+	result = strings.ReplaceAll(result, "{{#unless ", "{{if not .")
+	result = strings.ReplaceAll(result, "{{/unless}}", "{{end}}")
+
+	// Convert {{#each items}} to {{range .items}}
+	result = strings.ReplaceAll(result, "{{#each ", "{{range .")
+	result = strings.ReplaceAll(result, "{{/each}}", "{{end}}")
+
+	// Convert {{#with obj}} to {{with .obj}}
+	result = strings.ReplaceAll(result, "{{#with ", "{{with .")
+	result = strings.ReplaceAll(result, "{{/with}}", "{{end}}")
+
+	// Convert simple variables: {{var}} to {{.var}} (but not if already has dot or contains spaces/operators)
+	result = processTemplateVariables(result, func(content string) bool {
+		return strings.Contains(content, "if") || strings.Contains(content, "not")
+	})
+
+	return result
 }
 
 // convertMustacheToGo converts Mustache syntax to Go template syntax.
@@ -280,48 +288,11 @@ func convertMustacheToGo(content string) string {
 	result = strings.ReplaceAll(result, "{{/settings}}", "{{end}}")
 
 	// Convert simple variables: {{var}} to {{.var}} (similar to Handlebars)
-	lines := strings.Split(result, "\n")
-	for i, line := range lines {
-		// Find all {{...}} patterns
-		start := 0
-		for {
-			openIdx := strings.Index(line[start:], "{{")
-			if openIdx == -1 {
-				break
-			}
-			openIdx += start
+	result = processTemplateVariables(result, func(content string) bool {
+		return strings.HasPrefix(content, "#") || strings.HasPrefix(content, "/")
+	})
 
-			closeIdx := strings.Index(line[openIdx:], "}}")
-			if closeIdx == -1 {
-				break
-			}
-			closeIdx += openIdx + 2
-
-			// Extract the content between {{ and }}
-			content := line[openIdx+2 : closeIdx-2]
-			content = strings.TrimSpace(content)
-
-			// Skip if it's a control structure, already has dot, or contains operators
-			if !strings.HasPrefix(content, ".") &&
-				!strings.Contains(content, " ") &&
-				!strings.Contains(content, "range") &&
-				!strings.Contains(content, "with") &&
-				!strings.Contains(content, "end") &&
-				!strings.HasPrefix(content, "#") &&
-				!strings.HasPrefix(content, "/") &&
-				content != "" {
-				// Replace {{var}} with {{.var}}
-				newContent := "{{." + content + "}}"
-				line = line[:openIdx] + newContent + line[closeIdx:]
-				start = openIdx + len(newContent)
-			} else {
-				start = closeIdx
-			}
-		}
-		lines[i] = line
-	}
-
-	return strings.Join(lines, "\n")
+	return result
 }
 
 // CreateTemplateEngine creates a template engine based on the specified type.

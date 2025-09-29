@@ -26,34 +26,70 @@ jobs:
     name: Pre-Release Quality Gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-        
+
       - name: Set up Go
         uses: actions/setup-go@c0137caad775660c0844396c52da96e560aba63d # v6.0.0
         with:
-          go-version: '1.25.1'
+          go-version-file: go.mod
           cache: true
+
+      - name: Extract version information
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+          # Check if this is a pre-release
+          if [[ "${VERSION}" =~ -[a-zA-Z] ]]; then
+            echo "is-prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set Go toolchain environment
         run: |
           echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
-          echo "GOFLAGS=-gcflags=all=-lang=go1.25" >> $GITHUB_ENV
           echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
-      - run: go mod download
-        
+
+      - name: Download dependencies
+        run: go mod download
+
       - name: Install required tools
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-        
-      - name: Run pre-release quality gate
+        run: make tools
+
+      - name: Run comprehensive pre-release quality gate
         run: make pre-release
 
-  # Test on macOS 
+      - name: Validate GoReleaser configuration
+        run: |
+          go install github.com/goreleaser/goreleaser@latest
+          goreleaser check
+
+      - name: Test release build (dry-run)
+        run: goreleaser build --snapshot --clean
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-release-artifacts
+          path: dist/
+          retention-days: 1
+
+  # Test on macOS
   test-macos:
     name: Test macOS Functionality
     runs-on: macos-latest
@@ -63,21 +99,21 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-        
+
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
           cache: true
-          
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          
+
       - name: Download dependencies
         run: go mod download
-        
+
       - name: Run platform-specific tests
         run: go test -v ./internal/platform/ -run="TestPlatformFileOperations"
 
@@ -86,75 +122,118 @@ jobs:
     name: Create Release
     needs: [quality-gate, test-macos]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    environment:
+      name: release
+    outputs:
+      release-url: ${{ steps.release.outputs.url }}
+      assets-count: ${{ steps.release.outputs.assets-count }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          # Allow goreleaser to access the full commit history
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-          
+
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
+          go-version-file: go.mod
           cache: true
-          
+
+      - name: Set up environment variables
+        run: |
+          echo "VERSION=${{ needs.quality-gate.outputs.version }}" >> $GITHUB_ENV
+          echo "IS_PRERELEASE=${{ needs.quality-gate.outputs.is-prerelease }}" >> $GITHUB_ENV
+          echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
+
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
         id: import_gpg
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          
-      - name: Validate provider schema
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Install GoReleaser
+        run: go install github.com/goreleaser/goreleaser@latest
+
+      - name: Validate provider schema and binary
         run: |
-          go build -o /tmp/terraform-provider-dotfiles .
-          echo "Provider binary built successfully: $(file /tmp/terraform-provider-dotfiles)"
+          echo "Building and validating provider binary..."
+          go build -o terraform-provider-dotfiles .
+          echo "Provider binary built successfully: $(file terraform-provider-dotfiles)"
+
+          # Test provider initialization
+          ./terraform-provider-dotfiles --version || echo "Provider version command not available (expected)"
           echo "Provider schema validation completed"
-          
-      # Documentation is already generated and committed, skip regeneration to avoid dirty state
-          
-      - name: Check if release already exists with assets
+          rm -f terraform-provider-dotfiles
+
+      - name: Generate changelog
+        run: |
+          # Generate changelog if it doesn't exist
+          if [[ ! -f "CHANGELOG.md" ]]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "## [${{ env.VERSION }}] - $(date +%Y-%m-%d)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "Initial release." >> CHANGELOG.md
+          fi
+
+      - name: Check if release already exists
         id: check_release
         run: |
-          # Check if release exists and has assets
-          if gh release view ${{ github.ref_name }} >/dev/null 2>&1; then
-            asset_count=$(gh release view ${{ github.ref_name }} --json assets --jq '.assets | length' 2>/dev/null || echo "0")
+          if gh release view "${{ env.VERSION }}" >/dev/null 2>&1; then
+            asset_count=$(gh release view "${{ env.VERSION }}" --json assets --jq '.assets | length' 2>/dev/null || echo "0")
             if [ "$asset_count" -gt 0 ]; then
-              echo "release_exists=true" >> $GITHUB_OUTPUT
-              echo "Release ${{ github.ref_name }} already exists with $asset_count assets, will skip GoReleaser"
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "assets-count=$asset_count" >> $GITHUB_OUTPUT
+              echo "Release ${{ env.VERSION }} already exists with $asset_count assets"
             else
-              echo "release_exists=false" >> $GITHUB_OUTPUT
-              echo "Release ${{ github.ref_name }} exists but has no assets, proceeding with GoReleaser"
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "assets-count=0" >> $GITHUB_OUTPUT
+              echo "Release ${{ env.VERSION }} exists but has no assets"
             fi
           else
-            echo "release_exists=false" >> $GITHUB_OUTPUT
-            echo "Release ${{ github.ref_name }} does not exist, proceeding with GoReleaser"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "assets-count=0" >> $GITHUB_OUTPUT
+            echo "Release ${{ env.VERSION }} does not exist"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Run GoReleaser
-        if: steps.check_release.outputs.release_exists == 'false'
+        id: release
+        if: steps.check_release.outputs.exists == 'false'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: '~> v2'
+          version: latest
           args: release --clean
         env:
-          # GitHub token for creating releases
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GPG key for signing (optional)
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-          
-      - name: Log existing release
-        if: steps.check_release.outputs.release_exists == 'true'
+          TF_REGISTRY_TOKEN: ${{ secrets.TF_REGISTRY_TOKEN }}
+
+      - name: Get release information
+        if: steps.check_release.outputs.exists == 'false'
         run: |
-          echo "INFO: Release ${{ github.ref_name }} already exists with the following assets:"
-          gh release view ${{ github.ref_name }} --json assets --jq '.assets[] | "  - " + .name + " (" + (.size | tostring) + " bytes)"'
-          echo "SUCCESS: Skipping GoReleaser execution to prevent duplicate asset upload failures"
-          echo "NOTE: This is expected behavior when re-running releases with the same tag that already has assets"
+          release_url=$(gh release view "${{ env.VERSION }}" --json url --jq '.url')
+          asset_count=$(gh release view "${{ env.VERSION }}" --json assets --jq '.assets | length')
+          echo "url=$release_url" >> $GITHUB_OUTPUT
+          echo "assets-count=$asset_count" >> $GITHUB_OUTPUT
+          echo "Release created: $release_url"
+          echo "Assets uploaded: $asset_count"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log existing release
+        if: steps.check_release.outputs.exists == 'true'
+        run: |
+          echo "INFO: Release ${{ env.VERSION }} already exists with the following assets:"
+          gh release view "${{ env.VERSION }}" --json assets --jq '.assets[] | "  - " + .name + " (" + (.size | tostring) + " bytes)"'
+          echo "SUCCESS: Skipping GoReleaser execution to prevent duplicate uploads"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -169,19 +248,19 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-        
+
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
           cache: true
-          
+
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           echo "Running security vulnerability scan..."
           govulncheck ./... || echo "Vulnerabilities found, but continuing since this is a filesystem provider with expected OS calls"
-          
+
       - name: Run Gosec Security Scanner
         run: |
           echo "Running security analysis..."

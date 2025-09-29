@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -10,194 +10,260 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
 )
 
 func TestRepositoryResource(t *testing.T) {
 	t.Run("NewRepositoryResource", func(t *testing.T) {
-		r := NewRepositoryResource()
-		if r == nil {
-			t.Fatal("NewRepositoryResource() returned nil")
-		}
-
-		// RepositoryResource should implement the Resource interface
-		if r == nil {
-			t.Error("RepositoryResource should not be nil")
-		}
+		testNewRepositoryResource(t)
 	})
 
 	t.Run("Metadata", func(t *testing.T) {
-		r := NewRepositoryResource()
-		ctx := context.Background()
-
-		req := resource.MetadataRequest{
-			ProviderTypeName: "dotfiles",
-		}
-		resp := &resource.MetadataResponse{}
-
-		r.Metadata(ctx, req, resp)
-
-		expectedTypeName := "dotfiles_repository"
-		if resp.TypeName != expectedTypeName {
-			t.Errorf("Expected TypeName %s, got %s", expectedTypeName, resp.TypeName)
-		}
+		testRepositoryResourceMetadata(t)
 	})
 
 	t.Run("Schema", func(t *testing.T) {
-		r := NewRepositoryResource()
-		ctx := context.Background()
-
-		req := resource.SchemaRequest{}
-		resp := &resource.SchemaResponse{}
-
-		r.Schema(ctx, req, resp)
-
-		if resp.Diagnostics.HasError() {
-			t.Errorf("Schema validation failed: %v", resp.Diagnostics)
-		}
-
-		schema := resp.Schema
-
-		// Check required attributes
-		requiredAttrs := []string{"id", "name", "source_path"}
-		for _, attr := range requiredAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Required attribute %s not found in schema", attr)
-			}
-		}
-
-		// Check optional attributes
-		optionalAttrs := []string{
-			"description", "default_backup_enabled", "default_file_mode", "default_dir_mode",
-			"git_branch", "git_personal_access_token", "git_username", "git_ssh_private_key_path",
-			"git_ssh_passphrase", "git_update_interval",
-		}
-		for _, attr := range optionalAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Optional attribute %s not found in schema", attr)
-			}
-		}
-
-		// Check computed attributes
-		computedAttrs := []string{"local_path", "last_commit", "last_update"}
-		for _, attr := range computedAttrs {
-			if _, exists := schema.Attributes[attr]; !exists {
-				t.Errorf("Computed attribute %s not found in schema", attr)
-			}
-		}
-
-		// Verify sensitive attributes are marked correctly
-		sensitiveAttrs := []string{"git_personal_access_token", "git_ssh_passphrase"}
-		for _, attr := range sensitiveAttrs {
-			if schemaAttr, exists := schema.Attributes[attr]; exists {
-				if stringAttr, ok := schemaAttr.(interface{ GetSensitive() bool }); ok {
-					if !stringAttr.GetSensitive() {
-						t.Errorf("Attribute %s should be marked as sensitive", attr)
-					}
-				}
-			}
-		}
+		testRepositoryResourceSchema(t)
 	})
 
 	t.Run("Configure", func(t *testing.T) {
-		r := NewRepositoryResource()
-		repoResource, ok := r.(*RepositoryResource)
-		if !ok {
-			t.Fatal("NewRepositoryResource() did not return *RepositoryResource")
-		}
-
-		ctx := context.Background()
-
-		// Test with nil provider data
-		req := resource.ConfigureRequest{
-			ProviderData: nil,
-		}
-		resp := &resource.ConfigureResponse{}
-
-		repoResource.Configure(ctx, req, resp)
-
-		// Should not error with nil provider data
-		if resp.Diagnostics.HasError() {
-			t.Errorf("Configure with nil provider data should not error: %v", resp.Diagnostics)
-		}
-
-		// Test with valid client
-		client := &DotfilesClient{
-			Platform:     "test",
-			Architecture: "test",
-			HomeDir:      "/tmp",
-			ConfigDir:    "/tmp/.config",
-		}
-
-		req.ProviderData = client
-		resp = &resource.ConfigureResponse{}
-
-		repoResource.Configure(ctx, req, resp)
-
-		if resp.Diagnostics.HasError() {
-			t.Errorf("Configure with valid client failed: %v", resp.Diagnostics)
-		}
-
-		// Test with invalid provider data type
-		req.ProviderData = "invalid"
-		resp = &resource.ConfigureResponse{}
-
-		repoResource.Configure(ctx, req, resp)
-
-		if !resp.Diagnostics.HasError() {
-			t.Error("Configure with invalid provider data should error")
-		}
+		testRepositoryResourceConfigure(t)
 	})
 
 	t.Run("BuildAuthConfig", func(t *testing.T) {
-		r := &RepositoryResource{}
-
-		// Test with PAT
-		data := &RepositoryResourceModel{
-			GitPersonalAccessToken: types.StringValue("ghp_test_token"),
-			GitUsername:            types.StringValue("testuser"),
-		}
-
-		authConfig := r.buildAuthConfig(data)
-
-		if authConfig.PersonalAccessToken != "ghp_test_token" {
-			t.Errorf("Expected PAT 'ghp_test_token', got '%s'", authConfig.PersonalAccessToken)
-		}
-		if authConfig.Username != "testuser" {
-			t.Errorf("Expected username 'testuser', got '%s'", authConfig.Username)
-		}
-
-		// Test with SSH
-		data = &RepositoryResourceModel{
-			GitSSHPrivateKeyPath: types.StringValue("/path/to/key"),
-			GitSSHPassphrase:     types.StringValue("passphrase"),
-		}
-
-		authConfig = r.buildAuthConfig(data)
-
-		if authConfig.SSHPrivateKeyPath != "/path/to/key" {
-			t.Errorf("Expected SSH key path '/path/to/key', got '%s'", authConfig.SSHPrivateKeyPath)
-		}
-		if authConfig.SSHPassphrase != "passphrase" {
-			t.Errorf("Expected SSH passphrase 'passphrase', got '%s'", authConfig.SSHPassphrase)
-		}
-
-		// Test with null values
-		data = &RepositoryResourceModel{
-			GitPersonalAccessToken: types.StringNull(),
-			GitUsername:            types.StringNull(),
-		}
-
-		authConfig = r.buildAuthConfig(data)
-
-		if authConfig.PersonalAccessToken != "" {
-			t.Errorf("Expected empty PAT for null value, got: %q", authConfig.PersonalAccessToken)
-		}
-		if authConfig.Username != "" {
-			t.Errorf("Expected empty username for null value, got: %q", authConfig.Username)
-		}
+		testRepositoryResourceBuildAuthConfig(t)
 	})
+}
+
+// testNewRepositoryResource tests NewRepositoryResource creation
+func testNewRepositoryResource(t *testing.T) {
+	r := NewRepositoryResource()
+	if r == nil {
+		t.Fatal("NewRepositoryResource() returned nil")
+	}
+
+	// RepositoryResource should implement the Resource interface
+	if r == nil {
+		t.Error("RepositoryResource should not be nil")
+	}
+}
+
+// testRepositoryResourceMetadata tests repository resource metadata
+func testRepositoryResourceMetadata(t *testing.T) {
+	r := NewRepositoryResource()
+	ctx := context.Background()
+
+	req := resource.MetadataRequest{
+		ProviderTypeName: "dotfiles",
+	}
+	resp := &resource.MetadataResponse{}
+
+	r.Metadata(ctx, req, resp)
+
+	expectedTypeName := "dotfiles_repository"
+	if resp.TypeName != expectedTypeName {
+		t.Errorf("Expected TypeName %s, got %s", expectedTypeName, resp.TypeName)
+	}
+}
+
+// testRepositoryResourceSchema tests repository resource schema
+func testRepositoryResourceSchema(t *testing.T) {
+	r := NewRepositoryResource()
+	ctx := context.Background()
+
+	req := resource.SchemaRequest{}
+	resp := &resource.SchemaResponse{}
+
+	r.Schema(ctx, req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("Schema validation failed: %v", resp.Diagnostics)
+	}
+
+	validateRepositoryResourceSchemaAttributes(t, resp.Schema)
+}
+
+// validateRepositoryResourceSchemaAttributes validates schema attributes
+func validateRepositoryResourceSchemaAttributes(t *testing.T, schema schema.Schema) {
+	validateRepositoryRequiredAttributes(t, schema)
+	validateRepositoryOptionalAttributes(t, schema)
+	validateRepositoryComputedAttributes(t, schema)
+	validateRepositorySensitiveAttributes(t, schema)
+}
+
+// validateRepositoryRequiredAttributes validates required schema attributes
+func validateRepositoryRequiredAttributes(t *testing.T, schema schema.Schema) {
+	requiredAttrs := []string{"id", "name", "source_path"}
+	for _, attr := range requiredAttrs {
+		if _, exists := schema.Attributes[attr]; !exists {
+			t.Errorf("Required attribute %s not found in schema", attr)
+		}
+	}
+}
+
+// validateRepositoryOptionalAttributes validates optional schema attributes
+func validateRepositoryOptionalAttributes(t *testing.T, schema schema.Schema) {
+	optionalAttrs := []string{
+		"description", "default_backup_enabled", "default_file_mode", "default_dir_mode",
+		"git_branch", "git_personal_access_token", "git_username", "git_ssh_private_key_path",
+		"git_ssh_passphrase", "git_update_interval",
+	}
+	for _, attr := range optionalAttrs {
+		if _, exists := schema.Attributes[attr]; !exists {
+			t.Errorf("Optional attribute %s not found in schema", attr)
+		}
+	}
+}
+
+// validateRepositoryComputedAttributes validates computed schema attributes
+func validateRepositoryComputedAttributes(t *testing.T, schema schema.Schema) {
+	computedAttrs := []string{"local_path", "last_commit", "last_update"}
+	for _, attr := range computedAttrs {
+		if _, exists := schema.Attributes[attr]; !exists {
+			t.Errorf("Computed attribute %s not found in schema", attr)
+		}
+	}
+}
+
+// validateRepositorySensitiveAttributes validates sensitive schema attributes
+func validateRepositorySensitiveAttributes(t *testing.T, schema schema.Schema) {
+	sensitiveAttrs := []string{"git_personal_access_token", "git_ssh_passphrase"}
+	for _, attr := range sensitiveAttrs {
+		if schemaAttr, exists := schema.Attributes[attr]; exists {
+			if stringAttr, ok := schemaAttr.(interface{ GetSensitive() bool }); ok {
+				if !stringAttr.GetSensitive() {
+					t.Errorf("Attribute %s should be marked as sensitive", attr)
+				}
+			}
+		}
+	}
+}
+
+// testRepositoryResourceConfigure tests repository resource configuration
+func testRepositoryResourceConfigure(t *testing.T) {
+	r := NewRepositoryResource()
+	repoResource, ok := r.(*RepositoryResource)
+	if !ok {
+		t.Fatal("NewRepositoryResource() did not return *RepositoryResource")
+	}
+
+	ctx := context.Background()
+
+	testRepositoryConfigureWithNilProvider(t, ctx, repoResource)
+	testRepositoryConfigureWithValidClient(t, ctx, repoResource)
+	testRepositoryConfigureWithInvalidProvider(t, ctx, repoResource)
+}
+
+// testRepositoryConfigureWithNilProvider tests configure with nil provider
+func testRepositoryConfigureWithNilProvider(t *testing.T, ctx context.Context, repoResource *RepositoryResource) {
+	req := resource.ConfigureRequest{
+		ProviderData: nil,
+	}
+	resp := &resource.ConfigureResponse{}
+
+	repoResource.Configure(ctx, req, resp)
+
+	// Should not error with nil provider data
+	if resp.Diagnostics.HasError() {
+		t.Errorf("Configure with nil provider data should not error: %v", resp.Diagnostics)
+	}
+}
+
+// testRepositoryConfigureWithValidClient tests configure with valid client
+func testRepositoryConfigureWithValidClient(t *testing.T, ctx context.Context, repoResource *RepositoryResource) {
+	client := &DotfilesClient{
+		Platform:     "test",
+		Architecture: "test",
+		HomeDir:      "/tmp",
+		ConfigDir:    "/tmp/.config",
+	}
+
+	req := resource.ConfigureRequest{
+		ProviderData: client,
+	}
+	resp := &resource.ConfigureResponse{}
+
+	repoResource.Configure(ctx, req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("Configure with valid client failed: %v", resp.Diagnostics)
+	}
+}
+
+// testRepositoryConfigureWithInvalidProvider tests configure with invalid provider
+func testRepositoryConfigureWithInvalidProvider(t *testing.T, ctx context.Context, repoResource *RepositoryResource) {
+	req := resource.ConfigureRequest{
+		ProviderData: "invalid",
+	}
+	resp := &resource.ConfigureResponse{}
+
+	repoResource.Configure(ctx, req, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Error("Configure with invalid provider data should error")
+	}
+}
+
+// testRepositoryResourceBuildAuthConfig tests build auth config functionality
+func testRepositoryResourceBuildAuthConfig(t *testing.T) {
+	r := &RepositoryResource{}
+
+	testBuildAuthConfigWithPAT(t, r)
+	testBuildAuthConfigWithSSH(t, r)
+	testBuildAuthConfigWithNullValues(t, r)
+}
+
+// testBuildAuthConfigWithPAT tests build auth config with Personal Access Token
+func testBuildAuthConfigWithPAT(t *testing.T, r *RepositoryResource) {
+	data := &RepositoryResourceModel{
+		GitPersonalAccessToken: types.StringValue("ghp_test_token"),
+		GitUsername:            types.StringValue("testuser"),
+	}
+
+	authConfig := r.buildAuthConfig(data)
+
+	if authConfig.PersonalAccessToken != "ghp_test_token" {
+		t.Errorf("Expected PAT 'ghp_test_token', got '%s'", authConfig.PersonalAccessToken)
+	}
+	if authConfig.Username != "testuser" {
+		t.Errorf("Expected username 'testuser', got '%s'", authConfig.Username)
+	}
+}
+
+// testBuildAuthConfigWithSSH tests build auth config with SSH
+func testBuildAuthConfigWithSSH(t *testing.T, r *RepositoryResource) {
+	data := &RepositoryResourceModel{
+		GitSSHPrivateKeyPath: types.StringValue("/path/to/key"),
+		GitSSHPassphrase:     types.StringValue("passphrase"),
+	}
+
+	authConfig := r.buildAuthConfig(data)
+
+	if authConfig.SSHPrivateKeyPath != "/path/to/key" {
+		t.Errorf("Expected SSH key path '/path/to/key', got '%s'", authConfig.SSHPrivateKeyPath)
+	}
+	if authConfig.SSHPassphrase != "passphrase" {
+		t.Errorf("Expected SSH passphrase 'passphrase', got '%s'", authConfig.SSHPassphrase)
+	}
+}
+
+// testBuildAuthConfigWithNullValues tests build auth config with null values
+func testBuildAuthConfigWithNullValues(t *testing.T, r *RepositoryResource) {
+	data := &RepositoryResourceModel{
+		GitPersonalAccessToken: types.StringNull(),
+		GitUsername:            types.StringNull(),
+	}
+
+	authConfig := r.buildAuthConfig(data)
+
+	if authConfig.PersonalAccessToken != "" {
+		t.Errorf("Expected empty PAT for null value, got: %q", authConfig.PersonalAccessToken)
+	}
+	if authConfig.Username != "" {
+		t.Errorf("Expected empty username for null value, got: %q", authConfig.Username)
+	}
 }
 
 func TestRepositoryResourceModel(t *testing.T) {

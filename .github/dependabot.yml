@@ -1,30 +1,119 @@
-# See GitHub's documentation for more information on this file:
-# https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/configuration-options-for-dependency-updates
+# Dependabot configuration for terraform-provider-dotfiles
+# Documentation: https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/configuration-options-for-dependency-updates
+
 version: 2
 updates:
-  # Maintain dependencies for Go modules
+  # Go modules in root directory
   - package-ecosystem: "gomod"
     directory: "/"
-    schedule:
-      # Check for updates to Go modules every weekday
-      interval: "daily"
-    groups:
-      # Group all terraform-plugin-(go|sdk|framework|testing) dependencies together
-      "terraform-plugin":
-        patterns:
-          - "github.com/hashicorp/terraform-plugin-*"
-  - package-ecosystem: "gomod"
-    directory: "/tools"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    groups:
-      "github-actions":
-        patterns:
-          - "*" # Group all GitHub Actions dependencies together
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "09:00"
-      timezone: "Etc/UTC"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "jamesainslie"
+    assignees:
+      - "jamesainslie"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+    allow:
+      # Allow all dependency types
+      - dependency-type: "all"
+    ignore:
+      # Ignore specific packages if needed
+      # - dependency-name: "example.com/package"
+      #   versions: ["1.x"]
+    groups:
+      # Group HashCorp dependencies together
+      hashicorp-dependencies:
+        patterns:
+          - "github.com/hashicorp/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group testing dependencies
+      testing-dependencies:
+        patterns:
+          - "*test*"
+          - "*mock*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group security updates
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # Go modules in tools directory
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:30"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "jamesainslie"
+    assignees:
+      - "jamesainslie"
+    commit-message:
+      prefix: "tools"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "tools"
+    allow:
+      - dependency-type: "all"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "jamesainslie"
+    assignees:
+      - "jamesainslie"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    allow:
+      - dependency-type: "all"
+
+  # Terraform configurations in examples
+  - package-ecosystem: "terraform"
+    directory: "/examples"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "jamesainslie"
+    assignees:
+      - "jamesainslie"
+    commit-message:
+      prefix: "terraform"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "terraform"
+    allow:
+      - dependency-type: "all"

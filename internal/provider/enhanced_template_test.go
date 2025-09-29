@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -277,7 +277,7 @@ func TestCustomTemplateFunctions(t *testing.T) {
 		customFunctions := map[string]interface{}{
 			"homebrewPrefix": func() string { return "/opt/homebrew" },
 			"configPath":     func(app string) string { return "~/.config/" + app },
-			"camelCase":      func(s string) string { return toCamelCase(s) },
+			"camelCase":      toCamelCase,
 		}
 
 		engine, err := NewGoTemplateEngineWithFunctions(customFunctions)

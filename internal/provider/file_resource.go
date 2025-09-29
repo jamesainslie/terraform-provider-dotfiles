@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -188,9 +188,26 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"is_template": data.IsTemplate.ValueBool(),
 	})
 
-	// Application requirements are now handled by terraform-provider-package
-	// This resource focuses on file management only
+	// Prepare file creation - handle paths, validation, and configuration
+	sourcePath, expandedTargetPath, fileManager, permConfig, enhancedBackupConfig, err := r.prepareFileCreation(ctx, &data, resp)
+	if err != nil {
+		return // diagnostics already added
+	}
 
+	// Handle backup operations
+	r.handleFileBackup(ctx, &data, expandedTargetPath, fileManager, enhancedBackupConfig, resp)
+
+	// Process the file (template or regular copy)
+	if err := r.processFile(ctx, &data, sourcePath, expandedTargetPath, fileManager, permConfig, resp); err != nil {
+		return // diagnostics already added
+	}
+
+	// Finalize creation - post-create commands, metadata, and state
+	r.finalizeFileCreation(ctx, &data, expandedTargetPath, resp)
+}
+
+// prepareFileCreation handles initial setup, validation, and configuration for file creation
+func (r *FileResource) prepareFileCreation(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, resp *resource.CreateResponse) (string, string, *fileops.FileManager, *fileops.PermissionConfig, *fileops.EnhancedBackupConfig, error) {
 	// Get repository information (for local path if it's a Git repository)
 	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
 
@@ -205,7 +222,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 			WithContext("file_name", data.Name.ValueString()).
 			WithContext("repository", data.Repository.ValueString())
 		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, sourceErr, "Source file not found")
-		return
+		return "", "", nil, nil, nil, err
 	}
 
 	// Expand target path
@@ -216,7 +233,7 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 			WithPath(targetPath).
 			WithContext("file_name", data.Name.ValueString())
 		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, pathErr, "Invalid target path")
-		return
+		return "", "", nil, nil, nil, err
 	}
 
 	// Create file manager
@@ -229,132 +246,163 @@ func (r *FileResource) Create(ctx context.Context, req resource.CreateRequest, r
 			WithPath(expandedTargetPath).
 			WithContext("file_name", data.Name.ValueString())
 		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, configErr, "Invalid permission configuration")
-		return
+		return "", "", nil, nil, nil, err
 	}
 
 	// Build enhanced backup configuration
-	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(&data)
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(data)
 	if err != nil {
 		backupErr := errors.ConfigurationError("build_backup_config", "file", "Failed to build backup configuration", err).
 			WithPath(expandedTargetPath).
 			WithContext("file_name", data.Name.ValueString())
 		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, backupErr, "Invalid backup configuration")
+		return "", "", nil, nil, nil, err
+	}
+
+	return sourcePath, expandedTargetPath, fileManager, permConfig, enhancedBackupConfig, nil
+}
+
+// handleFileBackup handles backup operations (enhanced vs legacy)
+func (r *FileResource) handleFileBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, enhancedBackupConfig *fileops.EnhancedBackupConfig, resp *resource.CreateResponse) {
+	if !utils.PathExists(expandedTargetPath) {
+		return // no backup needed if file doesn't exist
+	}
+
+	if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
+		r.handleEnhancedBackup(ctx, data, expandedTargetPath, fileManager, enhancedBackupConfig, resp)
+	} else {
+		r.handleLegacyBackup(ctx, data, expandedTargetPath, fileManager, resp)
+	}
+}
+
+// handleEnhancedBackup handles enhanced backup operations
+func (r *FileResource) handleEnhancedBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, enhancedBackupConfig *fileops.EnhancedBackupConfig, resp *resource.CreateResponse) {
+	enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
+
+	if !r.client.Config.DryRun {
+		backupErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+			_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
+			return err
+		})
+
+		if backupErr != nil {
+			backupWarnErr := errors.IOError("create_enhanced_backup", "file", "Could not create enhanced backup", backupErr).
+				WithPath(expandedTargetPath).
+				WithContext("backup_directory", r.client.Config.BackupDirectory)
+			errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Enhanced backup failed", backupWarnErr.Error())
+		}
+	} else {
+		tflog.Info(ctx, "DRY RUN: Skipping enhanced backup operation", map[string]interface{}{
+			"target_path":      expandedTargetPath,
+			"backup_directory": r.client.Config.BackupDirectory,
+		})
+	}
+}
+
+// handleLegacyBackup handles legacy backup operations
+func (r *FileResource) handleLegacyBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, resp *resource.CreateResponse) {
+	backupEnabled := r.client.Config.BackupEnabled
+	if !data.BackupEnabled.IsNull() {
+		backupEnabled = data.BackupEnabled.ValueBool()
+	}
+
+	if !backupEnabled {
 		return
 	}
 
-	// Handle backup - use enhanced if available, otherwise fall back to legacy
-	if utils.PathExists(expandedTargetPath) {
-		if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
-			// Use enhanced backup with retry
-			enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
+	if !r.client.Config.DryRun {
+		backupErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+			_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
+			return err
+		})
 
-			if !r.client.Config.DryRun {
-				backupErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
-					_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
-					return err
-				})
-
-				if backupErr != nil {
-					backupWarnErr := errors.IOError("create_enhanced_backup", "file", "Could not create enhanced backup", backupErr).
-						WithPath(expandedTargetPath).
-						WithContext("backup_directory", r.client.Config.BackupDirectory)
-					errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Enhanced backup failed", backupWarnErr.Error())
-				}
-			} else {
-				tflog.Info(ctx, "DRY RUN: Skipping enhanced backup operation", map[string]interface{}{
-					"target_path":      expandedTargetPath,
-					"backup_directory": r.client.Config.BackupDirectory,
-				})
-			}
-		} else {
-			// Fall back to legacy backup
-			backupEnabled := r.client.Config.BackupEnabled
-			if !data.BackupEnabled.IsNull() {
-				backupEnabled = data.BackupEnabled.ValueBool()
-			}
-
-			if backupEnabled {
-				if !r.client.Config.DryRun {
-					backupErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
-						_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
-						return err
-					})
-
-					if backupErr != nil {
-						backupWarnErr := errors.IOError("create_backup", "file", "Could not create backup", backupErr).
-							WithPath(expandedTargetPath).
-							WithContext("backup_directory", r.client.Config.BackupDirectory)
-						errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Backup failed", backupWarnErr.Error())
-					}
-				} else {
-					tflog.Info(ctx, "DRY RUN: Skipping backup operation", map[string]interface{}{
-						"target_path":      expandedTargetPath,
-						"backup_directory": r.client.Config.BackupDirectory,
-					})
-				}
-			}
+		if backupErr != nil {
+			backupWarnErr := errors.IOError("create_backup", "file", "Could not create backup", backupErr).
+				WithPath(expandedTargetPath).
+				WithContext("backup_directory", r.client.Config.BackupDirectory)
+			errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Backup failed", backupWarnErr.Error())
 		}
+	} else {
+		tflog.Info(ctx, "DRY RUN: Skipping backup operation", map[string]interface{}{
+			"target_path":      expandedTargetPath,
+			"backup_directory": r.client.Config.BackupDirectory,
+		})
+	}
+}
+
+// processFile handles file processing (template vs regular copy)
+func (r *FileResource) processFile(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, sourcePath, expandedTargetPath string, fileManager *fileops.FileManager, permConfig *fileops.PermissionConfig, resp *resource.CreateResponse) error {
+	if data.IsTemplate.ValueBool() {
+		return r.processTemplateFile(ctx, data, sourcePath, expandedTargetPath, permConfig, resp)
+	}
+	return r.processRegularFile(ctx, data, sourcePath, expandedTargetPath, fileManager, permConfig, resp)
+}
+
+// processTemplateFile handles template file processing
+func (r *FileResource) processTemplateFile(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, sourcePath, expandedTargetPath string, permConfig *fileops.PermissionConfig, resp *resource.CreateResponse) error {
+	// Build enhanced template configuration
+	templateConfig, err := buildEnhancedTemplateConfigFromAppModel(data)
+	if err != nil {
+		templateErr := errors.ConfigurationError("build_template_config", "file", "Failed to build template configuration", err).
+			WithPath(expandedTargetPath).
+			WithContext("file_name", data.Name.ValueString()).
+			WithContext("source_path", sourcePath)
+		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, templateErr, "Invalid template configuration")
+		return err
 	}
 
-	var finalErr error
+	// Process template with enhanced features and retry
+	if !r.client.Config.DryRun {
+		finalErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+			return r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
+		})
 
-	if data.IsTemplate.ValueBool() {
-		// Build enhanced template configuration
-		templateConfig, err := buildEnhancedTemplateConfigFromAppModel(&data)
-		if err != nil {
-			templateErr := errors.ConfigurationError("build_template_config", "file", "Failed to build template configuration", err).
+		if finalErr != nil {
+			templateErr := errors.TemplateError("process_template", "file", "Template processing failed", finalErr).
+				WithPath(expandedTargetPath).
+				WithContext("file_name", data.Name.ValueString()).
+				WithContext("source_path", sourcePath).
+				WithContext("template_engine", templateConfig.Engine)
+			errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, templateErr, "Template processing failed")
+			return finalErr
+		}
+	} else {
+		tflog.Info(ctx, "DRY RUN: Skipping template processing", map[string]interface{}{
+			"source_path":     sourcePath,
+			"target_path":     expandedTargetPath,
+			"template_engine": templateConfig.Engine,
+		})
+	}
+	return nil
+}
+
+// processRegularFile handles regular file copy operations
+func (r *FileResource) processRegularFile(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, sourcePath, expandedTargetPath string, fileManager *fileops.FileManager, permConfig *fileops.PermissionConfig, resp *resource.CreateResponse) error {
+	// Regular file copy with enhanced permissions and retry
+	if !r.client.Config.DryRun {
+		finalErr := errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
+			return fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
+		})
+
+		if finalErr != nil {
+			copyErr := errors.IOError("copy_file", "file", "File copy operation failed", finalErr).
 				WithPath(expandedTargetPath).
 				WithContext("file_name", data.Name.ValueString()).
 				WithContext("source_path", sourcePath)
-			errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, templateErr, "Invalid template configuration")
-			return
-		}
-
-		// Process template with enhanced features and retry
-		if !r.client.Config.DryRun {
-			finalErr = errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
-				return r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
-			})
-
-			if finalErr != nil {
-				templateErr := errors.TemplateError("process_template", "file", "Template processing failed", finalErr).
-					WithPath(expandedTargetPath).
-					WithContext("file_name", data.Name.ValueString()).
-					WithContext("source_path", sourcePath).
-					WithContext("template_engine", templateConfig.Engine)
-				errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, templateErr, "Template processing failed")
-				return
-			}
-		} else {
-			tflog.Info(ctx, "DRY RUN: Skipping template processing", map[string]interface{}{
-				"source_path":     sourcePath,
-				"target_path":     expandedTargetPath,
-				"template_engine": templateConfig.Engine,
-			})
+			errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, copyErr, "File operation failed")
+			return finalErr
 		}
 	} else {
-		// Regular file copy with enhanced permissions and retry
-		if !r.client.Config.DryRun {
-			finalErr = errors.Retry(ctx, errors.DefaultRetryConfig(), func() error {
-				return fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
-			})
-
-			if finalErr != nil {
-				copyErr := errors.IOError("copy_file", "file", "File copy operation failed", finalErr).
-					WithPath(expandedTargetPath).
-					WithContext("file_name", data.Name.ValueString()).
-					WithContext("source_path", sourcePath)
-				errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, copyErr, "File operation failed")
-				return
-			}
-		} else {
-			tflog.Info(ctx, "DRY RUN: Skipping file copy operation", map[string]interface{}{
-				"source_path": sourcePath,
-				"target_path": expandedTargetPath,
-			})
-		}
+		tflog.Info(ctx, "DRY RUN: Skipping file copy operation", map[string]interface{}{
+			"source_path": sourcePath,
+			"target_path": expandedTargetPath,
+		})
 	}
+	return nil
+}
 
+// finalizeFileCreation handles post-create commands, metadata updates, and state saving
+func (r *FileResource) finalizeFileCreation(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, resp *resource.CreateResponse) {
 	// Execute post-create commands
 	if err := executePostCommands(ctx, data.PostCreateCommands, "post-create"); err != nil {
 		postCmdErr := errors.IOError("execute_post_commands", "file", "Post-create commands failed", err).
@@ -445,6 +493,26 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		"target_path": data.TargetPath.ValueString(),
 	})
 
+	// Prepare file update - handle paths, validation, and configuration
+	sourcePath, expandedTargetPath, fileManager, permConfig, enhancedBackupConfig, err := r.prepareFileUpdate(ctx, &data, resp)
+	if err != nil {
+		return // diagnostics already added
+	}
+
+	// Handle backup operations for update
+	r.handleFileUpdateBackup(ctx, &data, expandedTargetPath, fileManager, enhancedBackupConfig, resp)
+
+	// Process the file (template or regular copy)
+	if err := r.processFileUpdate(ctx, &data, sourcePath, expandedTargetPath, fileManager, permConfig, resp); err != nil {
+		return // diagnostics already added
+	}
+
+	// Finalize update - post-update commands, metadata, and state
+	r.finalizeFileUpdate(ctx, &data, expandedTargetPath, resp)
+}
+
+// prepareFileUpdate handles initial setup, validation, and configuration for file updates
+func (r *FileResource) prepareFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, resp *resource.UpdateResponse) (string, string, *fileops.FileManager, *fileops.PermissionConfig, *fileops.EnhancedBackupConfig, error) {
 	// Get repository local path
 	repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
 
@@ -459,7 +527,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			WithContext("file_name", data.Name.ValueString()).
 			WithContext("repository", data.Repository.ValueString())
 		errors.AddErrorToDiagnostics(ctx, &resp.Diagnostics, sourceErr, "Source file not found")
-		return
+		return "", "", nil, nil, nil, err
 	}
 
 	// Expand target path
@@ -470,7 +538,7 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			"Invalid target path",
 			fmt.Sprintf("Could not expand target path %s: %s", targetPath, err.Error()),
 		)
-		return
+		return "", "", nil, nil, nil, err
 	}
 
 	// Create file manager
@@ -483,67 +551,74 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			"Invalid permission configuration",
 			fmt.Sprintf("Failed to build permission config: %s", err.Error()),
 		)
-		return
+		return "", "", nil, nil, nil, err
 	}
 
 	// Build enhanced backup configuration
-	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(&data)
+	enhancedBackupConfig, err := buildEnhancedBackupConfigFromAppModel(data)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid backup configuration",
 			fmt.Sprintf("Failed to build backup config: %s", err.Error()),
 		)
+		return "", "", nil, nil, nil, err
+	}
+
+	return sourcePath, expandedTargetPath, fileManager, permConfig, enhancedBackupConfig, nil
+}
+
+// handleFileUpdateBackup handles backup operations before file update
+func (r *FileResource) handleFileUpdateBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, enhancedBackupConfig *fileops.EnhancedBackupConfig, resp *resource.UpdateResponse) {
+	if !utils.PathExists(expandedTargetPath) {
+		return // no backup needed if file doesn't exist
+	}
+
+	if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
+		r.handleEnhancedUpdateBackup(ctx, data, expandedTargetPath, fileManager, enhancedBackupConfig, resp)
+	} else {
+		r.handleLegacyUpdateBackup(ctx, data, expandedTargetPath, fileManager, resp)
+	}
+}
+
+// handleEnhancedUpdateBackup handles enhanced backup operations for updates
+func (r *FileResource) handleEnhancedUpdateBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, enhancedBackupConfig *fileops.EnhancedBackupConfig, resp *resource.UpdateResponse) {
+	enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
+	_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
+	if err != nil {
+		resp.Diagnostics.AddWarning(
+			"Enhanced backup failed",
+			fmt.Sprintf("Could not create enhanced backup before update: %s", err.Error()),
+		)
+	}
+}
+
+// handleLegacyUpdateBackup handles legacy backup operations for updates
+func (r *FileResource) handleLegacyUpdateBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, resp *resource.UpdateResponse) {
+	backupEnabled := r.client.Config.BackupEnabled
+	if !data.BackupEnabled.IsNull() {
+		backupEnabled = data.BackupEnabled.ValueBool()
+	}
+
+	if !backupEnabled {
 		return
 	}
 
-	// Handle backup before update - use enhanced if available, otherwise fall back to legacy
-	if utils.PathExists(expandedTargetPath) {
-		if enhancedBackupConfig != nil && enhancedBackupConfig.Enabled {
-			// Use enhanced backup
-			enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
-			_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
-			if err != nil {
-				resp.Diagnostics.AddWarning(
-					"Enhanced backup failed",
-					fmt.Sprintf("Could not create enhanced backup before update: %s", err.Error()),
-				)
-			}
-		} else {
-			// Fall back to legacy backup
-			backupEnabled := r.client.Config.BackupEnabled
-			if !data.BackupEnabled.IsNull() {
-				backupEnabled = data.BackupEnabled.ValueBool()
-			}
-
-			if backupEnabled {
-				_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
-				if err != nil {
-					resp.Diagnostics.AddWarning(
-						"Backup failed",
-						fmt.Sprintf("Could not create backup before update: %s", err.Error()),
-					)
-				}
-			}
-		}
+	_, err := fileManager.CreateBackup(expandedTargetPath, r.client.Config.BackupDirectory)
+	if err != nil {
+		resp.Diagnostics.AddWarning(
+			"Backup failed",
+			fmt.Sprintf("Could not create backup before update: %s", err.Error()),
+		)
 	}
+}
 
+// processFileUpdate handles file processing for updates (template vs regular copy)
+func (r *FileResource) processFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, sourcePath, expandedTargetPath string, fileManager *fileops.FileManager, permConfig *fileops.PermissionConfig, resp *resource.UpdateResponse) error {
 	var finalErr error
 
 	if data.IsTemplate.ValueBool() {
-		// Build enhanced template configuration
-		templateConfig, err := buildEnhancedTemplateConfigFromAppModel(&data)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Invalid template configuration",
-				fmt.Sprintf("Failed to build template config: %s", err.Error()),
-			)
-			return
-		}
-
-		// Process template with enhanced features
-		finalErr = r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
+		finalErr = r.processTemplateFileUpdate(ctx, data, sourcePath, expandedTargetPath, permConfig, resp)
 	} else {
-		// Regular file copy with enhanced permissions
 		finalErr = fileManager.CopyFileWithPermissions(sourcePath, expandedTargetPath, permConfig)
 	}
 
@@ -552,9 +627,28 @@ func (r *FileResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			"File update failed",
 			fmt.Sprintf("Could not update file %s: %s", expandedTargetPath, finalErr.Error()),
 		)
-		return
+		return finalErr
 	}
 
+	return nil
+}
+
+// processTemplateFileUpdate handles template file processing for updates
+func (r *FileResource) processTemplateFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, sourcePath, expandedTargetPath string, permConfig *fileops.PermissionConfig, resp *resource.UpdateResponse) error {
+	templateConfig, err := buildEnhancedTemplateConfigFromAppModel(data)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid template configuration",
+			fmt.Sprintf("Failed to build template config: %s", err.Error()),
+		)
+		return err
+	}
+
+	return r.processEnhancedTemplate(sourcePath, expandedTargetPath, templateConfig, permConfig)
+}
+
+// finalizeFileUpdate handles post-update commands, metadata updates, and state saving
+func (r *FileResource) finalizeFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, resp *resource.UpdateResponse) {
 	// Execute post-update commands
 	if err := executePostCommands(ctx, data.PostUpdateCommands, "post-update"); err != nil {
 		resp.Diagnostics.AddWarning(
@@ -941,7 +1035,7 @@ func executeShellCommand(ctx context.Context, cmdStr string) error {
 		shellFlag = "-c"
 	}
 
-	cmd = exec.CommandContext(ctx, shell, shellFlag, cmdStr)
+	cmd = exec.CommandContext(ctx, shell, shellFlag, cmdStr) //nolint:gosec // G204: Intentional subprocess execution from user-configured commands
 
 	// Set environment variables
 	cmd.Env = os.Environ()

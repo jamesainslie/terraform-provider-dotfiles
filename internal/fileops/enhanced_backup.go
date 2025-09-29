@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package fileops
@@ -50,26 +50,51 @@ type BackupIndex struct {
 
 // CreateEnhancedBackup creates a backup with enhanced features.
 func (fm *FileManager) CreateEnhancedBackup(filePath string, config *EnhancedBackupConfig) (string, error) {
-	if config == nil || !config.Enabled {
+	// Validate and handle early returns
+	if skip, backupPath := fm.validateBackupRequest(config); skip {
+		return backupPath, nil
+	}
+
+	// Check if incremental backup should be skipped
+	if shouldSkip, err := fm.checkIncrementalBackup(filePath, config); err != nil {
+		return "", fmt.Errorf("failed to check incremental backup: %w", err)
+	} else if shouldSkip {
 		return "", nil
 	}
 
+	// Create backup and handle post-processing
+	return fm.performBackupOperations(filePath, config)
+}
+
+// validateBackupRequest validates backup configuration and handles dry run scenarios
+func (fm *FileManager) validateBackupRequest(config *EnhancedBackupConfig) (bool, string) {
+	if config == nil || !config.Enabled {
+		return true, ""
+	}
+
 	if fm.dryRun {
-		return fmt.Sprintf("%s/enhanced-backup-dry-run", config.Directory), nil
+		return true, fmt.Sprintf("%s/enhanced-backup-dry-run", config.Directory)
 	}
 
-	// Check if incremental backup is needed
+	return false, ""
+}
+
+// checkIncrementalBackup checks if incremental backup should be skipped
+func (fm *FileManager) checkIncrementalBackup(filePath string, config *EnhancedBackupConfig) (bool, error) {
 	if config.Incremental && config.BackupIndex {
-		if shouldSkipBackup, err := fm.shouldSkipIncrementalBackup(filePath, config); err != nil {
-			return "", fmt.Errorf("failed to check incremental backup: %w", err)
-		} else if shouldSkipBackup {
-			return "", nil // Skip backup - content hasn't changed
+		shouldSkipBackup, err := fm.shouldSkipIncrementalBackup(filePath, config)
+		if err != nil {
+			return false, err
 		}
+		return shouldSkipBackup, nil
 	}
+	return false, nil
+}
 
+// performBackupOperations performs the main backup operations and post-processing
+func (fm *FileManager) performBackupOperations(filePath string, config *EnhancedBackupConfig) (string, error) {
 	// Create backup directory
-	err := os.MkdirAll(config.Directory, 0755)
-	if err != nil {
+	if err := os.MkdirAll(config.Directory, 0755); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -79,41 +104,51 @@ func (fm *FileManager) CreateEnhancedBackup(filePath string, config *EnhancedBac
 		return "", fmt.Errorf("failed to generate backup path: %w", err)
 	}
 
-	// Create the backup
-	if config.Compression {
-		err = fm.createCompressedBackup(filePath, backupPath)
-	} else {
-		err = fm.platform.CopyFile(filePath, backupPath)
-	}
-	if err != nil {
+	// Create the backup file
+	if err := fm.createBackupFile(filePath, backupPath, config.Compression); err != nil {
 		return "", fmt.Errorf("failed to create backup: %w", err)
 	}
 
+	// Handle post-backup operations
+	if err := fm.handlePostBackupOperations(filePath, backupPath, config); err != nil {
+		return "", fmt.Errorf("failed to handle post-backup operations: %w", err)
+	}
+
+	return backupPath, nil
+}
+
+// createBackupFile creates the backup file with optional compression
+func (fm *FileManager) createBackupFile(filePath, backupPath string, compression bool) error {
+	if compression {
+		return fm.createCompressedBackup(filePath, backupPath)
+	}
+	return fm.platform.CopyFile(filePath, backupPath)
+}
+
+// handlePostBackupOperations handles metadata, indexing, and retention
+func (fm *FileManager) handlePostBackupOperations(filePath, backupPath string, config *EnhancedBackupConfig) error {
 	// Create metadata if requested
 	if config.BackupMetadata {
-		err = fm.createBackupMetadata(filePath, backupPath, config)
-		if err != nil {
-			return "", fmt.Errorf("failed to create backup metadata: %w", err)
+		if err := fm.createBackupMetadata(filePath, backupPath, config); err != nil {
+			return fmt.Errorf("failed to create backup metadata: %w", err)
 		}
 	}
 
 	// Update backup index if requested
 	if config.BackupIndex {
-		err = fm.updateBackupIndex(filePath, backupPath, config)
-		if err != nil {
-			return "", fmt.Errorf("failed to update backup index: %w", err)
+		if err := fm.updateBackupIndex(filePath, backupPath, config); err != nil {
+			return fmt.Errorf("failed to update backup index: %w", err)
 		}
 	}
 
 	// Apply retention policy
 	if config.MaxBackups > 0 {
-		err = fm.applyRetentionPolicy(filePath, config)
-		if err != nil {
-			return "", fmt.Errorf("failed to apply retention policy: %w", err)
+		if err := fm.applyRetentionPolicy(filePath, config); err != nil {
+			return fmt.Errorf("failed to apply retention policy: %w", err)
 		}
 	}
 
-	return backupPath, nil
+	return nil
 }
 
 // generateBackupPath generates backup file path based on format.

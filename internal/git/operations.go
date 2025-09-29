@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package git
@@ -114,7 +114,7 @@ func NormalizeGitURL(sourceURL string) (string, error) {
 		url := strings.TrimPrefix(sourceURL, "github.com/")
 		url = strings.TrimPrefix(url, "github.com:")
 		if !strings.HasSuffix(url, ".git") {
-			url = url + ".git"
+			url += ".git"
 		}
 		return "https://github.com/" + url, nil
 	}
@@ -428,7 +428,7 @@ func (gm *GitManager) ListSubmodules(localPath string) ([]*SubmoduleInfo, error)
 		return nil, fmt.Errorf("failed to get submodules: %w", err)
 	}
 
-	var submoduleInfos []*SubmoduleInfo
+	submoduleInfos := make([]*SubmoduleInfo, 0, len(submodules))
 	for _, submodule := range submodules {
 		config := submodule.Config()
 		status, err := submodule.Status()

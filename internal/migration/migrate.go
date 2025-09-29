@@ -218,7 +218,7 @@ func removeStrategyField(lines []string) []string {
 
 // convertToSymlinkResource converts dotfiles_file with strategy=symlink to dotfiles_symlink.
 func convertToSymlinkResource(ctx *ResourceContext) ([]string, error) {
-	var result []string
+	result := make([]string, 0, len(ctx.Lines)+1)
 
 	// Add migration comment
 	result = append(result, "# MIGRATED: dotfiles_file with strategy=symlink → dotfiles_symlink")
@@ -239,7 +239,7 @@ func convertToSymlinkResource(ctx *ResourceContext) ([]string, error) {
 
 // convertToTemplateFile converts dotfiles_file with strategy=template to dotfiles_file with is_template=true.
 func convertToTemplateFile(ctx *ResourceContext) ([]string, error) {
-	var result []string
+	result := make([]string, 0, len(ctx.Lines)+2)
 	var hasIsTemplate bool
 
 	// Add migration comment
@@ -263,7 +263,7 @@ func convertToTemplateFile(ctx *ResourceContext) ([]string, error) {
 	// If is_template wasn't already set, we've added it above
 	if hasIsTemplate {
 		// Add note that there might be a conflict
-		result[1] = result[1] + " # NOTE: Check for is_template conflicts"
+		result[1] += " # NOTE: Check for is_template conflicts"
 	}
 
 	return result, nil

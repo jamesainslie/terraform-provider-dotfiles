@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -65,207 +65,281 @@ func TestProviderSchema(t *testing.T) {
 
 func TestProviderConfigure(t *testing.T) {
 	t.Run("DotfilesClient creation and validation", func(t *testing.T) {
-		// Create temporary directories for testing
-		tmpDir := t.TempDir()
-		dotfilesDir := filepath.Join(tmpDir, "dotfiles")
-		backupDir := filepath.Join(tmpDir, "backups")
-		if err := os.MkdirAll(dotfilesDir, 0755); err != nil {
-			t.Fatalf("Failed to create dotfiles directory: %v", err)
-		}
-		if err := os.MkdirAll(backupDir, 0755); err != nil {
-			t.Fatalf("Failed to create backup directory: %v", err)
-		}
-
-		// Test DotfilesClient creation directly
-		config := &DotfilesConfig{
-			DotfilesRoot:       dotfilesDir,
-			BackupEnabled:      true,
-			BackupDirectory:    backupDir,
-			Strategy:           "symlink",
-			ConflictResolution: "backup",
-			DryRun:             false,
-			AutoDetectPlatform: true,
-			TargetPlatform:     "auto",
-			TemplateEngine:     "go",
-			LogLevel:           "info",
-		}
-
-		// Test configuration validation
-		if err := config.Validate(); err != nil {
-			t.Errorf("Valid configuration failed validation: %v", err)
-		}
-
-		// Test client creation
-		client, err := NewDotfilesClient(config)
-		if err != nil {
-			t.Errorf("Failed to create DotfilesClient: %v", err)
-		} else {
-			// Verify client properties
-			if client.Config != config {
-				t.Error("Client config not set correctly")
-			}
-			if client.Platform == "" {
-				t.Error("Platform should be detected")
-			}
-			if client.Architecture == "" {
-				t.Error("Architecture should be detected")
-			}
-			if client.HomeDir == "" {
-				t.Error("HomeDir should be set")
-			}
-			if client.ConfigDir == "" {
-				t.Error("ConfigDir should be set")
-			}
-
-			// Verify platform info method
-			platformInfo := client.GetPlatformInfo()
-			if platformInfo["platform"] != client.Platform {
-				t.Error("Platform info doesn't match client platform")
-			}
-
-			// Verify platform is one of the expected values
-			knownPlatforms := []string{"macos", "linux", "windows"}
-			found := false
-			for _, platform := range knownPlatforms {
-				if client.Platform == platform {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("Unknown platform detected: %s, expected one of %v", client.Platform, knownPlatforms)
-			}
-		}
+		testDotfilesClientCreation(t)
 	})
 
 	t.Run("DotfilesClient with default values", func(t *testing.T) {
-		// Create temporary directory for testing
-		tmpDir := t.TempDir()
-
-		// Test client creation with minimal config (to test defaults)
-		config := &DotfilesConfig{
-			DotfilesRoot: tmpDir,
-			// Leave other values empty to test defaults
-		}
-
-		// Set defaults first, then validate
-		if err := config.SetDefaults(); err != nil {
-			t.Errorf("Setting defaults failed: %v", err)
-		}
-		if err := config.Validate(); err != nil {
-			t.Errorf("Configuration validation failed: %v", err)
-		}
-
-		// Verify defaults were set
-		if config.Strategy != "symlink" {
-			t.Errorf("Expected default strategy 'symlink', got '%s'", config.Strategy)
-		}
-		if config.ConflictResolution != "backup" {
-			t.Errorf("Expected default conflict resolution 'backup', got '%s'", config.ConflictResolution)
-		}
-		if config.TargetPlatform != "auto" {
-			t.Errorf("Expected default target platform 'auto', got '%s'", config.TargetPlatform)
-		}
-		if config.TemplateEngine != "go" {
-			t.Errorf("Expected default template engine 'go', got '%s'", config.TemplateEngine)
-		}
-		if config.LogLevel != "info" {
-			t.Errorf("Expected default log level 'info', got '%s'", config.LogLevel)
-		}
-
-		// Test client creation
-		client, err := NewDotfilesClient(config)
-		if err != nil {
-			t.Errorf("Failed to create DotfilesClient with defaults: %v", err)
-		} else {
-			// Verify client was created with platform detection
-			if client.Platform == "" {
-				t.Error("Platform detection should work with defaults")
-			}
-		}
+		testDotfilesClientDefaults(t)
 	})
 
 	t.Run("Configuration validation tests", func(t *testing.T) {
-		// Create temporary directory for testing
-		tmpDir := t.TempDir()
-
-		tests := []struct {
-			name      string
-			config    *DotfilesConfig
-			expectErr bool
-		}{
-			{
-				name: "Valid configuration",
-				config: &DotfilesConfig{
-					DotfilesRoot:       tmpDir,
-					Strategy:           "symlink",
-					ConflictResolution: "backup",
-					TargetPlatform:     "auto",
-					TemplateEngine:     "go",
-					LogLevel:           "info",
-					BackupEnabled:      true,
-					AutoDetectPlatform: true,
-					DryRun:             false,
-				},
-				expectErr: false,
-			},
-			{
-				name: "Invalid strategy",
-				config: &DotfilesConfig{
-					DotfilesRoot: tmpDir,
-					Strategy:     "invalid",
-				},
-				expectErr: true,
-			},
-			{
-				name: "Invalid conflict resolution",
-				config: &DotfilesConfig{
-					DotfilesRoot:       tmpDir,
-					ConflictResolution: "invalid",
-				},
-				expectErr: true,
-			},
-			{
-				name: "Invalid target platform",
-				config: &DotfilesConfig{
-					DotfilesRoot:   tmpDir,
-					TargetPlatform: "invalid",
-				},
-				expectErr: true,
-			},
-			{
-				name: "Invalid template engine",
-				config: &DotfilesConfig{
-					DotfilesRoot:   tmpDir,
-					TemplateEngine: "invalid",
-				},
-				expectErr: true,
-			},
-			{
-				name: "Invalid log level",
-				config: &DotfilesConfig{
-					DotfilesRoot: tmpDir,
-					LogLevel:     "invalid",
-				},
-				expectErr: true,
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				err := tt.config.Validate()
-				if tt.expectErr {
-					if err == nil {
-						t.Error("Expected validation error but got none")
-					}
-				} else {
-					if err != nil {
-						t.Errorf("Unexpected validation error: %v", err)
-					}
-				}
-			})
-		}
+		testConfigurationValidation(t)
 	})
+}
+
+// testDotfilesClientCreation tests DotfilesClient creation and validation
+func testDotfilesClientCreation(t *testing.T) {
+	_, dotfilesDir, backupDir := setupProviderTestDirs(t)
+
+	// Create and test configuration
+	config := createValidTestConfig(dotfilesDir, backupDir)
+	testProviderConfigValidation(t, config)
+
+	// Create and test client
+	client := testClientCreation(t, config)
+	testClientProperties(t, client, config)
+	testClientPlatformInfo(t, client)
+}
+
+// setupProviderTestDirs creates test directories for provider testing
+func setupProviderTestDirs(t *testing.T) (string, string, string) {
+	tmpDir := t.TempDir()
+	dotfilesDir := filepath.Join(tmpDir, "dotfiles")
+	backupDir := filepath.Join(tmpDir, "backups")
+
+	if err := os.MkdirAll(dotfilesDir, 0755); err != nil {
+		t.Fatalf("Failed to create dotfiles directory: %v", err)
+	}
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		t.Fatalf("Failed to create backup directory: %v", err)
+	}
+
+	return tmpDir, dotfilesDir, backupDir
+}
+
+// createValidTestConfig creates a valid test configuration
+func createValidTestConfig(dotfilesDir, backupDir string) *DotfilesConfig {
+	return &DotfilesConfig{
+		DotfilesRoot:       dotfilesDir,
+		BackupEnabled:      true,
+		BackupDirectory:    backupDir,
+		Strategy:           "symlink",
+		ConflictResolution: "backup",
+		DryRun:             false,
+		AutoDetectPlatform: true,
+		TargetPlatform:     "auto",
+		TemplateEngine:     "go",
+		LogLevel:           "info",
+	}
+}
+
+// testConfigValidation tests configuration validation
+func testProviderConfigValidation(t *testing.T, config *DotfilesConfig) {
+	if err := config.Validate(); err != nil {
+		t.Errorf("Valid configuration failed validation: %v", err)
+	}
+}
+
+// testClientCreation creates and tests client creation
+func testClientCreation(t *testing.T, config *DotfilesConfig) *DotfilesClient {
+	client, err := NewDotfilesClient(config)
+	if err != nil {
+		t.Errorf("Failed to create DotfilesClient: %v", err)
+		return nil
+	}
+	return client
+}
+
+// testClientProperties tests client property validation
+func testClientProperties(t *testing.T, client *DotfilesClient, config *DotfilesConfig) {
+	if client == nil {
+		return
+	}
+
+	if client.Config != config {
+		t.Error("Client config not set correctly")
+	}
+	if client.Platform == "" {
+		t.Error("Platform should be detected")
+	}
+	if client.Architecture == "" {
+		t.Error("Architecture should be detected")
+	}
+	if client.HomeDir == "" {
+		t.Error("HomeDir should be set")
+	}
+	if client.ConfigDir == "" {
+		t.Error("ConfigDir should be set")
+	}
+}
+
+// testClientPlatformInfo tests client platform information
+func testClientPlatformInfo(t *testing.T, client *DotfilesClient) {
+	if client == nil {
+		return
+	}
+
+	// Verify platform info method
+	platformInfo := client.GetPlatformInfo()
+	if platformInfo["platform"] != client.Platform {
+		t.Error("Platform info doesn't match client platform")
+	}
+
+	// Verify platform is one of the expected values
+	knownPlatforms := []string{"macos", "linux", "windows"}
+	found := false
+	for _, platform := range knownPlatforms {
+		if client.Platform == platform {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Unknown platform detected: %s, expected one of %v", client.Platform, knownPlatforms)
+	}
+}
+
+// testDotfilesClientDefaults tests client creation with default values
+func testDotfilesClientDefaults(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Test client creation with minimal config (to test defaults)
+	config := &DotfilesConfig{
+		DotfilesRoot: tmpDir,
+		// Leave other values empty to test defaults
+	}
+
+	// Set and validate defaults
+	testDefaultsSetup(t, config)
+	testDefaultValues(t, config)
+	testClientWithDefaults(t, config)
+}
+
+// testDefaultsSetup sets up and validates defaults
+func testDefaultsSetup(t *testing.T, config *DotfilesConfig) {
+	if err := config.SetDefaults(); err != nil {
+		t.Errorf("Setting defaults failed: %v", err)
+	}
+	if err := config.Validate(); err != nil {
+		t.Errorf("Configuration validation failed: %v", err)
+	}
+}
+
+// testDefaultValues verifies default values were set correctly
+func testDefaultValues(t *testing.T, config *DotfilesConfig) {
+	expectations := map[string]string{
+		"Strategy":           "symlink",
+		"ConflictResolution": "backup",
+		"TargetPlatform":     "auto",
+		"TemplateEngine":     "go",
+		"LogLevel":           "info",
+	}
+
+	if config.Strategy != expectations["Strategy"] {
+		t.Errorf("Expected default strategy '%s', got '%s'", expectations["Strategy"], config.Strategy)
+	}
+	if config.ConflictResolution != expectations["ConflictResolution"] {
+		t.Errorf("Expected default conflict resolution '%s', got '%s'", expectations["ConflictResolution"], config.ConflictResolution)
+	}
+	if config.TargetPlatform != expectations["TargetPlatform"] {
+		t.Errorf("Expected default target platform '%s', got '%s'", expectations["TargetPlatform"], config.TargetPlatform)
+	}
+	if config.TemplateEngine != expectations["TemplateEngine"] {
+		t.Errorf("Expected default template engine '%s', got '%s'", expectations["TemplateEngine"], config.TemplateEngine)
+	}
+	if config.LogLevel != expectations["LogLevel"] {
+		t.Errorf("Expected default log level '%s', got '%s'", expectations["LogLevel"], config.LogLevel)
+	}
+}
+
+// testClientWithDefaults tests client creation with default values
+func testClientWithDefaults(t *testing.T, config *DotfilesConfig) {
+	client, err := NewDotfilesClient(config)
+	if err != nil {
+		t.Errorf("Failed to create DotfilesClient with defaults: %v", err)
+	} else if client.Platform == "" {
+		// Verify client was created with platform detection
+		t.Error("Platform detection should work with defaults")
+	}
+}
+
+// testConfigurationValidation tests configuration validation with various scenarios
+func testConfigurationValidation(t *testing.T) {
+	tmpDir := t.TempDir()
+	testCases := createValidationTestCases(tmpDir)
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected validation error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected validation error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// validationTestCase represents a validation test case
+type validationTestCase struct {
+	name      string
+	config    *DotfilesConfig
+	expectErr bool
+}
+
+// createValidationTestCases creates test cases for configuration validation
+func createValidationTestCases(tmpDir string) []validationTestCase {
+	return []validationTestCase{
+		{
+			name: "Valid configuration",
+			config: &DotfilesConfig{
+				DotfilesRoot:       tmpDir,
+				Strategy:           "symlink",
+				ConflictResolution: "backup",
+				TargetPlatform:     "auto",
+				TemplateEngine:     "go",
+				LogLevel:           "info",
+				BackupEnabled:      true,
+				AutoDetectPlatform: true,
+				DryRun:             false,
+			},
+			expectErr: false,
+		},
+		{
+			name: "Invalid strategy",
+			config: &DotfilesConfig{
+				DotfilesRoot: tmpDir,
+				Strategy:     "invalid",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Invalid conflict resolution",
+			config: &DotfilesConfig{
+				DotfilesRoot:       tmpDir,
+				ConflictResolution: "invalid",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Invalid target platform",
+			config: &DotfilesConfig{
+				DotfilesRoot:   tmpDir,
+				TargetPlatform: "invalid",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Invalid template engine",
+			config: &DotfilesConfig{
+				DotfilesRoot:   tmpDir,
+				TemplateEngine: "invalid",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Invalid log level",
+			config: &DotfilesConfig{
+				DotfilesRoot: tmpDir,
+				LogLevel:     "invalid",
+			},
+			expectErr: true,
+		},
+	}
 }
 
 func TestProviderResources(t *testing.T) {

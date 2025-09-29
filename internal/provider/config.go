@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -70,85 +70,89 @@ func (c *DotfilesConfig) SetDefaults() error {
 func (c *DotfilesConfig) Validate() error {
 	var errs []string
 
+	// Validate paths
+	c.validatePaths(&errs)
+
+	// Validate enums and constraints
+	c.validateEnumFields(&errs)
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+
+	return nil
+}
+
+// validatePaths validates and expands path configurations
+func (c *DotfilesConfig) validatePaths(errs *[]string) {
 	// Validate dotfiles root
 	if c.DotfilesRoot == "" {
-		errs = append(errs, "dotfiles_root cannot be empty")
+		*errs = append(*errs, "dotfiles_root cannot be empty")
 	} else {
-		// Expand path
-		if strings.HasPrefix(c.DotfilesRoot, "~") {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				errs = append(errs, fmt.Sprintf("unable to expand dotfiles_root path: %v", err))
-			} else {
-				c.DotfilesRoot = filepath.Join(homeDir, c.DotfilesRoot[1:])
-			}
-		}
-
-		// Convert to absolute path
-		absPath, err := filepath.Abs(c.DotfilesRoot)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("invalid dotfiles_root path: %v", err))
-		} else {
-			c.DotfilesRoot = absPath
-
-			// Validate that DotfilesRoot is writable
-			if err := c.validateWritablePath(c.DotfilesRoot, "dotfiles_root"); err != nil {
-				errs = append(errs, err.Error())
-			}
+		if err := c.validateAndExpandPath(&c.DotfilesRoot, "dotfiles_root", true); err != nil {
+			*errs = append(*errs, err.Error())
 		}
 	}
 
 	// Validate backup directory if backups are enabled
 	if c.BackupEnabled && c.BackupDirectory != "" {
-		if strings.HasPrefix(c.BackupDirectory, "~") {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				errs = append(errs, fmt.Sprintf("unable to expand backup_directory path: %v", err))
-			} else {
-				c.BackupDirectory = filepath.Join(homeDir, c.BackupDirectory[1:])
-			}
-		}
-
-		absPath, err := filepath.Abs(c.BackupDirectory)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("invalid backup_directory path: %v", err))
-		} else {
-			c.BackupDirectory = absPath
-
-			// Validate that BackupDirectory is writable
-			if err := c.validateWritablePath(c.BackupDirectory, "backup_directory"); err != nil {
-				errs = append(errs, err.Error())
-			}
+		if err := c.validateAndExpandPath(&c.BackupDirectory, "backup_directory", true); err != nil {
+			*errs = append(*errs, err.Error())
 		}
 	}
+}
 
+// validateEnumFields validates enum-type configuration fields
+func (c *DotfilesConfig) validateEnumFields(errs *[]string) {
 	// Validate strategy
 	if !contains(ValidStrategies, c.Strategy) {
-		errs = append(errs, fmt.Sprintf("invalid strategy '%s', must be one of: %v", c.Strategy, ValidStrategies))
+		*errs = append(*errs, fmt.Sprintf("invalid strategy '%s', must be one of: %v", c.Strategy, ValidStrategies))
 	}
 
 	// Validate conflict resolution
 	if !contains(ValidConflictResolutions, c.ConflictResolution) {
-		errs = append(errs, fmt.Sprintf("invalid conflict_resolution '%s', must be one of: %v", c.ConflictResolution, ValidConflictResolutions))
+		*errs = append(*errs, fmt.Sprintf("invalid conflict_resolution '%s', must be one of: %v", c.ConflictResolution, ValidConflictResolutions))
 	}
 
 	// Validate target platform
 	if !contains(ValidPlatforms, c.TargetPlatform) {
-		errs = append(errs, fmt.Sprintf("invalid target_platform '%s', must be one of: %v", c.TargetPlatform, ValidPlatforms))
+		*errs = append(*errs, fmt.Sprintf("invalid target_platform '%s', must be one of: %v", c.TargetPlatform, ValidPlatforms))
 	}
 
 	// Validate template engine
 	if !contains(ValidTemplateEngines, c.TemplateEngine) {
-		errs = append(errs, fmt.Sprintf("invalid template_engine '%s', must be one of: %v", c.TemplateEngine, ValidTemplateEngines))
+		*errs = append(*errs, fmt.Sprintf("invalid template_engine '%s', must be one of: %v", c.TemplateEngine, ValidTemplateEngines))
 	}
 
 	// Validate log level
 	if !contains(ValidLogLevels, c.LogLevel) {
-		errs = append(errs, fmt.Sprintf("invalid log_level '%s', must be one of: %v", c.LogLevel, ValidLogLevels))
+		*errs = append(*errs, fmt.Sprintf("invalid log_level '%s', must be one of: %v", c.LogLevel, ValidLogLevels))
+	}
+}
+
+// validateAndExpandPath validates and expands a path configuration
+func (c *DotfilesConfig) validateAndExpandPath(pathPtr *string, fieldName string, checkWritable bool) error {
+	// Expand home directory
+	if strings.HasPrefix(*pathPtr, "~") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("unable to expand %s path: %v", fieldName, err)
+		}
+		*pathPtr = filepath.Join(homeDir, (*pathPtr)[1:])
 	}
 
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "; "))
+	// Convert to absolute path
+	absPath, err := filepath.Abs(*pathPtr)
+	if err != nil {
+		return fmt.Errorf("invalid %s path: %v", fieldName, err)
+	}
+	*pathPtr = absPath
+
+	// Validate writability if required
+	if checkWritable {
+		if err := c.validateWritablePath(*pathPtr, fieldName); err != nil {
+			return err
+		}
 	}
 
 	return nil
