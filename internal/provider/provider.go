@@ -284,6 +284,7 @@ func (p *DotfilesProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewSymlinkResource,
 		NewDirectoryResource,
 		NewApplicationResource,
+		NewServiceResource,
 	}
 }
 

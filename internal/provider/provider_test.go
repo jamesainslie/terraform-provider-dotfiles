@@ -355,7 +355,7 @@ func TestProviderResources(t *testing.T) {
 		t.Error("no resources returned")
 	}
 
-	expectedResources := 5 // repository, file, symlink, directory, application
+	expectedResources := 6 // repository, file, symlink, directory, application, service
 	if len(resources) != expectedResources {
 		t.Errorf("expected %d resources, got %d", expectedResources, len(resources))
 	}

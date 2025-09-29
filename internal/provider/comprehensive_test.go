@@ -38,8 +38,8 @@ func TestProviderIntegration(t *testing.T) {
 
 		// Test resource registration
 		resources := p.Resources(ctx)
-		if len(resources) != 5 {
-			t.Errorf("Expected 5 resources, got %d", len(resources))
+		if len(resources) != 6 {
+			t.Errorf("Expected 6 resources, got %d", len(resources))
 		}
 
 		// Test data source registration
