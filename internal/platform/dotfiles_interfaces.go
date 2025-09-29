@@ -8,43 +8,12 @@ import (
 	"time"
 )
 
-// ServiceManager defines the interface for cross-platform service management operations.
-// This replaces shell commands like "systemctl restart nginx" with native Go implementations.
-type ServiceManager interface {
-	// StartService starts a service
-	StartService(name string, userLevel bool) error
-
-	// StopService stops a service
-	StopService(name string, userLevel bool) error
-
-	// RestartService restarts a service (stop + start)
-	RestartService(name string, userLevel bool) error
-
-	// ReloadService reloads a service configuration without stopping
-	ReloadService(name string, userLevel bool) error
-
-	// GetServiceStatus retrieves the current status of a service
-	GetServiceStatus(name string, userLevel bool) (ServiceStatus, error)
-
-	// ServiceExists checks if a service exists on the system
-	ServiceExists(name string, userLevel bool) bool
-}
-
-// ServiceStatus represents the current status of a system service
-type ServiceStatus struct {
-	Name           string     // Service name
-	State          string     // Current state (running, stopped, failed, etc.)
-	UserLevel      bool       // Whether this is a user-level service
-	ProcessID      int        // Process ID if running
-	StartTime      time.Time  // When the service was started
-	SupportsReload bool       // Whether the service supports configuration reload
-	LastReload     *time.Time // When the service was last reloaded
-	Description    string     // Service description
-	ExitCode       *int       // Exit code if stopped
-}
+// Service management interfaces removed - service management belongs in terraform-provider-package
+// This provider focuses on dotfiles and configuration file management operations
 
 // ProcessManager defines the interface for cross-platform process management operations.
-// This replaces shell commands like "killall app" or "pkill app" with native Go implementations.
+// This replaces shell commands like "killall app" or "pkill app" with native Go implementations
+// for application state management in dotfiles contexts.
 type ProcessManager interface {
 	// FindProcessesByName finds all processes with the given name
 	FindProcessesByName(name string) ([]Process, error)
@@ -175,19 +144,16 @@ const (
 	LogFatal LogLevel = "fatal"
 )
 
-// ExtendedPlatformProvider extends PlatformProvider with the new management interfaces
+// ExtendedPlatformProvider extends PlatformProvider with dotfiles-specific management interfaces
 type ExtendedPlatformProvider interface {
 	PlatformProvider
 
-	// Service management
-	ServiceManager() ServiceManager
-
-	// Process management
+	// Process management (for application state management)
 	ProcessManager() ProcessManager
 
-	// Enhanced file management
+	// Enhanced file management (for permission and backup operations)
 	FileManager() FileManager
 
-	// Notification management
+	// Notification management (for deployment notifications)
 	NotificationManager() NotificationManager
 }

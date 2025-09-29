@@ -6,32 +6,25 @@ package platform
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
-// MockPlatformProvider extends the existing platform providers with service management capabilities
-// This is used for testing and as a base for platform-specific implementations
+// MockPlatformProvider extends the existing platform providers with dotfiles-specific management capabilities
+// This is used for testing dotfiles operations (file permissions, backups, notifications, process management)
 type MockPlatformProvider struct {
 	PlatformProvider
-	mockServiceManager      *ExtendedMockServiceManager
 	mockProcessManager      *MockProcessManager
 	mockFileManager         *MockFileManager
 	mockNotificationManager *MockNotificationManager
 }
 
-// NewMockPlatformProvider creates a new mock platform provider with service management capabilities
+// NewMockPlatformProvider creates a new mock platform provider for dotfiles operations
 func NewMockPlatformProvider(base PlatformProvider) *MockPlatformProvider {
 	return &MockPlatformProvider{
 		PlatformProvider:        base,
-		mockServiceManager:      NewExtendedMockServiceManager(),
 		mockProcessManager:      &MockProcessManager{processes: make(map[int]*Process)},
 		mockFileManager:         &MockFileManager{permissions: make(map[string]FilePermission)},
 		mockNotificationManager: &MockNotificationManager{},
 	}
-}
-
-func (m *MockPlatformProvider) ServiceManager() ServiceManager {
-	return m.mockServiceManager
 }
 
 func (m *MockPlatformProvider) ProcessManager() ProcessManager {
@@ -44,116 +37,6 @@ func (m *MockPlatformProvider) FileManager() FileManager {
 
 func (m *MockPlatformProvider) NotificationManager() NotificationManager {
 	return m.mockNotificationManager
-}
-
-// ExtendedMockServiceManager extends MockServiceManager with additional test helpers
-type ExtendedMockServiceManager struct {
-	services       map[string]ServiceStatus
-	shouldError    bool
-	operationDelay time.Duration
-}
-
-func NewExtendedMockServiceManager() *ExtendedMockServiceManager {
-	return &ExtendedMockServiceManager{
-		services: make(map[string]ServiceStatus),
-	}
-}
-
-func (m *ExtendedMockServiceManager) StartService(name string, userLevel bool) error {
-	if m.shouldError {
-		return fmt.Errorf("mock error starting service")
-	}
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	status := m.services[key]
-	status.Name = name
-	status.State = "running"
-	status.UserLevel = userLevel
-	status.StartTime = time.Now()
-	m.services[key] = status
-	time.Sleep(m.operationDelay)
-	return nil
-}
-
-func (m *ExtendedMockServiceManager) StopService(name string, userLevel bool) error {
-	if m.shouldError {
-		return fmt.Errorf("mock error stopping service")
-	}
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	status := m.services[key]
-	status.Name = name
-	status.State = "stopped"
-	status.UserLevel = userLevel
-	m.services[key] = status
-	time.Sleep(m.operationDelay)
-	return nil
-}
-
-func (m *ExtendedMockServiceManager) RestartService(name string, userLevel bool) error {
-	if m.shouldError {
-		return fmt.Errorf("mock error restarting service")
-	}
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	status := m.services[key]
-	status.Name = name
-	status.State = "running"
-	status.UserLevel = userLevel
-	status.StartTime = time.Now()
-	m.services[key] = status
-	time.Sleep(m.operationDelay)
-	return nil
-}
-
-func (m *ExtendedMockServiceManager) ReloadService(name string, userLevel bool) error {
-	if m.shouldError {
-		return fmt.Errorf("mock error reloading service")
-	}
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	status := m.services[key]
-	if !status.SupportsReload {
-		return fmt.Errorf("service does not support reload")
-	}
-	status.Name = name
-	status.UserLevel = userLevel
-	now := time.Now()
-	status.LastReload = &now
-	m.services[key] = status
-	time.Sleep(m.operationDelay)
-	return nil
-}
-
-func (m *ExtendedMockServiceManager) GetServiceStatus(name string, userLevel bool) (ServiceStatus, error) {
-	if m.shouldError {
-		return ServiceStatus{}, fmt.Errorf("mock error getting service status")
-	}
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	status, exists := m.services[key]
-	if !exists {
-		return ServiceStatus{}, fmt.Errorf("service not found")
-	}
-	return status, nil
-}
-
-func (m *ExtendedMockServiceManager) ServiceExists(name string, userLevel bool) bool {
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	_, exists := m.services[key]
-	return exists
-}
-
-// SetServiceExists is a test helper to configure service existence
-func (m *ExtendedMockServiceManager) SetServiceExists(name string, userLevel bool, exists bool) {
-	key := fmt.Sprintf("%s:%t", name, userLevel)
-	if exists {
-		if _, found := m.services[key]; !found {
-			m.services[key] = ServiceStatus{
-				Name:           name,
-				State:          "stopped",
-				UserLevel:      userLevel,
-				SupportsReload: true,
-			}
-		}
-	} else {
-		delete(m.services, key)
-	}
 }
 
 // MockProcessManager implements ProcessManager for testing
