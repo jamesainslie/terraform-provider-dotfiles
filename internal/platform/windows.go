@@ -122,7 +122,7 @@ func (p *WindowsProvider) CreateSymlink(source, target string) error {
 	// Note: This requires developer mode or elevated privileges on Windows
 	if err := os.Symlink(expandedSource, expandedTarget); err != nil {
 		// If symlink fails, fall back to copying (for Windows compatibility)
-		fmt.Printf("Warning: Symlink creation failed, falling back to copy: %v\n", err)
+		// This is expected behavior on Windows without developer mode
 		return p.CopyFile(source, target)
 	}
 
@@ -156,10 +156,8 @@ func (p *WindowsProvider) CopyFile(source, target string) error {
 		return fmt.Errorf("unable to open source file: %w", err)
 	}
 	defer func() {
-		if err := sourceFile.Close(); err != nil {
-			// Log error but don't fail the operation
-			fmt.Printf("Warning: failed to close source file: %v\n", err)
-		}
+		// Best effort close - errors are non-critical
+		_ = sourceFile.Close()
 	}()
 
 	// Get source file info
@@ -180,10 +178,8 @@ func (p *WindowsProvider) CopyFile(source, target string) error {
 		return fmt.Errorf("unable to create target file: %w", err)
 	}
 	defer func() {
-		if err := targetFile.Close(); err != nil {
-			// Log error but don't fail the operation
-			fmt.Printf("Warning: failed to close target file: %v\n", err)
-		}
+		// Best effort close - errors are non-critical
+		_ = targetFile.Close()
 	}()
 
 	// Copy file contents
@@ -191,11 +187,9 @@ func (p *WindowsProvider) CopyFile(source, target string) error {
 		return fmt.Errorf("unable to copy file contents: %w", err)
 	}
 
-	// Copy permissions (simplified for Windows)
-	if err := targetFile.Chmod(sourceInfo.Mode()); err != nil {
-		// Windows permission handling is different, so we'll log but not fail
-		fmt.Printf("Warning: Unable to copy file permissions on Windows: %v\n", err)
-	}
+	// Copy permissions (Windows handles permissions differently)
+	// Attempt to set permissions but don't fail if it doesn't work
+	_ = targetFile.Chmod(sourceInfo.Mode())
 
 	return nil
 }
@@ -209,10 +203,8 @@ func (p *WindowsProvider) SetPermissions(path string, mode os.FileMode) error {
 
 	// Windows doesn't have the same permission model as Unix
 	// This is a simplified implementation
-	if err := os.Chmod(expandedPath, mode); err != nil {
-		// Don't fail on Windows permission errors, just warn
-		fmt.Printf("Warning: Unable to set permissions on Windows: %v\n", err)
-	}
+	// Windows handles permissions differently - attempt but don't fail
+	_ = os.Chmod(expandedPath, mode)
 
 	return nil
 }
