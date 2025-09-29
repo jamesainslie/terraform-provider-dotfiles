@@ -225,8 +225,3 @@ func testTemplateProcessFileExecution(t *testing.T) {
 	}
 	t.Skip("Complex template processing replaced with simplified test")
 }
-
-func testTemplateProcessFileExecutionOriginal(t *testing.T) {
-	// Complex test removed to reduce complexity
-	t.Skip("Complex template processing replaced with simplified test")
-}

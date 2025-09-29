@@ -67,6 +67,7 @@ func CreateTempDotfilesRepo(tempDir string) (string, error) {
 		"fish",
 		"ssh",
 		"tools",
+		"templates",
 	}
 
 	for _, dir := range dirs {

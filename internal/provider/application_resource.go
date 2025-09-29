@@ -336,6 +336,7 @@ func (r *ApplicationResource) expandTargetPathTemplate(targetPath, applicationNa
 
 // createSymlinkForConfig creates a symlink for a configuration file.
 func (r *ApplicationResource) createSymlinkForConfig(ctx context.Context, sourcePath, targetPath string) error {
+	_ = ctx // Context not used in this simple file operation
 	// Create target directory if it doesn't exist
 	targetDir := filepath.Dir(targetPath)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
@@ -403,6 +404,7 @@ func (r *ApplicationResource) copyConfigFile(ctx context.Context, sourcePath, ta
 
 // verifyConfigurationFiles verifies that configuration files are still properly configured.
 func (r *ApplicationResource) verifyConfigurationFiles(ctx context.Context, data *ApplicationResourceModel) error {
+	_ = ctx // Context not used in this verification
 	configuredFiles := data.ConfiguredFiles.Elements()
 
 	for _, fileValue := range configuredFiles {
@@ -418,6 +420,9 @@ func (r *ApplicationResource) verifyConfigurationFiles(ctx context.Context, data
 }
 
 // removeApplicationConfig removes all configured files for the application.
+// Returns nil on purpose - this function is fault-tolerant and continues removing files even if some fail.
+//
+//nolint:unparam // Function intentionally always returns nil for fault tolerance
 func (r *ApplicationResource) removeApplicationConfig(ctx context.Context, data *ApplicationResourceModel) error {
 	configuredFiles := data.ConfiguredFiles.Elements()
 

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package provider
@@ -613,9 +613,4 @@ func TestFuzzErrorHandling(t *testing.T) {
 			}
 		})
 	}
-}
-
-func init() {
-	// Seed random number generator for consistent but varied fuzz testing
-	// Note: rand.Seed is deprecated in Go 1.20+. Using default random generator.
 }

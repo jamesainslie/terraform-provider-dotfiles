@@ -277,6 +277,7 @@ func (r *FileResource) handleFileBackup(ctx context.Context, data *EnhancedFileR
 
 // handleEnhancedBackup handles enhanced backup operations
 func (r *FileResource) handleEnhancedBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, enhancedBackupConfig *fileops.EnhancedBackupConfig, resp *resource.CreateResponse) {
+	_ = data // Data parameter not used in this backup handler
 	enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
 
 	if !r.client.Config.DryRun {
@@ -582,6 +583,8 @@ func (r *FileResource) handleFileUpdateBackup(ctx context.Context, data *Enhance
 
 // handleEnhancedUpdateBackup handles enhanced backup operations for updates
 func (r *FileResource) handleEnhancedUpdateBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, enhancedBackupConfig *fileops.EnhancedBackupConfig, resp *resource.UpdateResponse) {
+	_ = ctx  // Context not used in this backup handler
+	_ = data // Data not used in this backup handler
 	enhancedBackupConfig.Directory = r.client.Config.BackupDirectory
 	_, err := fileManager.CreateEnhancedBackup(expandedTargetPath, enhancedBackupConfig)
 	if err != nil {
@@ -594,6 +597,7 @@ func (r *FileResource) handleEnhancedUpdateBackup(ctx context.Context, data *Enh
 
 // handleLegacyUpdateBackup handles legacy backup operations for updates
 func (r *FileResource) handleLegacyUpdateBackup(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, fileManager *fileops.FileManager, resp *resource.UpdateResponse) {
+	_ = ctx // Context not used in this backup handler
 	backupEnabled := r.client.Config.BackupEnabled
 	if !data.BackupEnabled.IsNull() {
 		backupEnabled = data.BackupEnabled.ValueBool()
@@ -635,6 +639,7 @@ func (r *FileResource) processFileUpdate(ctx context.Context, data *EnhancedFile
 
 // processTemplateFileUpdate handles template file processing for updates
 func (r *FileResource) processTemplateFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, sourcePath, expandedTargetPath string, permConfig *fileops.PermissionConfig, resp *resource.UpdateResponse) error {
+	_ = ctx // Context not used in this template processing
 	templateConfig, err := buildEnhancedTemplateConfigFromAppModel(data)
 	if err != nil {
 		resp.Diagnostics.AddError(

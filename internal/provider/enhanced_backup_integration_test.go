@@ -286,6 +286,7 @@ func testBackupUpdateOperations(t *testing.T, fm *fileops.FileManager, targetFil
 
 // testRecoveryModelValidation tests recovery model validation
 func testRecoveryModelValidation(t *testing.T, env *enhancedBackupIntegrationTestEnv) {
+	_ = env // Environment not used in this validation test
 	recoveryModel := &RecoveryTestModel{
 		Enabled: types.BoolValue(true),
 		Command: types.StringValue("test -r {{.backup_path}}"),

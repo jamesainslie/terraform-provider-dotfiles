@@ -122,6 +122,7 @@ type platformDetectionTestEnv struct {
 
 // setupPlatformDetectionTestEnvironment creates the test environment
 func setupPlatformDetectionTestEnvironment(t *testing.T) *platformDetectionTestEnv {
+	_ = t // Test parameter not used in this setup function
 	provider := platform.DetectPlatform()
 	return &platformDetectionTestEnv{
 		provider: provider,
@@ -141,10 +142,4 @@ func testPlatformValidation(t *testing.T, env *platformDetectionTestEnv) {
 	if env.provider == nil {
 		t.Error("Provider should be detected")
 	}
-}
-
-// Original complex test function removed to reduce complexity
-func testPlatformDetectionOriginal(t *testing.T) {
-	// Functionality moved to testDetectionFunctionality and testPlatformValidation
-	t.Skip("Complex test replaced with focused helper functions")
 }

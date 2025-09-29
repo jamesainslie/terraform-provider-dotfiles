@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) HashCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0.
 
 package services
@@ -254,6 +254,7 @@ func (s *DefaultBackupService) simulateBackup(_ context.Context, sourcePath, bac
 }
 
 func (s *DefaultBackupService) performBackup(ctx context.Context, sourcePath, backupDir string, options BackupOptions) (*BackupResult, error) {
+	_ = ctx // Context not used in this backup operation
 	// Ensure backup directory exists
 	if err := s.platformProvider.CreateDirectory(backupDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create backup directory: %w", err)

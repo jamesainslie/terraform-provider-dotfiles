@@ -26,20 +26,30 @@ output:
 linters:
   default: none
   enable:
+    # Essential defaults that were disabled
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Additional table stakes linters
+    - bodyclose
     - contextcheck
     - copyloopvar
     - depguard
     - dupl
+    - errname
     - gocritic
+    - gochecknoinits
     - gocyclo
     - gosec
-    - imports
     - misspell
     - nakedret
     - nolintlint
     - prealloc
     - revive
     - unconvert
+    - unparam
     - whitespace
   settings:
     depguard:

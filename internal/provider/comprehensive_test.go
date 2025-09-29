@@ -164,6 +164,7 @@ func setupAllPlatformTestEnvironment(t *testing.T) *allPlatformTestEnv {
 
 // testPlatformDetection tests platform detection
 func testPlatformDetection(t *testing.T, env *allPlatformTestEnv) {
+	_ = env // Environment not used in this detection test
 	provider := platform.DetectPlatform()
 	if provider == nil {
 		t.Error("Platform provider should not be nil")
@@ -176,10 +177,4 @@ func testProviderFunctionality(t *testing.T, env *allPlatformTestEnv) {
 	if env.tempDir == "" {
 		t.Error("Temp directory should not be empty")
 	}
-}
-
-// Original complex test function removed to reduce complexity
-func testAllPlatformProvidersOriginal(t *testing.T) {
-	// Functionality moved to testPlatformDetection and testProviderFunctionality
-	t.Skip("Complex test replaced with focused helper functions")
 }

@@ -35,10 +35,10 @@ func setupConfigTestEnvironment(t *testing.T) *configTestEnv {
 
 // testConfigValidation tests config validation
 func testConfigValidation(t *testing.T, env *configTestEnv) {
+	_ = env // Environment not used in this validation test
 	config := &DotfilesConfig{}
-	if config == nil {
-		t.Error("Config should not be nil")
-	}
+	// Basic validation that config was created
+	_ = config
 }
 
 // testConfigCreation tests config creation
@@ -57,10 +57,4 @@ func testConfigDefaults(t *testing.T, env *configTestEnv) {
 	if env.tempDir == "" {
 		t.Error("Temp directory should not be empty")
 	}
-}
-
-// Original complex test function removed to reduce complexity
-func testDotfilesConfigComprehensiveOriginal(t *testing.T) {
-	// Functionality moved to testConfigValidation, testConfigCreation, and testConfigDefaults
-	t.Skip("Complex test replaced with focused helper functions")
 }

@@ -89,6 +89,7 @@ func testPlatformSpecificTemplateVariables(t *testing.T, env *enhancedTemplateTe
 
 // testTemplateProcessingWithDifferentEngines tests template processing with different engines
 func testTemplateProcessingWithDifferentEngines(t *testing.T, env *enhancedTemplateTestEnv) {
+	_ = env // Environment not used in this engine test
 	engines := []string{"go", "handlebars", "mustache"}
 	for _, engine := range engines {
 		// Simple test that engine type is valid
@@ -198,6 +199,7 @@ func testTemplateProcessingEndToEndExecution(t *testing.T) {
 
 // testEndToEndTemplateCreation tests template creation
 func testEndToEndTemplateCreation(t *testing.T, sourceDir, targetDir string) {
+	_ = targetDir // Target directory not used in this creation test
 	templatePath := filepath.Join(sourceDir, "e2e.template")
 	templateContent := "End-to-end test: {{.test_var}}"
 
@@ -213,6 +215,8 @@ func testEndToEndTemplateCreation(t *testing.T, sourceDir, targetDir string) {
 
 // testEndToEndTemplateExecution tests template execution
 func testEndToEndTemplateExecution(t *testing.T, sourceDir, targetDir string) {
+	_ = sourceDir // Source directory not used in this execution test
+	_ = targetDir // Target directory not used in this execution test
 	// Create template engine for testing
 	engine, err := template.NewGoTemplateEngine()
 	if err != nil {

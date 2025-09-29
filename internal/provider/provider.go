@@ -207,6 +207,7 @@ func (p *DotfilesProvider) mapProviderDataToConfig(data *EnhancedProviderModel, 
 
 // handleBackupStrategyConfig handles backup strategy configuration and conflict detection
 func (p *DotfilesProvider) handleBackupStrategyConfig(ctx context.Context, data *EnhancedProviderModel, config *DotfilesConfig, resp *provider.ConfigureResponse) {
+	_ = ctx // Context not used in this backup configuration
 	if data.BackupStrategy == nil {
 		return
 	}

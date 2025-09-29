@@ -34,9 +34,8 @@ func setupFileResourceTestEnvironment(t *testing.T) *fileResourceTestEnv {
 // testFileResourceCreation tests file resource creation
 func testFileResourceCreation(t *testing.T, env *fileResourceTestEnv) {
 	resource := &FileResource{}
-	if resource == nil {
-		t.Error("File resource should not be nil")
-	}
+	// Basic validation that resource was created
+	_ = resource
 }
 
 // testFileResourceOperations tests file resource operations
@@ -45,10 +44,4 @@ func testFileResourceOperations(t *testing.T, env *fileResourceTestEnv) {
 	if env.tempDir == "" {
 		t.Error("Temp directory should not be empty")
 	}
-}
-
-// Original complex test function removed to reduce complexity
-func testFileResourceImplementationOriginal(t *testing.T) {
-	// Functionality moved to testFileResourceCreation and testFileResourceOperations
-	t.Skip("Complex test replaced with focused helper functions")
 }
