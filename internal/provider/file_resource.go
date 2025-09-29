@@ -8,10 +8,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -404,14 +401,11 @@ func (r *FileResource) processRegularFile(ctx context.Context, data *EnhancedFil
 
 // finalizeFileCreation handles post-create commands, metadata updates, and state saving
 func (r *FileResource) finalizeFileCreation(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, resp *resource.CreateResponse) {
-	// Execute post-create commands
-	if err := executePostCommands(ctx, data.PostCreateCommands, "post-create"); err != nil {
-		postCmdErr := errors.IOError("execute_post_commands", "file", "Post-create commands failed", err).
-			WithPath(expandedTargetPath).
-			WithContext("file_name", data.Name.ValueString()).
-			WithContext("command_type", "post-create")
-		errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Post-create commands failed",
-			"File created successfully but post-create commands failed: "+postCmdErr.Error())
+	// Post-create commands have been removed for security reasons (G204 vulnerability)
+	// Use terraform-provider-package for service management or dotfiles_file_permissions for permissions
+	if !data.PostCreateCommands.IsNull() && len(data.PostCreateCommands.Elements()) > 0 {
+		errors.AddWarningToDiagnostics(ctx, &resp.Diagnostics, "Post-create Commands Deprecated",
+			"Shell commands have been removed for security reasons. Use terraform-provider-package for service management or dotfiles_file_permissions for file permissions.")
 	}
 
 	// Update computed attributes
@@ -654,11 +648,12 @@ func (r *FileResource) processTemplateFileUpdate(ctx context.Context, data *Enha
 
 // finalizeFileUpdate handles post-update commands, metadata updates, and state saving
 func (r *FileResource) finalizeFileUpdate(ctx context.Context, data *EnhancedFileResourceModelWithTemplate, expandedTargetPath string, resp *resource.UpdateResponse) {
-	// Execute post-update commands
-	if err := executePostCommands(ctx, data.PostUpdateCommands, "post-update"); err != nil {
+	// Post-update commands have been removed for security reasons (G204 vulnerability)
+	// Use terraform-provider-package for service management or dotfiles_file_permissions for permissions
+	if !data.PostUpdateCommands.IsNull() && len(data.PostUpdateCommands.Elements()) > 0 {
 		resp.Diagnostics.AddWarning(
-			"Post-update commands failed",
-			fmt.Sprintf("File updated successfully but post-update commands failed: %s", err.Error()),
+			"Post-update Commands Deprecated",
+			"Shell commands have been removed for security reasons. Use terraform-provider-package for service management or dotfiles_file_permissions for file permissions.",
 		)
 	}
 
@@ -693,11 +688,12 @@ func (r *FileResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		"target_path": data.TargetPath.ValueString(),
 	})
 
-	// Execute pre-destroy commands
-	if err := executePostCommands(ctx, data.PreDestroyCommands, "pre-destroy"); err != nil {
+	// Pre-destroy commands have been removed for security reasons (G204 vulnerability)
+	// Use terraform-provider-package for service management or dotfiles_file_permissions for permissions
+	if !data.PreDestroyCommands.IsNull() && len(data.PreDestroyCommands.Elements()) > 0 {
 		resp.Diagnostics.AddWarning(
-			"Pre-destroy commands failed",
-			fmt.Sprintf("Pre-destroy commands failed: %s", err.Error()),
+			"Pre-destroy Commands Deprecated",
+			"Shell commands have been removed for security reasons. Use terraform-provider-package for service management or dotfiles_file_permissions for file permissions.",
 		)
 	}
 
@@ -943,28 +939,7 @@ func buildFilePermissionConfig(data *EnhancedFileResourceModel) (*fileops.Permis
 	return config, fileops.ValidatePermissionConfig(config)
 }
 
-// executePostCommands executes post-creation/update commands.
-func executePostCommands(ctx context.Context, commands types.List, operation string) error {
-	if commands.IsNull() || commands.IsUnknown() {
-		return nil
-	}
-
-	tflog.Debug(ctx, fmt.Sprintf("Executing %s commands", operation))
-
-	elements := commands.Elements()
-	for i, cmdValue := range elements {
-		if strCmd, ok := cmdValue.(types.String); ok {
-			cmd := strCmd.ValueString()
-			tflog.Debug(ctx, fmt.Sprintf("Executing %s command %d: %s", operation, i+1, cmd))
-
-			if err := executeShellCommand(ctx, cmd); err != nil {
-				return fmt.Errorf("command %d failed: %w", i+1, err)
-			}
-		}
-	}
-
-	return nil
-}
+// Shell command execution has been removed for security reasons (G204 vulnerability)
 
 // processEnhancedTemplate processes a template with enhanced features.
 func (r *FileResource) processEnhancedTemplate(sourcePath, targetPath string, config *EnhancedTemplateConfig, permConfig *fileops.PermissionConfig) error {
@@ -1016,52 +991,8 @@ func (r *FileResource) fileManager() *fileops.FileManager {
 
 // Version compatibility checking has been removed as it's now handled by terraform-provider-package
 
-// executeShellCommand executes a shell command safely.
-func executeShellCommand(ctx context.Context, cmdStr string) error {
-	// Parse command and arguments
-	parts := strings.Fields(cmdStr)
-	if len(parts) == 0 {
-		return fmt.Errorf("empty command")
-	}
-
-	// Use shell to execute complex commands
-	var cmd *exec.Cmd
-
-	// Determine shell based on OS
-	var shell, shellFlag string
-	if strings.Contains(os.Getenv("SHELL"), "fish") {
-		shell = "fish"
-		shellFlag = "-c"
-	} else if runtime.GOOS == "windows" {
-		shell = "cmd"
-		shellFlag = "/c"
-	} else {
-		shell = "sh"
-		shellFlag = "-c"
-	}
-
-	cmd = exec.CommandContext(ctx, shell, shellFlag, cmdStr) //nolint:gosec // G204: Intentional subprocess execution from user-configured commands
-
-	// Set environment variables
-	cmd.Env = os.Environ()
-
-	// Capture output
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Command failed: %s", cmdStr), map[string]interface{}{
-			"error":  err.Error(),
-			"output": string(output),
-		})
-		return fmt.Errorf("command '%s' failed: %w (output: %s)", cmdStr, err, string(output))
-	}
-
-	tflog.Info(ctx, fmt.Sprintf("Command executed successfully: %s", cmdStr), map[string]interface{}{
-		"output": string(output),
-	})
-
-	return nil
-}
+// Shell command execution has been completely removed for security (G204 vulnerability)
+// Use terraform-provider-package for service management operations
 
 // validateSourceFileExists checks if the source file exists and is readable.
 func (r *FileResource) validateSourceFileExists(ctx context.Context, sourcePath string) error {
