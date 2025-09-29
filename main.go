@@ -9,6 +9,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/provider"
 )
 

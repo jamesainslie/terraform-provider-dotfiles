@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+
 	"github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
 )
 

@@ -52,10 +52,24 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Build terraform-provider-dotfiles
-        run: make build
+      - name: Install golangci-lint
+        run: |
+          echo "Installing golangci-lint v2.5.0 via official installer..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
 
       - run: ./terraform-provider-dotfiles --version || echo "Version command not available (expected for Terraform provider)"
+
+      - run: golangci-lint config path
+      - run: golangci-lint config path --json
+      - run: golangci-lint config verify
+      - run: golangci-lint version
+      - run: golangci-lint version --short
+      - run: golangci-lint version --debug
+      - run: golangci-lint version --json
+      - run: golangci-lint version --json --debug
+
+      - name: Build terraform-provider-dotfiles
+        run: make build
 
       - name: Run comprehensive quality checks
         run: make quality
