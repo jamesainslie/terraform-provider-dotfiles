@@ -61,8 +61,8 @@ jobs:
 
       - name: Install tools
         run: |
-          echo "Force installing golangci-lint v2 to match local environment..."
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.5.0
+          echo "Installing golangci-lint v2.5.0 via official installer..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
           make tools
 
       - name: Run comprehensive quality checks

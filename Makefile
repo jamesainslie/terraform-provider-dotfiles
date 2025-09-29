@@ -143,7 +143,8 @@ mod: ## Tidy and verify go modules
 tools: ## Install development tools from tools/go.mod
 	@echo "Installing development tools..."
 	cd $(TOOLS_DIR) && $(GO) install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@${DOCS_VERSION}
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.5.0
+	@echo "Installing golangci-lint v2.5.0 via official installer..."
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
 	$(GO) install honnef.co/go/tools/cmd/staticcheck@latest
 	$(GO) install golang.org/x/tools/cmd/goimports@latest
 	$(GO) install golang.org/x/vuln/cmd/govulncheck@latest
