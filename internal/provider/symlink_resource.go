@@ -422,33 +422,73 @@ func (r *SymlinkResource) Read(ctx context.Context, req resource.ReadRequest, re
 		data.LastModified = types.StringValue(time.Now().Format(time.RFC3339))
 	}
 
-	// Verify symlink integrity if it exists
-	if data.LinkExists.ValueBool() && data.IsSymlink.ValueBool() {
-		// Check if the symlink target matches our expected source
-		actualTarget, err := os.Readlink(expandedTargetPath)
-		if err != nil {
-			tflog.Warn(ctx, "Could not read symlink target", map[string]interface{}{
-				"target_path": expandedTargetPath,
-				"error":       err.Error(),
-			})
-		} else {
-			// Expand the source path to compare
-			expandedSourcePath, err := platformProvider.ExpandPath(data.SourcePath.ValueString())
-			if err == nil {
-				// Make paths absolute for comparison
-				expectedTarget, _ := filepath.Abs(expandedSourcePath)
-				actualTargetAbs, _ := filepath.Abs(actualTarget)
+	// Check if symlink exists in correct form
+	if data.LinkExists.ValueBool() {
+		if data.IsSymlink.ValueBool() {
+			// Case 1: Symlink exists - check if target is correct
+			actualTarget, err := os.Readlink(expandedTargetPath)
+			if err != nil {
+				tflog.Warn(ctx, "Could not read symlink target", map[string]interface{}{
+					"target_path": expandedTargetPath,
+					"error":       err.Error(),
+				})
+				// Symlink is corrupted - remove from state to trigger recreation
+				tflog.Info(ctx, "Removing corrupted symlink from state to trigger recreation")
+				return
+			} else {
+				// Expand the source path to compare
+				repositoryLocalPath := r.getRepositoryLocalPath(data.Repository.ValueString())
+				sourcePath := filepath.Join(repositoryLocalPath, data.SourcePath.ValueString())
+				expandedSourcePath, err := platformProvider.ExpandPath(sourcePath)
+				if err == nil {
+					// Make paths absolute for comparison
+					expectedTarget, _ := filepath.Abs(expandedSourcePath)
+					actualTargetAbs, _ := filepath.Abs(actualTarget)
 
-				if expectedTarget != actualTargetAbs {
-					tflog.Info(ctx, "Symlink target drift detected", map[string]interface{}{
-						"expected": expectedTarget,
-						"actual":   actualTargetAbs,
-					})
+					if expectedTarget != actualTargetAbs {
+						tflog.Info(ctx, "Symlink points to wrong target - removing from state", map[string]interface{}{
+							"expected": expectedTarget,
+							"actual":   actualTargetAbs,
+						})
+						// Wrong target - remove from state to trigger recreation
+						return
+					}
 				}
 			}
+		} else {
+			// Case 2: CRITICAL - Directory/file exists instead of symlink!
+			// Remove from state to trigger recreation
+			tflog.Info(ctx, "Directory/file exists instead of expected symlink - removing from state", map[string]interface{}{
+				"target_path": expandedTargetPath,
+				"expected":    "symlink",
+				"actual":      "directory or file",
+			})
+
+			// Log details for debugging
+			if info, err := os.Lstat(expandedTargetPath); err == nil {
+				tflog.Info(ctx, "Target details", map[string]interface{}{
+					"mode":   info.Mode().String(),
+					"is_dir": info.IsDir(),
+					"size":   info.Size(),
+				})
+			}
+
+			// Don't set state - this will cause Terraform to detect the resource is gone
+			// and needs to be recreated
+			resp.State.RemoveResource(ctx)
+			return
 		}
+	} else {
+		// Case 3: Nothing exists at target path - resource is gone
+		tflog.Info(ctx, "Symlink target does not exist - removing from state", map[string]interface{}{
+			"target_path": expandedTargetPath,
+		})
+		// Don't set state - resource doesn't exist anymore
+		resp.State.RemoveResource(ctx)
+		return
 	}
 
+	// Only set state if symlink exists and is correct
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -491,16 +531,32 @@ func (r *SymlinkResource) Delete(ctx context.Context, req resource.DeleteRequest
 		}
 
 		if utils.PathExists(expandedTargetPath) {
-			err := os.Remove(expandedTargetPath)
+			// Handle both files and directories (same logic as Create function)
+			info, err := os.Lstat(expandedTargetPath) // Use Lstat to handle symlinks properly
 			if err != nil {
 				resp.Diagnostics.AddWarning(
-					"Could not remove symlink",
-					fmt.Sprintf("Could not remove symlink %s: %s", expandedTargetPath, err.Error()),
+					"Could not stat target for removal",
+					fmt.Sprintf("Could not stat target %s for removal: %s", expandedTargetPath, err.Error()),
 				)
 			} else {
-				tflog.Info(ctx, "Symlink resource removed", map[string]interface{}{
-					"target_path": expandedTargetPath,
-				})
+				// Remove based on what it actually is
+				if info.IsDir() {
+					err = os.RemoveAll(expandedTargetPath)
+				} else {
+					err = os.Remove(expandedTargetPath)
+				}
+
+				if err != nil {
+					resp.Diagnostics.AddWarning(
+						"Could not remove target",
+						fmt.Sprintf("Could not remove target %s: %s", expandedTargetPath, err.Error()),
+					)
+				} else {
+					tflog.Info(ctx, "Target removed successfully", map[string]interface{}{
+						"target_path":   expandedTargetPath,
+						"was_directory": info.IsDir(),
+					})
+				}
 			}
 		}
 	}

@@ -105,9 +105,16 @@ func (p *WindowsProvider) CreateSymlink(source, target string) error {
 	}
 
 	// Remove existing target if it exists
-	if _, err := os.Lstat(expandedTarget); err == nil {
-		if err := os.Remove(expandedTarget); err != nil {
-			return fmt.Errorf("unable to remove existing target: %w", err)
+	if info, err := os.Lstat(expandedTarget); err == nil {
+		// Handle both files and directories properly
+		if info.IsDir() {
+			if err := os.RemoveAll(expandedTarget); err != nil {
+				return fmt.Errorf("unable to remove existing directory: %w", err)
+			}
+		} else {
+			if err := os.Remove(expandedTarget); err != nil {
+				return fmt.Errorf("unable to remove existing file: %w", err)
+			}
 		}
 	}
 
