@@ -53,8 +53,20 @@ linters:
           allow:
             # Standard library packages
             - "$gostd"
-            # Project internal packages
+            # Project internal packages - allow all internal imports
             - "github.com/jamesainslie/terraform-provider-dotfiles"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/errors"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/fileops"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/git"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/idempotency"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/migration"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/platform"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/provider"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/services"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/template"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/utils"
+            - "github.com/jamesainslie/terraform-provider-dotfiles/internal/validators"
             # Terraform provider framework and all sub-packages
             - "github.com/hashicorp/terraform-plugin-framework"
             - "github.com/hashicorp/terraform-plugin-framework/diag"
