@@ -163,6 +163,27 @@ jobs:
       release-url: ${{ steps.release.outputs.url }}
       assets-count: ${{ steps.release.outputs.assets-count }}
     steps:
+      # temporary workaround for an error in free disk space action
+      # https://github.com/jlumbroso/free-disk-space/issues/14
+      - name: Update Package List and Remove Dotnet
+        run: |
+          sudo apt-get update
+          sudo apt-get remove -y '^dotnet-.*'
+
+      # https://github.com/marketplace/actions/free-disk-space-ubuntu
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed
+          tool-cache: false
+          # all of these default to true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
       - name: Checkout
         uses: actions/checkout@v5
         with:
@@ -173,7 +194,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
 
       - name: Set up environment variables
         run: |
