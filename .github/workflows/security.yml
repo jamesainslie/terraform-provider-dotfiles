@@ -201,8 +201,25 @@ jobs:
           echo "GOTOOLCHAIN=go1.25.1" >> $GITHUB_ENV
           echo "GOPROXY=https://proxy.golang.org,direct" >> $GITHUB_ENV
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build Go packages for CodeQL analysis
+        run: |
+          echo "Building all Go packages for CodeQL analysis..."
+          # Create output directory
+          mkdir -p bin
+
+          # Build all packages to ensure CodeQL can analyze them
+          go build -v ./...
+
+          # Also build the main binary
+          go build -v -o terraform-provider-dotfiles ./
+
+          # Build the migrate-config tool
+          go build -v -o bin/migrate-config ./cmd/migrate-config
+
+          echo "Build completed successfully for CodeQL analysis"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@6db8d6351fd0be61f9ed8ebd12ccd35dcec51fea # v3.26.11
