@@ -4,7 +4,7 @@ go 1.25.1
 
 require (
 	github.com/go-git/go-git/v5 v5.16.2
-	github.com/hashicorp/terraform-plugin-framework v1.16.0
+	github.com/hashicorp/terraform-plugin-framework v1.16.1
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 )
 
